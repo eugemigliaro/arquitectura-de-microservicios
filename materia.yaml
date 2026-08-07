@@ -1,13 +1,13 @@
 schema_version: 1
 template_version: "0.1.0"
-configurada: false
+configurada: true
 
 materia:
-  nombre: "Nombre de la materia"
-  slug: "materia"
+  nombre: "Arquitectura de Microservicios"
+  slug: "arquitectura-de-microservicios"
   institucion: ""
   carrera: ""
-  ciclo: ""
+  ciclo: "2026"
   idioma: "es"
 
 estudio:

@@ -1,0 +1,694 @@
+FUENTE: T02
+TITULO: Conceptos acerca de microservicios
+ORIGINAL: material/catedra/teoria/Conceptos acerca de Microservicios - Slidev.pdf
+PAGINAS: 44
+
+===== PAGINA 1 =====
+
+Arquitectura de
+Microservicios con
+Contenedores
+Docentes
+
+— Ing. Federico Castañeda
+— Ing. Carlos Maceira
+— Ing. Franco Rupnik
+
+
+
+                            Microservicios (73.40) · ITBA
+
+===== PAGINA 2 =====
+
+Introducción a las
+Arquitectura de
+Microservicios
+
+===== PAGINA 3 =====
+
+ Objetivos de la clase
+ Al finalizar esta clase vas a poder:
+     Explicar el origen y la motivación de la arquitectura de microservicios.
+     Diferenciar microservicios de arquitecturas monolíticas y de SOA.
+     Aplicar los criterios de bajo acoplamiento y alta cohesión para definir los límites de un servicio.
+     Reconocer cuándo microservicios no es la mejor opción para un negocio.
+     Describir los módulos que componen la anatomía genérica de un microservicio.
+
+
+
+
+Microservicios (73.40)                                                                                     3
+
+===== PAGINA 4 =====
+
+ Inicios
+ En 2014 Martin Fowler & James Lewis escriben un artículo donde plantean los problemas de las arquitecturas
+ de software existentes y por qué hace falta redefinir las metodologías de trabajo.
+     Conceptualmente plantea que una arquitectura basada en microservicios no es más que un conjunto de
+     servicios desarrollados en forma independientes, cada uno ejecutándose en forma independiente, con
+     sistemas de comunicación simples entre ellos.
+     Los servicios deben poder ser ejecutados en forma independiente, pero coordinada.
+
+
+
+
+Microservicios (73.40)                                                                                        4
+
+===== PAGINA 5 =====
+
+ Inicios
+     Anteriormente las arquitectura seguían un modelo más monolítico, donde toda la aplicación se ejecutaba
+     en un sólo servidor, o a lo sumo un modelo de dos o tres capas.
+     El escalamiento, normalmente era vertical, poniendo un servidor más potente, u horizontal, pero replicando
+     la misma aplicación completa varias veces.
+     El planteo de los microservicios es dividir en servicios independientes las partes que componen una
+     aplicación, de modo hacer elementos funcionales independientes.
+
+
+
+
+Microservicios (73.40)                                                                                            5
+
+===== PAGINA 6 =====
+
+ Early adopters de Microservicios
+ Amazon fue uno de los early adopters de una
+ arquitectura de microservicios, y la justificación de su
+ CTO fue:
+     Podemos escalar cada servicios en forma
+     independiente
+     Mantener en forma paralela la disponibilidad de
+     cada servicio
+     Facilidad de agregar un servicio nuevo sin la
+     necesidad de una reconfiguración masiva de todo
+     el sistema.
+
+
+
+
+                                                            Fuente: https://queue.acm.org/detail.cfm?id=1142065
+
+Microservicios (73.40)                                                                                       6
+
+===== PAGINA 7 =====
+
+ Early adopters de Microservicios
+ Las tiendas Gilt habían adoptado microservicios en el
+ 2015 y la justificación que dio su VP de ingeniería
+ fue:
+     Mayor independencia entre equipos de trabajo,
+     que resultaban en mayor velocidad de delivery
+     Permite muchas iniciativas en paralelo
+     Soporta múltiples tecnologías, lenguajes y
+     frameworks distintos
+     Permite limitar mejor el fallo de un servicio.
+     Facilita la innovación por medio del concepto de
+     disposable code.
+
+
+
+
+                                                         Fuente: https://www.infoq.com/news/2015/04/scaling-microservices-gilt/
+
+Microservicios (73.40)                                                                                                       7
+
+===== PAGINA 8 =====
+
+ Monolítico vs Microservicios
+
+
+
+
+                                Fuente: https://martinfowler.com/articles/microservices.html
+
+Microservicios (73.40)                                                                    8
+
+===== PAGINA 9 =====
+
+ ¿Y no era esto lo mismo que SOA?
+ SOA también propone dividir en servicios. La diferencia está en el cómo:
+
+                         SOA                                    Microservicios
+
+    Comunicación         Middleware centralizado (ESB)          Directa y simple (HTTP, mensajería)
+
+    Gobernanza           Centralizada (SOAP, WS-*)              Descentralizada, cada equipo elige
+
+    Datos                Base de datos compartida               Cada servicio con su propia base
+
+    Tamaño               Servicios grandes, por sistema         Pequeños, por capacidad de negocio
+
+    Equipos              Un equipo, varios servicios            Un equipo dueño de punta a punta
+
+ El ESB de SOA termina siendo un monolito disfrazado: toda la lógica de integración en un solo lugar.
+
+
+
+
+Microservicios (73.40)                                                                                  9
+
+===== PAGINA 10 =====
+
+ Problemas Monolíticos
+     El costo de mantenimiento de las aplicaciones
+     monolíticas es muy alto.
+     Un pequeño cambio requiere volver a construir
+     toda la aplicación.
+     El tiempo de despliegue suele ser alto, de modo
+     que las afectaciones de servicio llevan a un
+     despliegue menos frecuente.
+     El escalamiento se realiza replicando todos los
+     componentes de la solución, y no solamente
+     aquellos que tienen más carga.
+
+
+
+
+Microservicios (73.40)                                 10
+
+===== PAGINA 11 =====
+
+ Soluciones de los Microservicios
+     En vez de una aplicación por servidor, múltiples servicios, más simples, en uno o más servidores.
+     Interfaces muy bien definidas, de modo que cualquier cambio interno, que mantenga la interfaz, puede
+     realizarse sin que el resto de los servicios se enteren.
+     La independencia en la implementación permite usar para cada servicio un lenguaje independiente, o un
+     estilo de base de datos diferente, sin afectar a otras partes de la aplicación.
+     Este modelo, no fue original, ya que UNIX fue diseñado con el mismo principio, pero no se había aplicado
+     al desarrollo de aplicaciones.
+
+
+
+
+Microservicios (73.40)                                                                                          11
+
+===== PAGINA 12 =====
+
+ Microservicios: Separación en servicios
+     Un componente es una unidad de software que puede ser reemplazada o actualizada en forma
+     independiente. Cada componente implementa un servicio que forma parte de la aplicación.
+     Un servicio no es una librería. Las librerías son software bien separado y con una interfaz bien definida que
+     se ejecuta dentro del mismo proceso, compartiendo memoria y CPU.
+     Un servicio puede reemplazarse y el programa que consume esos servicios no se entera. Si cambiamos una
+     librería es necesario reiniciar el programa o en algunos casos hasta compilarlo de nuevo.
+
+
+
+
+Microservicios (73.40)                                                                                               12
+
+===== PAGINA 13 =====
+
+ Modelo tradicional
+
+
+
+
+Microservicios (73.40)   13
+
+===== PAGINA 14 =====
+
+ Equipos multifuncionales por servicio
+
+
+
+
+                                    Fuente: https://martinfowler.com/articles/microservices.html
+
+Microservicios (73.40)                                                                       14
+
+===== PAGINA 15 =====
+
+ Microservicios: Productos, no Proyectos
+     El modelo de desarrollo basado en proyectos define que para un proyecto se arma un equipo de trabajo,
+     hace el diseño del cambio, lo desarrolla, lo prueba, implementa y luego se disuelve el equipo.
+     El modelo orientado a producto, tiene un equipo de trabajo interdisciplinario que maneja todos los
+     aspectos necesarios para el desarrollo del producto. Toman responsabilidad por el producto y no por las
+     funcionalidades.
+
+    The traditional model is that you take your software to the wall that separates development and operations, and
+    throw it over and then forget about it. Not at Amazon. You build it, you run it. This brings developers into contact
+    with the day-to-day operation of their software.
+    — Werner Vogels, Amazon CTO, 2006
+
+
+
+
+                                                                                    Fuente: https://queue.acm.org/detail.cfm?id=1142065
+
+Microservicios (73.40)                                                                                                              15
+
+===== PAGINA 16 =====
+
+ Microservicios: Descentralización de las DB
+
+
+
+
+                                     Fuente: https://martinfowler.com/articles/microservices.html
+
+Microservicios (73.40)                                                                        16
+
+===== PAGINA 17 =====
+
+ Microservicios: Automatización (CI/CD)
+
+
+
+
+                                    Fuente: https://martinfowler.com/articles/microservices.html
+
+Microservicios (73.40)                                                                       17
+
+===== PAGINA 18 =====
+
+ Microservicios: Pros/Cons
+ Pros                             Cons
+     ✅ Strong Module Boundaries    ❌ Distribution
+     ✅ Independent Deployment      ❌ Eventual Consistency
+     ✅ Technology Diversity        ❌ Operational Complexity
+
+
+
+
+Microservicios (73.40)                                        18
+
+===== PAGINA 19 =====
+
+Criterios Básicos de diseño
+
+===== PAGINA 20 =====
+
+ Principios universales en desarrollo
+ Bajo acoplamiento:
+     El acoplamiento se define como la dependencia
+     que tiene un servicio de otro. El cambio en un
+     servicio no depende del cambio en otro servicio.
+     Un sistema de intercambio de mensajes que
+     requiera que para agregar un campo más en un
+     mensaje se debe cambiar a todos los posibles
+     receptores, tiene alto acoplamiento.
+     Un sistema que no depende de la estructura del
+     mensaje y donde todos los posibles receptores
+     puedan ignorar los campos que no necesitan,
+     tiene bajo acoplamiento.
+
+
+
+
+Microservicios (73.40)                                  20
+
+===== PAGINA 21 =====
+
+ Un ejemplo concreto de acoplamiento
+ Un servicio de Pedidos publica un evento cuando se       // Evento OrderConfirmed
+ confirma una compra. Queremos agregar un campo           {
+                                                            "orderId": "A-1029",
+ couponCode.                                                "customerId": "8841",
+                                                            "total": 4200.00,
+ Alto acoplamiento: el mensaje es un contrato               "couponCode": "ITBA10" // nuevo campo
+ rígido (ej. un schema estricto sin campos opcionales).   }
+ Cada consumidor debe recompilar y redesplegar
+                                                          Los consumidores que solo leen orderId y total
+ antes de que el productor pueda publicar el nuevo
+                                                          no se rompen con el campo nuevo: esa tolerancia
+ campo.
+                                                          es lo que baja el acoplamiento.
+ Bajo acoplamiento: el consumidor ignora los
+ campos que no conoce. El productor agrega
+ couponCode y despliega solo; nadie más se entera
+ hasta que decida usarlo.
+
+
+
+
+Microservicios (73.40)                                                                                      21
+
+===== PAGINA 22 =====
+
+ Principios universales en desarrollo
+ Alta cohesión
+     Se denomina la cohesión como qué tan
+     relacionadas están todas las tareas de un servicio        We want to design components that are self-
+     para con el objetivo específico de ese servicio.          contained: independent, and with a single, well-
+     Una alta cohesión simplifica el mantenimiento de          defined purpose
+     un servicio, ya que todo lo que necesito para ese
+     servicio se encuentra en un mismo lugar.
+                                                               When you come across a problem, assess how
+     Dentro de Microservicios este concepto es clave           localized the fix is. Do you change just one module, or
+     para asegurar la facilidad para actualizar los            are the changes scattered throughout the entire
+     servicios en forma continua e independiente.              system? When you make a change, does it fix
+                                                               everything, or do other problems mysteriously arise?
+                                                               — The Pragmatic Programmer
+
+
+                                                          Fuente: https://pragprog.com/titles/tpp20/the-pragmatic-programmer-20th-anniversary-
+                                                                                                                                      edition/
+
+Microservicios (73.40)                                                                                                                     22
+
+===== PAGINA 23 =====
+
+ Still SOLID…
+ Robert C. Martin planteó el criterio de diseño SOLID para una arquitectura OO:
+     Single Responsability Principle: Cada servicio se ocupa de una sóla función.
+     Open-Close Principle: Cada servicio que requiera una modificación debe ser extendido, no re hecho.
+     Liskov Substitution Principle: Este principio habla del concepto de herencia entre objetos, el rol padre-
+     hijo entre objetos y que la interfaz de padre es la que debe aplicarse a cualquier reemplazo.
+     Interface Segregation Principle: Mantener las APIs simples para que cada cliente pueda usar la parte
+     que necesite.
+     Dependency Inversion Principle: Depender de abstracciones, no de los detalles.
+
+
+
+
+                                                                                                                                    Fuente:
+                                                      https://web.archive.org/web/20150906155800/http:/www.objectmentor.com/resources/ar
+                                                                                                         ticles/Principles_and_Patterns.pdf
+
+Microservicios (73.40)                                                                                                                  23
+
+===== PAGINA 24 =====
+
+ La ley de Conway
+     Melvin Conway dijo en 1967 que: los sistemas
+     tienden a organizarse de la misma manera que se
+     definen los flujos de comunicación entre áreas
+     funcionales en las empresas.
+     Los dominios que mencionamos antes tienden a
+     seguir este mismo principio.                      Any organization that designs a system (defined
+                                                       broadly) will produce a design whose structure is a
+                                                       copy of the organization’s communication structure.
+                                                       — Melvin E. Conway
+
+
+
+
+Microservicios (73.40)                                                                                       24
+
+===== PAGINA 25 =====
+
+ Business Capabilities
+     Si hablamos de definir un contrato entre contextos,
+     es importante no limitar ese contrato a solamente
+     el intercambio de datos (operaciones CRUD).
+     Debo hacerme la pregunta: ¿Qué capacidades
+     tiene ese contexto y quiero que me brinde?
+     Al pedir capacidades y no datos, estos bajando el
+     acoplamiento y aumentando la cohesión para
+     ese contexto.
+
+
+
+
+Microservicios (73.40)                                     25
+
+===== PAGINA 26 =====
+
+ Límites y más límites
+     Cada vez que se define un contexto, podemos
+     mirar dentro del contexto y ver que los modelos
+     también tiene interfaces con otros modelos, de
+     modo que podríamos generar sub contextos y
+     volver separar estos modelos en sus propios
+     dominios.
+     Un servicio debería implementar pocos
+     requerimientos funcionales. Si tiene muchos,
+     probablemente deba dividirse.
+
+
+
+
+Microservicios (73.40)                                 26
+
+===== PAGINA 27 =====
+
+ Otros métodos de descomposición
+     Recién vimos el método de descomposición por
+     contextos, pero existen otros métodos de
+     descomposición:
+         Por funcionalidad
+         Por madurez
+         Por patrones de acceso a los datos
+
+     Funcionalidad y madurez son más usados en
+     procesos de refactoring de aplicaciones
+                                                    ⬇
+     monolíticas.
+
+
+
+
+Microservicios (73.40)                                  27
+
+===== PAGINA 28 =====
+
+No siempre se puede con
+Microservicios
+
+===== PAGINA 29 =====
+
+ Sólo importa el valor al negocio
+     Todos los beneficios que vimos en los casos no se implementaron para hacer aplicaciones más robustas,
+     más dinámicas o más estables.
+     La única justificación para su implementación es aportar valor al negocio.
+         Unos negocios necesitan aplicaciones que se actualicen diariamente (Rappi). Otras, un release muy
+         estable cada varios meses (Leistung).
+         Algunas empresas operan muy distribuidas (Waze) y otras muy centralizadas (Retail físico).
+         Equipos de trabajo chicos pueden trabajar mejor bajo un mismo alineamiento, que equipos muy
+         grandes, donde un liderazgo distribuido puede ser una mejor solución.
+
+     Los microservicios son un medio más para el diseño de sistemas adecuados para el negocio, no un fin en sí
+     mismos.
+
+
+
+
+Microservicios (73.40)                                                                                           29
+
+===== PAGINA 30 =====
+
+ Para discutir en clase
+ Para cada caso, decidí: ¿monolito o microservicios? y justificá con al menos uno de los criterios vistos
+ (equipo, frecuencia de release, escalamiento, distribución del negocio).
+
+    Caso                                                                                      ¿Monolito o microservicios?
+
+    Una fintech que lanza features nuevas todas las semanas con 6 equipos independientes      ?
+
+    Un sistema de facturación interno, un solo equipo de 4 personas, cambia 2 veces por año   ?
+
+    Una app de e-commerce donde el catálogo recibe 100x más tráfico que el checkout           ?
+
+    Una startup de 3 personas construyendo su primer MVP                                      ?
+
+ No hay una única respuesta correcta: lo importante es el criterio usado para justificarla.
+
+
+
+
+Microservicios (73.40)                                                                                                      30
+
+===== PAGINA 31 =====
+
+ Fallos al implementar Microservicios
+     Se deben implementar porque su naturaleza se
+     alinea mejor con los requerimientos del negocio,
+     no porque está de moda o es una tecnología cool.
+
+
+
+
+                                                        Fuente: https://www.infoq.com/articles/microservices-seven-fail/
+
+Microservicios (73.40)                                                                                               31
+
+===== PAGINA 32 =====
+
+ Fallos al implementar Microservicios
+     Las aplicaciones monolíticas distribuidas no son microservicios.
+     Distribuido no necesariamente significa desacoplado.
+     Muchos microservicios operando sobre el mismo dominio de datos. La independencia de cada
+     microservicios debe ser lo más completa posible (front, backend y datos) para asegurar su éxito.
+     Sistemas real-time o donde la coordinación es crítica, no son buenos casos de éxito para los microservicios.
+
+
+
+
+                                                                         Fuente: https://www.infoq.com/articles/microservices-seven-fail/
+
+Microservicios (73.40)                                                                                                                32
+
+===== PAGINA 33 =====
+
+ Fallos al implementar Microservicios (cont.)
+     El contrato (acuerdo) entre el proveedor y el
+     consumidor. Cómo se define la interfaz y cómo se
+     generan los procesos de prueba para el
+     consumidor y el proveedor de un servicio. La
+     capacidad de coordinar en el diseño entre
+     equipos es crítica.
+     Este problema se resuelve con contract testing
+     (ej. Pact): cada consumidor define qué espera del
+     proveedor, y esas expectativas se verifican
+     automáticamente en el pipeline de CI de ambos
+     lados, sin necesidad de un entorno integrado end-
+     to-end.
+
+
+
+
+                                                         Fuente: https://www.infoq.com/articles/microservices-seven-fail/
+
+Microservicios (73.40)                                                                                                33
+
+===== PAGINA 34 =====
+
+ Fallos al implementar Microservicios (cont.)
+     La velocidad debe ser consistente entre equipos
+     para poder aprovechar la frecuencia y
+     metodología de despliegue de los Microservicios.
+
+
+
+
+                                                        Fuente: https://www.infoq.com/articles/microservices-seven-fail/
+
+Microservicios (73.40)                                                                                               34
+
+===== PAGINA 35 =====
+
+Framework genérico de un
+microservicio
+
+===== PAGINA 36 =====
+
+ Framework genérico
+ Este es un framework genérico que se adapta a la
+ gran mayoría de microservicios que se podrían
+ implementar.
+
+
+
+
+                                                    Fuente: https://martinfowler.com/articles/microservice-testing/#anatomy-modules
+
+Microservicios (73.40)                                                                                                          36
+
+===== PAGINA 37 =====
+
+ Framework genérico
+ Recursos:
+     Actúan como interfaz entre los requerimientos
+     recibidos por el protocolo externo y el mensaje a
+     los objetos internos del servicio.
+     Validan parámetros y dan formato a las respuestas.
+
+
+
+
+                                                          Fuente: https://martinfowler.com/articles/microservice-testing/#anatomy-modules
+
+Microservicios (73.40)                                                                                                                37
+
+===== PAGINA 38 =====
+
+ Framework genérico
+ Domain Model:
+     Implementa lógica de negocio.
+     El service layer coordina actividades complejas
+     que requieren mantener un estado.
+     Los repositories gestionan la persistencia de los
+     datos
+
+
+
+
+                                                         Fuente: https://martinfowler.com/articles/microservice-testing/#anatomy-modules
+
+Microservicios (73.40)                                                                                                               38
+
+===== PAGINA 39 =====
+
+ Framework genérico
+ Gateway:
+     Gestiona la lógica para las comunicaciones
+     salientes hacia otros servicios.
+     Sincronismo, encap/decap, autenticación.
+     Gestión de errores
+
+
+
+
+                                                  Fuente: https://martinfowler.com/articles/microservice-testing/#anatomy-modules
+
+Microservicios (73.40)                                                                                                        39
+
+===== PAGINA 40 =====
+
+ Framework genérico
+ Data Mapper/ORM:
+     Object relation mapping
+     Mantiene la persistencia sobre los objetos del
+     dominio.
+     Hace de interfaz entre el data store y los objetos
+     del servicio.
+
+
+
+
+                                                          Fuente: https://martinfowler.com/articles/microservice-testing/#anatomy-modules
+
+Microservicios (73.40)                                                                                                                40
+
+===== PAGINA 41 =====
+
+ Framework genérico
+
+
+
+
+                         Fuente: https://martinfowler.com/articles/microservice-testing/#anatomy-modules
+
+Microservicios (73.40)                                                                               41
+
+===== PAGINA 42 =====
+
+ Repaso: lo que nos tenemos que llevar
+     Microservicios = servicios independientes, con interfaces bien definidas, desplegables y escalables por
+     separado.
+     El objetivo nunca es la tecnología: es aportar valor al negocio (velocidad de entrega, escalamiento
+     selectivo, autonomía de equipos).
+     Los criterios de diseño clave son bajo acoplamiento y alta cohesión; SOLID, la ley de Conway y los
+     bounded contexts son herramientas para lograrlos.
+     No siempre es la mejor opción: monolitos distribuidos, dominios de datos compartidos y sistemas real-time
+     son señales de alerta.
+     Todo microservicio comparte una anatomía común: Resources, Domain Model, Gateways y Data
+     Mappers/ORM.
+
+
+
+
+Microservicios (73.40)                                                                                         42
+
+===== PAGINA 43 =====
+
+ Glosario
+     Acoplamiento: dependencia entre servicios.         Ley de Conway: la arquitectura del sistema
+     Cohesión: qué tan alineadas están las tareas de    refleja la estructura de comunicación de la
+     un servicio con su propósito.                      organización.
+     Bounded Context: límite dentro del cual un         Monolito distribuido: servicios separados en el
+     modelo de dominio es válido y consistente.         despliegue pero acoplados en los datos o en el
+     Contract testing: verificar el contrato entre      diseño.
+     consumidor y proveedor sin un entorno integrado.   Business capability: lo que un contexto puede
+                                                        hacer por otros, no solo los datos que expone.
+
+
+
+
+Microservicios (73.40)                                                                                    43
+
+===== PAGINA 44 =====
+
+Fin!!
+

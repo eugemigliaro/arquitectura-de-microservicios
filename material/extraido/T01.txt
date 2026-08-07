@@ -1,0 +1,362 @@
+FUENTE: T01
+TITULO: Presentación de la materia
+ORIGINAL: material/catedra/teoria/Presentación de la Materia - Slidev.pdf
+PAGINAS: 25
+
+===== PAGINA 1 =====
+
+Arquitectura de
+Microservicios con
+Contenedores
+— Ing. Federico Castañeda
+— Ing. Carlos Maceira
+— Ing. Franco Rupnik
+
+
+
+
+                            Arquitectura de Microservicios
+                                                     Docentes:
+                                                           2026
+
+===== PAGINA 2 =====
+
+ Objetivo de la clase de hoy
+     Presentación
+     Organización de la materia y contenidos
+     Introducción a la Arquitectura de Microservicios
+     Introducción a la Tecnologías de Microservicios
+     Setup del ambiente de trabajo
+
+
+
+
+Microservicios (73.40)                                  2
+
+===== PAGINA 3 =====
+
+ El equipo
+     Federico Castañeda, fcastaneda@itba.edu.ar
+     Ingeniero Informático (primera colación   😀 ), ITBA
+     Arquitecto de Software, Arquitecto AI, Lead DevOps.
+     Arquitecto de Seguridad, CISO, preventa, Consultor en seguridad, Arquitecto Cloud
+     Docente en la facultad en grado (Informática General, Microservicios, DevOps, Sistemas Multiagentes)
+
+
+
+
+Microservicios (73.40)                                                                                      3
+
+===== PAGINA 4 =====
+
+ El equipo
+     Carlos Maceira, cmaceira@itba.edu.ar
+     Ingeniero en Informática (FIE - UNDEF).
+     Análisis e implementación de infraestructura cloud. Participó en el desarrollo de microservicios de
+     procesamiento de pagos.
+     Docente en la ITBA por 3 años en grado. Informática General y Arquitectura de microservicios
+     Docente en otras facultades FIE, UTN en networking y programación.
+
+
+
+
+Microservicios (73.40)                                                                                     4
+
+===== PAGINA 5 =====
+
+ El equipo
+     Franco Rupnik, frupnik@itba.edu.ar
+     Ingeniero Informático, ITBA
+     Desarrollador backend centrado en IA en Accenture por 1 año y medio. Participó en el análisis y mejora de
+     microservicios internos de la empresa.
+     Actualmente desarrollador backend para Mendel, integrando Agentes en Python con un ecosistema de
+     microservicios totalmente en Java.
+     Ayudante en la facultad en la cátedra de Microservicios.
+
+
+
+
+Microservicios (73.40)                                                                                           5
+
+===== PAGINA 6 =====
+
+ Objetivo de esta materia:
+ Darle a los alumnos las herramientas para diseñar y crear una arquitectura basada en microservicios.
+ Los alumnos que completen exitosamente la currícula podrán desarrollar e implementar aplicaciones
+ haciendo uso de herramientas como contenedores, servicios de balanceo y alta disponibilidad con
+ contenedores, procesos de CI/CD, observabilidad y seguridad.
+
+
+
+
+Microservicios (73.40)                                                                                  6
+
+===== PAGINA 7 =====
+
+ Metodología de evaluación
+ Cursada
+     Parciales: Teóricos y prácticos, basados en los temas vistos en clase o en las lecturas relacionadas. Se
+     aprueban con 5.
+         Cierran cada módulo
+
+     Tres entregas de avance del trabajo final
+         Diseño
+         Arquitectura
+         CI/CD
+
+     Nota de cursada: Promedio de parciales (60%) + Entregas Trabajo Final (40%)
+
+ Final
+     Final Integrado: Trabajo integral demostrando los conocimientos adquiridos a lo largo de la materia. Se
+     aprueba con 7.
+
+
+Microservicios (73.40)                                                                                          7
+
+===== PAGINA 8 =====
+
+ Recursos adicionales
+     Guías prácticas reducidas para aplicar los conceptos teóricos vistos en clase. No se evalúan, pero se
+     recomienda su implementación.
+     Lecturas complementarias.
+     Uso de AI para el análisis y generacion de código.
+
+
+
+
+Microservicios (73.40)                                                                                       8
+
+===== PAGINA 9 =====
+
+Contenido de la materia
+
+===== PAGINA 10 =====
+
+ Cronograma
+    Módulo                     Clase   Temas Principales
+
+    I: Fundamentos, Diseño y           Análisis y Diseño Estratégico (DDD): Microservicios vs. Monolitos, Bounded
+                               1
+    Construcción                       Contexts y EventStorming (Agregados, Comandos y Eventos).
+
+                                       Contenedores y Optimización: Namespaces, Cgroups, Volúmenes, Dockerfiles,
+                               2
+                                       Multi-stage builds y seguridad de imágenes.
+
+                                       Orquestación Local y Testing: Docker Compose, ambientes homogéneos,
+                               3
+                                       verificación de interfaces, Stub servers y gestión de dependencias.
+
+                                       CI/CD de Contenedores: Pipelines de integración, Testing post-deploy, Linting
+                               4
+                                       (Hadolint) y estrategias de versionado (SemVer, SHA).
+
+
+
+
+Microservicios (73.40)                                                                                                 10
+
+===== PAGINA 11 =====
+
+ Cronograma
+    Módulo                        Clase   Temas Principales
+
+    II: Comunicación y Sistemas           Patrones de Comunicación: Síncrono (REST/gRPC) vs. Asíncrono, Event-Driven y
+                                  5
+    Distribuidos                          Patrón Saga para transacciones distribuidas.
+
+                                          Middleware de Mensajería (Kafka): Arquitectura (Topics, Partitions, Brokers),
+                                  6
+                                          Consumer Groups, CQRS y garantías de entrega.
+
+                                          Caché y Estado Distribuido: Redis, estructuras de datos, patrones Cache-Aside y
+                                  7
+                                          Write-Through, y Rate Limit distribuido.
+
+
+
+
+Microservicios (73.40)                                                                                                      11
+
+===== PAGINA 12 =====
+
+ Cronograma
+    Módulo                  Clase   Temas Principales
+
+    III: Orquestación con           Fundamentos de K8s: Arquitectura (Control/Data Plane), Pods, Deployments,
+                            8
+    Kubernetes                      Services e identificación por DNS interno.
+
+                                    Configuración y Acceso: Volúmenes (EKS/Minikube), Statefulsets, Helm Charts, API
+                            9
+                                    Gateways (Nginx/Traefik) y Secretos/ConfigMaps.
+
+                                    GitOps y Entrega Continua: Principios de GitOps, herramientas (ArgoCD/Flux) y
+                            10
+                                    automatización de despliegues vía repositorios Git.
+
+
+
+
+Microservicios (73.40)                                                                                                 12
+
+===== PAGINA 13 =====
+
+ Cronograma
+    Módulo               Clase   Temas Principales
+
+    IV: Operaciones y            Observabilidad Integral: Logs, Métricas y Trazas. OpenTelemetry, Jaeger, Prometheus
+                         11
+    Evolución                    y Grafana.
+
+                                 Escalabilidad y Resiliencia: HPA/VPA, Affinity/Antiaffinity, Node Autoscaling, Feature
+                         12
+                                 Flagging y Circuit Breakers.
+
+                                 Service Mesh y Seguridad: Istio/Linkerd, Canary Deployments, Mirroring de tráfico,
+                         13
+                                 mTLS (Zero Trust) y microsegmentación.
+
+                                 Serverless y Cierre: Arquitectura FaaS, coordinación de eventos en la nube y
+                         14
+                                 comparativa final: Contenedores vs. Serverless.
+
+
+
+
+Microservicios (73.40)                                                                                                    13
+
+===== PAGINA 14 =====
+
+ Bibliografía Principal
+
+
+
+
+Microservicios (73.40)    14
+
+===== PAGINA 15 =====
+
+ Discord
+     Canal de comunicación para consultas técnicas
+     offline.
+     No és el canal oficial de comunicación. Temas
+     administrativos o notas sólo vía mail/campus.
+     Best-Effort
+     Canal colaborativo, se pueden ayudar entre
+     ustedes.
+
+                                                     https://discord.gg/ZeDmAG3Tn
+
+
+
+
+Microservicios (73.40)                                                              15
+
+===== PAGINA 16 =====
+
+Contenido de la materia
+
+===== PAGINA 17 =====
+
+ Fundamentos, diseño y construcción
+     Análisis y diseño estratégico (DDD): microservicios vs monolitos, bounded contexts, tecnica Event Storming
+     Contenedores y optimización: funcionamiento interno, buenas practicas de dockerfiles, capas y multi-stage
+     builds, seguridad básica.
+     Orquestacion local y testing de interfaces: Docker compose para desarrollo. Ambiente de testing.
+     Verificacion de interfaces y stub servers. Dependencias entre servicios
+     CI/CD de contenedores: Pipelines, shift left testing, linting de codigo, versionado de imágenes.
+
+
+
+
+Microservicios (73.40)                                                                                           17
+
+===== PAGINA 18 =====
+
+ Comunicación y sistemas distribuidos
+     Patrones de comunicación: sincronico vs asincronico, sistemas basados en eventos, saga.
+     Middleware de mensajeria: arquitectura de kafka, patrones de kafka, garantias de entrega.
+     Cache y estado distribuido: base de datos de estructuras de datos. Patrones.
+
+
+
+
+Microservicios (73.40)                                                                           18
+
+===== PAGINA 19 =====
+
+ Orquestación de Contenedores con Kubernetes
+     Fundamentos de Kubernetes: arquitectura del cluster. Objetos primitivos. Service discovery.
+     Configuración avanzada y acceso: gestión de paquetes con helm, ingress controllers, gestión de secretos y
+     configMaps.
+     GItOps y entrega continua: principios de gitops, herramientas, testing de integracion.
+
+
+
+
+Microservicios (73.40)                                                                                           19
+
+===== PAGINA 20 =====
+
+ Operaciones y evolución
+     Observabilidad integral: tres pilares, tracing distribuido, monitoreo.
+     Escalabilidad y resiliencia: autoscaling, feature flagging, circuit breakers
+     Service mesh y seguridad: concepto de mesh, gestion de trafico, mTLS.
+     Serverless: arquitectura FaaS, coordinación y eventos cloud, contenedores vs serverless.
+
+
+
+
+Microservicios (73.40)                                                                          20
+
+===== PAGINA 21 =====
+
+ Microservicios en Serverless
+     Introducción a la arquitectura serverless para microservicios.
+     Fundamentos teóricos y aplicación práctica en entornos reales.
+     Conceptos clave de arquitectura Lambda: funcionamiento, gestión de red y uso de namespaces para
+     organización y aislamiento de servicios.
+     Exploración del ecosistema serverless en AWS: diseño, despliegue y operación de soluciones basadas en
+     funciones como servicio.
+     Implementación práctica: coreografía de microservicios con AWS Lambda, enfrentando desafíos y
+     aprovechando ventajas del enfoque serverless.
+
+
+
+
+Microservicios (73.40)                                                                                       21
+
+===== PAGINA 22 =====
+
+Evaluación de la materia
+
+===== PAGINA 23 =====
+
+ Requisitos de aprobación de la cursada
+     Aprobar el parcial sobre el módulo de diseño. (45%)
+     Aprobar las entregas parciales del trabajo práctico final. (45%)
+     Obtener concepto positivo en asistencia y participación en clase. (10%)
+     Nota mínima de aprobación: 5
+
+
+
+
+Microservicios (73.40)                                                         23
+
+===== PAGINA 24 =====
+
+ Requisito de aprobación final
+     Entregar y aprobar el trabajo práctico final, cumpliendo al menos con el 70% de los requerimientos
+     solicitados.
+     Nota mínima de aprobación: 5
+
+
+
+
+Microservicios (73.40)                                                                                    24
+
+===== PAGINA 25 =====
+
+Fin!!
+

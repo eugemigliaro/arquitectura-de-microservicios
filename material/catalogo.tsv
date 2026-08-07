@@ -1,1 +1,4 @@
 id	tipo	titulo	ruta	paginas	ciclo	estado	archivo_original
+T01	presentacion	Presentación de la materia	material/catedra/teoria/Presentación de la Materia - Slidev.pdf	25	2026	vigente	Presentación de la Materia - Slidev.pdf
+T02	teoria	Conceptos acerca de microservicios	material/catedra/teoria/Conceptos acerca de Microservicios - Slidev.pdf	44	2026	vigente	Conceptos acerca de Microservicios - Slidev.pdf
+T03	teoria	Domain-Driven Design	material/catedra/teoria/Domain-Driven Design - Slidev.pdf	58	2026	vigente	Domain-Driven Design - Slidev.pdf

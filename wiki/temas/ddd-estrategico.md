@@ -65,4 +65,4 @@ Señales de un buen límite:
 
 Antipatrones relacionados son los servicios por tabla, la base compartida, un shared kernel excesivo, un “PedidoService” global y adoptar sin ACL un modelo externo que contamina el core. [T03, p. 33]
 
-La estructura interna y el descubrimiento colaborativo de estos límites continúan en [DDD táctico y EventStorming](ddd-tactico-y-eventstorming.md).
+La estructura interna y el descubrimiento colaborativo de estos límites continúan en [DDD táctico y EventStorming](ddd-tactico-y-eventstorming.md). Para aplicar estos criterios, [Práctica de DDD](practica-ddd.md) distingue una resolución 2025 de un ejercicio abierto 2026; la [lectura complementaria](ddd-complementario.md) se mantiene separada por ser una fuente externa.

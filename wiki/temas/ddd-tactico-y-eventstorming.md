@@ -62,3 +62,9 @@ El relato recorre una compra desde Ventas a Operaciones, Facturación y Logísti
 **Síntesis de estudio:** el resultado útil no es la cantidad de notas adhesivas, sino un lenguaje explícito por contexto, aggregates que contienen invariantes, eventos que narran hechos y un mapa de integraciones. El material resume esta relación como “Command in / Event out” y usa los BC como candidatos —no equivalencias obligatorias— a microservicios. [T03, p. 54] [T03, p. 31]
 
 Los eventos y fronteras descubiertos preparan los temas siguientes: comunicación síncrona/asíncrona y sagas; Kafka y garantías; gateways y contratos; resiliencia, compensación y consistencia eventual. [T03, p. 56]
+
+## Materiales de práctica relacionados
+
+La resolución 2025 de Pedidos contiene diagramas de camino feliz, fallos y detalle por dominio; su partición separa Créditos de Cobros y por eso no debe reemplazar silenciosamente el modelo 2026 de esta página. [P01, p. 7] [P01, p. 10] [P01, p. 11]
+
+El ejercicio Huella no trae solución: exige detectar lenguaje conflictivo, clasificar subdominios, proponer bounded contexts, dibujar un context map, modelar el Core y construir commands, eventos y un EventStorming mínimo. [P02, p. 6] [P02, p. 7] [P02, p. 8] El detalle de ambos materiales está en [Práctica de DDD](practica-ddd.md).

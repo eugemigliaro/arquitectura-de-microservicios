@@ -2,3 +2,9 @@ id	tipo	titulo	ruta	paginas	ciclo	estado	archivo_original
 T01	presentacion	Presentación de la materia	material/catedra/teoria/Presentación de la Materia - Slidev.pdf	25	2026	vigente	Presentación de la Materia - Slidev.pdf
 T02	teoria	Conceptos acerca de microservicios	material/catedra/teoria/Conceptos acerca de Microservicios - Slidev.pdf	44	2026	vigente	Conceptos acerca de Microservicios - Slidev.pdf
 T03	teoria	Domain-Driven Design	material/catedra/teoria/Domain-Driven Design - Slidev.pdf	58	2026	vigente	Domain-Driven Design - Slidev.pdf
+T04	teoria	Linux y contenedores	material/catedra/teoria/Linux y Contenedores - Slidev.pdf	41	2026	vigente	Linux y Contenedores - Slidev.pdf
+T05	laboratorio	Demo: construyendo un container a mano	material/catedra/teoria/Demo_ construyendo un container a mano - Slidev.pdf	59	2026	vigente	Demo_ construyendo un container a mano - Slidev.pdf
+P01	resolucion	Ejercicio DDD: Pedidos — resolución	material/catedra/practica/Ejercicio DDD  - Pedidos Resolucion.pdf	16	2025	vigente	Ejercicio DDD  - Pedidos Resolucion.pdf
+P02	ejercicio	Ejercicio de DDD: Huella	material/catedra/practica/Ejercicio de DDD — “Huella”.pdf	10	2026	vigente	Ejercicio de DDD — “Huella”.pdf
+E01	consigna	Requerimientos funcionales: Álbum de Figuritas Mundial 2026	material/catedra/practica/consigna-funcional-v1-1.pdf	7	2026	vigente-v1.1	consigna-funcional-v1-1.pdf
+B01	bibliografia	Modern Domain-Driven Design Guide	material/externo/Modern Domain-Driven Design Guide.pdf	17		complementaria	Modern Domain-Driven Design Guide.pdf

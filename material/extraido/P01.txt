@@ -1,0 +1,219 @@
+FUENTE: P01
+TITULO: Ejercicio DDD: Pedidos — resolución
+ORIGINAL: material/catedra/practica/Ejercicio DDD  - Pedidos Resolucion.pdf
+PAGINAS: 16
+
+===== PAGINA 1 =====
+
+                                      Resolución
+
+
+
+Arquitectura de Microservicios 2025
+
+===== PAGINA 2 =====
+
+     Conversación acerca de un proceso...
+     Se reúnen los gerentes de Ventas, Logística, Operaciones y Facturación para diseñar un
+     sistema.
+
+
+
+
+Arquitectura de Microservicios 2025
+
+===== PAGINA 3 =====
+
+     Requerimentos
+     Cada uno cuenta lo que el sistema debe hacer, desde su punto de vista:
+      ●      Gte. Ventas:
+               ○    Cuando el usuario presiona el botón de comprar, se genera un pedido con los ítems que se
+                    necesitan y la cantidad.
+      ●      Gte Operaciones:
+               ○    Cuando se recibe un pedido, se veriﬁca si todos los ítems solicitados están disponibles y se lo
+                    aprueba, reservando los ítems en el inventario.
+      ●      Gte. Facturación:
+               ○    Los pedidos aprobados se facturan y se manda a cobrar por tarjeta. El sistema de cobros
+                    tarda, así que cuando está listo, se pone el pedido como pagado, y se le pasa a Logística.
+      ●      Gte Logística:
+               ○    Los pedidos pagados se programan para ser enviados, y se despachan. Una vez que se
+                    conﬁrma la recepción, se le informa a ventas.
+
+
+Arquitectura de Microservicios 2025
+
+===== PAGINA 4 =====
+
+     Requerimentos
+
+     Qué pasa si algo falla?
+      ●      Gte Operaciones:
+               ○    Si no hay suﬁciente inventario se rechaza el pedido.
+               ○    Sí facturación rechaza un pedido se libera el inventario.
+               ○    Sí Logística devuelve un pedido, se actualiza el inventario.
+      ●      Gte. Facturación:
+               ○    Si el cobro falla, se rechaza el pedido, informando a operaciones.
+      ●      Gte Logística:
+               ○    Si no se puede entregar, se devuelve el operaciones los ítems, se informa a facturación y a
+                    ventas.
+      ●      Gte. Facturación:
+               ○    Si el envío falla, asigna un crédito por lo pagado.
+
+
+Arquitectura de Microservicios 2025
+
+===== PAGINA 5 =====
+
+     1. Identiﬁcamos entidades
+
+      ●      Gte. Ventas:
+               ○    Cuando el usuario presiona el botón de comprar, se genera un pedido con los ítems que se
+                    necesitan y la cantidad.
+      ●      Gte Operaciones:
+               ○    Cuando se recibe un pedido, se veriﬁca si todos los ítems solicitados están disponibles y se lo
+                    aprueba, reservando los ítems en el inventario.
+      ●      Gte. Facturación:
+               ○    Los pedidos aprobados se facturan y realiza un cobro por tarjeta. El sistema de cobros tarda,
+                    así que cuando está listo, se pone el pedido como pagado, y se le pasa a Logística.
+      ●      Gte Logística:
+               ○    Los pedidos pagados se programan en un envío, y se despachan. Una vez que se conﬁrma la
+                    recepción, se le informa a ventas.
+
+
+
+Arquitectura de Microservicios 2025
+
+===== PAGINA 6 =====
+
+     1. Identiﬁcamos entidades
+
+      ●      Gte Operaciones:
+               ○    Si no hay suﬁciente inventario se rechaza el pedido.
+               ○    Sí facturación rechaza un pedido se libera el inventario.
+               ○    Sí Logística devuelve un pedido, se actualiza el inventario.
+      ●      Gte. Facturación:
+               ○    Si el cobro falla, se rechaza el pedido, informando a operaciones.
+      ●      Gte Logística:
+               ○    Si no se puede realizar el envío (no se puede entregar), se devuelve el operaciones los ítems,
+                    se informa a facturación y a ventas.
+      ●      Gte. Facturación:
+               ○    Si el envío falla, asigna un crédito por lo pagado.
+
+
+
+Arquitectura de Microservicios 2025
+
+===== PAGINA 7 =====
+
+     2. Deﬁnimios dominios
+
+
+
+
+   Los ítems no existen sin un
+   pedido en este dominio
+
+
+Arquitectura de Microservicios 2025
+
+===== PAGINA 8 =====
+
+     3. Deﬁnimos un lenguaje común
+
+      ●      Pedido:
+               ○    Representa una compra realizada por el usuario
+               ○    Posee los datos del comprador. Id del comprador, dirección de envío y tarjeta de crédito.
+               ○    Posee uno o más ítems
+      ●      Ítem:
+               ○    Elemento de un pedido.
+               ○    Incluye un número de artículo
+               ○    Incluye la cantidad de ese artículo en el pedido
+      ●      Inventario:
+               ○    Listado con todos los artículos y su cantidad existente en el depósito
+
+
+
+
+Arquitectura de Microservicios 2025
+
+===== PAGINA 9 =====
+
+     3. Deﬁnimos un lenguaje común
+
+      ●      Envío:
+               ○    Representa un paquete en tránsito con todos los artículos del pedido.
+               ○    Se envía a la dirección indicada en el pedido.
+               ○    Incluye información del pedido y del cobro.
+      ●      Cobro:
+               ○    Representa al acto de cobrar el total del valor del envío.
+               ○    Usa la tarjeta de crédito existente el en pedido.
+               ○    Puede rechazarse el cobro por falta de fondos.
+      ●      Crédito:
+               ○    Representa el crédito disponible del cliente.
+
+
+
+
+Arquitectura de Microservicios 2025
+
+===== PAGINA 10 =====
+
+     4. EventStorm: Happy path
+
+
+
+
+Arquitectura de Microservicios 2025
+
+===== PAGINA 11 =====
+
+     4. EventStorm: Con todas las opciones
+
+
+
+
+Arquitectura de Microservicios 2025
+
+===== PAGINA 12 =====
+
+     5. Detalle por dominio: Inventario
+
+
+
+
+Arquitectura de Microservicios 2025
+
+===== PAGINA 13 =====
+
+     5. Detalle por dominio: Cobros
+
+
+
+
+Arquitectura de Microservicios 2025
+
+===== PAGINA 14 =====
+
+     5. Detalle por dominio: Envíos
+
+
+
+
+Arquitectura de Microservicios 2025
+
+===== PAGINA 15 =====
+
+     5. Detalle por dominio: Créditos
+
+
+
+
+Arquitectura de Microservicios 2025
+
+===== PAGINA 16 =====
+
+        Fin!!
+
+
+Arquitectura de Microservicios 2025
+

@@ -1,0 +1,405 @@
+FUENTE: E01
+TITULO: Requerimientos funcionales: Álbum de Figuritas Mundial 2026
+ORIGINAL: material/catedra/practica/consigna-funcional-v1-1.pdf
+PAGINAS: 7
+
+===== PAGINA 1 =====
+
+Requerimientos Funcionales: Álbum de Figuritas Mundial 2026
+Este documento especifica los requerimientos funcionales que la plataforma debe implementar, desde el punto
+de vista de cada actor que interactúa con ella. Todos los requerimientos listados en este documento
+son obligatorios: deben implementarse y ser demostrables en la entrega final.
+Versión: 1.1
+
+Changelog
+1.1
+  • Se aclara la diferencia entre publicar una oferta y apartar una copia.
+  • Se permite que una misma copia ofrecible respalde varias ofertas activas simultáneamente.
+  • Una copia pasa a estado apartada únicamente cuando una aceptación inicia el intento de concretar un
+    intercambio.
+  • Se aclaran los casos de concurrencia entre ofertas respaldadas por una misma copia.
+  • Se definen los criterios de ranking.
+
+
+
+1. Glosario mínimo
+
+Término                                                 Significado
+Figurita                                                Tipo del catálogo de la edición. Se identifica por su
+                                                        número único dentro de la edición (por ejemplo,
+                                                        Argentina 8).
+Copia                                                   Unidad poseída por un usuario de una figurita. Un
+                                                        usuario puede tener cero, una o varias copias de la
+                                                        misma figurita.
+Sobre                                                   Paquete cerrado, propiedad de un usuario, que al
+                                                        abrirse acredita copias en su colección.
+Colección                                               Conjunto de copias de un usuario, con cantidades por
+                                                        figurita.
+Repetida                                                Copia extra: el usuario tiene más de una copia de esa
+                                                        figurita.
+Disponible                                              Copia que el usuario posee y que no está apartada.
+                                                        Un sobre está disponible si pertenece al usuario y
+                                                        todavía no fue abierto.
+Apartada                                                Copia temporalmente reservada para un intento de
+                                                        intercambio en curso. Mientras está apartada, no
+                                                        puede ser utilizada ni transferida por otra operación.
+                                                        La publicación de una oferta, por sí sola, no aparta la
+                                                        copia.
+Ofrecible                                               Copia disponible y repetida (nunca la última copia
+                                                        de una figurita). Es la única condición bajo la cual
+                                                        una copia puede publicarse en una oferta. Una
+                                                        misma copia ofrecible puede respaldar varias ofertas
+                                                        activas simultáneamente, sin que eso represente
+                                                        copias ni reservas adicionales.
+Oferta                                                  Publicación de un coleccionista que propone entregar
+                                                        copias a cambio de otras.
+Operador                                                Persona de soporte que inspecciona el estado de
+                                                        operaciones, ofertas y reservas.
+
+
+
+                                                    1
+
+===== PAGINA 2 =====
+
+Invariante de cantidades, para cada usuario y cada figurita:
+poseídas = disponibles + apartadas
+repetidas = max(poseídas - 1, 0)
+ofrecibles = max(disponibles - 1, 0)
+poseídas >= 0, disponibles >= 0, apartadas >= 0
+La figurita cuenta para el álbum si poseídas >= 1, aunque alguna copia extra esté apartada.
+Una oferta activa es una intención de intercambio y no modifica estas cantidades. El apartado ocurre recién
+cuando una aceptación inicia un intento de intercambio: la copia pasa temporalmente de disponibles a
+apartadas hasta que se transfiere o se libera.
+Por ejemplo, si un usuario posee dos copias de Messi, una cuenta para su álbum y la segunda es ofrecible. Esa
+misma copia puede respaldar simultáneamente las ofertas Messi por Ronaldo, Messi por Neymar y Messi por
+Yamal. Las tres ofertas pueden coexistir, pero no representan tres copias ni tres reservas.
+
+
+
+2. Actores
+
+Actor                                Descripción                          Cómo interactúa
+Coleccionista (Usuario)              Persona que participa del álbum:     Se autentica con su cuenta de
+                                     abre sobres, arma su colección,      Google (login real). El sistema
+                                     publica y acepta intercambios,       identifica al usuario a partir de esa
+                                     progresa en retos.                   identidad autenticada.
+Operador (Administrador)             Persona de soporte de la             Se autentica con su cuenta de
+                                     plataforma, sin rol de jugador.      Google; su rol de operador debe
+                                     Inspecciona el estado de             estar asignado explícitamente en
+                                     operaciones para detectar            la plataforma. No juega ni posee
+                                     problemas (copias apartadas          colección.
+                                     indebidamente, ofertas trabadas).
+Sistema (automático)                 No es una persona, pero ejecuta      Disparado por tiempo o por
+                                     comportamiento funcional             eventos de negocio, sin
+                                     autónomo: vencimiento de ofertas,    intervención humana.
+                                     otorgamiento de recompensas,
+                                     actualización de progreso. Se
+                                     incluye porque genera resultados
+                                     que el Coleccionista y el Operador
+                                     observan.
+
+
+
+
+3. Requerimientos funcionales por actor
+Todos los requerimientos listados a continuación deben implementarse y ser demostrables en la entrega.
+
+3.1 Autenticación (todos los actores)
+  • RF-A01 Todo usuario debe autenticarse con su cuenta de Google (login real, mediante OAuth 2.0 /
+    OpenID Connect) antes de poder usar cualquier funcionalidad de la plataforma.
+  • RF-A02 La primera vez que una cuenta de Google autenticada accede a la plataforma, el sistema crea
+    automáticamente su álbum y le acredita los sobres de regalo inicial.
+  • RF-A03 Toda acción sobre la colección, los sobres o las ofertas de un usuario solo puede ser ejecutada
+    por ese mismo usuario autenticado; ninguna operación puede realizarse en nombre de otro usuario.
+
+
+
+                                                     2
+
+===== PAGINA 3 =====
+
+  • RF-A04 El rol de Operador se asigna explícitamente a cuentas de Google específicas. Una cuenta
+    autenticada sin ese rol no puede acceder a las funciones de inspección de operador.
+  • RF-A05 Una solicitud sin una sesión válida (token ausente, inválido o expirado) se rechaza sin ejecutar
+    ninguna operación de negocio.
+
+3.2 Coleccionista
+Álbum y colección
+  • RF-01 El usuario puede consultar su colección, viendo por figurita: si la posee, cuántas copias tiene,
+    cuántas son repetidas y cuántas están disponibles para intercambiar.
+  • RF-02 El usuario puede consultar qué porcentaje del álbum completó.
+  • RF-03 El usuario puede ver cuáles figuritas le faltan.
+  • RF-04 La colección refleja de inmediato cualquier cambio (apertura de sobre o intercambio completado);
+    nunca muestra copias perdidas, duplicadas o cantidades negativas.
+Sobres
+  • RF-05 El usuario recibe sobres iniciales al comenzar su álbum.
+  • RF-06 El usuario puede abrir un sobre de su propiedad que todavía no fue abierto, y ver de inmediato
+    el contenido revelado (figuritas obtenidas).
+  • RF-07 Si el usuario reintenta la apertura del mismo sobre (por reenvío, mala conexión o duplicado), el
+    sistema muestra el mismo contenido ya determinado, sin acreditar copias adicionales ni volver a abrir el
+    sobre.
+  • RF-08 El usuario no puede abrir un sobre que no le pertenece o que ya está abierto; en ese caso la
+    operación se rechaza y no se acredita nada.
+  • RF-09 El usuario puede obtener sobres adicionales por códigos promocionales, recompensas de retos,
+    campañas especiales o eventos de la comunidad.
+Intercambios
+  • RF-10 El usuario puede publicar una oferta de intercambio 1:1, indicando qué copia propia ofrecible
+    está dispuesto a entregar y qué figurita espera recibir a cambio.
+  • RF-11 El sistema rechaza la publicación de una oferta si la copia indicada no existe, no pertenece al
+    usuario o no es ofrecible. La publicación no se rechaza por el solo hecho de que esa misma copia respalde
+    otra oferta activa.
+  • RF-12 Una oferta activa no aparta automáticamente la copia que la respalda. La copia se aparta
+    cuando una aceptación inicia el intento de concretar un intercambio. Mientras esté apartada por una
+    operación en curso, ninguna otra operación puede utilizarla y ninguna otra aceptación respaldada por
+    esa copia puede completarse utilizándola.
+  • RF-13 El usuario puede explorar las ofertas publicadas por otros coleccionistas.
+  • RF-14 El usuario puede aceptar una oferta publicada por otro usuario, siempre que él mismo posea la
+    copia solicitada en condición de ofrecible. Al aceptar, el sistema verifica nuevamente la elegibilidad de las
+    copias necesarias e intenta apartarlas para esa operación; solo después puede confirmar el intercambio.
+  • RF-15 Inmediatamente antes de confirmar el intercambio, el sistema vuelve a verificar que la oferta siga
+    activa, que todas las copias continúen siendo elegibles para esa operación y que permanezcan apartadas
+    por ella.
+  • RF-16 Si alguna condición ya no se cumple o alguna copia no puede apartarse (por ejemplo, porque
+    dejó de estar disponible o la oferta venció o fue cancelada), el intercambio no se completa, no se acredita
+    nada a nadie y toda reserva realizada durante ese intento se libera.
+  • RF-17 Si dos usuarios aceptan la misma oferta al mismo tiempo, solo uno logra completar el intercambio;
+    el otro recibe un rechazo, sin que se dupliquen copias.
+  • RF-18 El usuario puede cancelar una oferta propia mientras no tenga una aceptación en curso ni
+    confirmada. Como la oferta activa no aparta la copia, su cancelación no modifica por sí sola las
+    cantidades de la colección.
+  • RF-19 Una oferta con fecha de vencimiento deja de estar disponible para ser aceptada al vencer, incluso
+    sin que el publicador esté conectado. Como la oferta activa no aparta la copia, su vencimiento no
+
+
+                                                       3
+
+===== PAGINA 4 =====
+
+    modifica por sí solo las cantidades de la colección.
+  • RF-20 Si una cancelación o un vencimiento coincide en el tiempo con una aceptación, el resultado es
+    uno solo: o el intercambio se completa, o la oferta queda cerrada, el intercambio no se concreta y se
+    liberan las reservas realizadas por esa operación — nunca ambas cosas ni un estado intermedio.
+  • RF-21 Cuando un intercambio se completa, ambas partes reciben la copia acordada y son informadas
+    del resultado; si la figurita recibida ya la poseían, la nueva copia queda como repetida y disponible.
+  • RF-22 El usuario puede conocer el resultado real de una operación de intercambio o apertura aunque
+    no haya recibido respuesta a tiempo (por ejemplo, tras una demora o corte de conexión), sin que eso
+    provoque que la operación se ejecute de nuevo.
+  • RF-23 El usuario puede publicar y aceptar ofertas de varias figuritas por varias figuritas (N:M),
+    además de las ofertas 1:1. Las mismas reglas de elegibilidad, apartado durante el intento, revalidación,
+    transferencia y liberación se aplican a todas las copias involucradas.
+  • RF-24 El sistema destaca al usuario las ofertas publicadas por otros que son compatibles con su
+    colección (ofertas donde el usuario posee lo que se solicita a cambio).
+Retos, recompensas y promociones
+  • RF-25 El usuario progresa automáticamente en retos (por ejemplo: abrir cinco sobres, completar una
+    sección, intercambiar con cinco personas distintas) a partir de sus acciones en la plataforma (aperturas,
+    intercambios, colección).
+  • RF-26 Al completar un reto, el usuario recibe una recompensa (sobre, insignia o acceso a promoción) y
+    es notificado.
+  • RF-27 Una misma acción del usuario no incrementa el progreso de un reto más de una vez, aunque el
+    sistema reciba esa acción informada por duplicado.
+  • RF-28 El usuario puede canjear un código promocional para obtener sobres, una figurita especial o una
+    recompensa, respetando límites de uso globales o por usuario, vigencia y restricciones (país, campaña).
+  • RF-29 Si dos solicitudes intentan usar al mismo tiempo el último uso disponible de un código, solo una
+    es aceptada.
+Panorama general
+  • RF-30 El usuario puede ver un resumen con: porcentaje de álbum, cantidad de figuritas, repetidas,
+    faltantes y resultado de sus operaciones recientes de sobres/intercambios.
+  • RF-31 El resumen incluye también retos activos, ofertas compatibles, actividad reciente y la posición
+    del usuario en dos rankings obligatorios: porcentaje de álbum completado y cantidad de intercambios
+    completados.
+  • RF-32 El usuario puede consultar ambos rankings, de alcance global o por categoría cuando corresponda.
+    Cada uno se ordena de mayor a menor según su criterio; ante valores iguales puede aplicarse un desempate
+    determinístico simple. Su actualización puede ser eventual según lo establecido en la sección 4.
+
+3.3 Operador (Administrador)
+  • RF-33 El operador puede inspeccionar las ofertas activas de la plataforma.
+  • RF-34 El operador puede inspeccionar las copias actualmente apartadas y a qué operación de intercambio
+    en curso corresponden.
+  • RF-35 El operador puede identificar ofertas u operaciones de intercambio incompletas o inconsistentes
+    (por ejemplo, una copia apartada sin una operación de intercambio en curso asociada, una reserva que
+    no fue liberada luego de finalizar o fallar una operación, un intercambio que permanece en un estado
+    intermedio, o un estado de oferta u operación incompatible con las reservas existentes).
+  • RF-36 El operador no puede alterar colecciones ajenas ni forzar resultados de negocio; su rol es de
+    inspección/diagnóstico, no de intervención directa sobre los datos del coleccionista.
+
+3.4 Sistema (comportamiento automático)
+  • RF-37 El sistema vence automáticamente las ofertas que superan su fecha límite, sin requerir una
+    acción humana. El vencimiento de una oferta no modifica por sí solo las cantidades de la colección; si
+
+
+
+                                                     4
+
+===== PAGINA 5 =====
+
+    coincide con una aceptación en curso que no puede completarse, las reservas realizadas por esa operación
+    deben liberarse.
+  • RF-38 El sistema otorga automáticamente recompensas al completarse un reto o al canjearse un código
+    promocional.
+  • RF-39 El sistema nunca deja, como resultado de ninguna secuencia de acciones (incluyendo fallas,
+    reintentos y duplicados), que: una copia desaparezca, se duplique, quede apartada indefinidamente, se
+    acredite a dos usuarios a la vez, o que un intercambio completado se ejecute nuevamente.
+
+
+
+4. Qué debe verse al instante vs. qué puede demorar (expectativa funcional del
+usuario)
+El usuario debe poder confiar en que lo siguiente es correcto en el momento:
+  • si un sobre es suyo, si está disponible o abierto, y su contenido una vez abierto;
+  • las cantidades de su colección (poseídas, repetidas, apartadas, disponibles);
+  • el resultado de publicar, aceptar, rechazar, cancelar o hacer vencer una oferta;
+  • si un intercambio se completó o no.
+Lo siguiente puede demorar sin que eso se considere un error:
+  • el porcentaje de avance del álbum;
+  • el progreso o la finalización de un reto;
+  • la posición en un ranking;
+  • notificaciones e indicadores de actividad reciente.
+Ejemplo esperado: tras abrir un sobre, el usuario puede ver las copias nuevas en su colección antes de que el
+porcentaje de avance se actualice.
+
+
+
+5. Reglas de negocio que todo requerimiento debe respetar
+  • Una figurita cuenta para el álbum apenas se posee una copia, aunque otra copia extra esté apartada.
+  • Solo pueden ofrecerse copias ofrecibles (disponibles y repetidas); nunca la última copia de una figurita.
+  • Nunca puede apartarse ni transferirse la última copia necesaria para que el usuario conserve esa figurita
+    en su álbum.
+  • Una misma copia ofrecible puede respaldar varias ofertas activas, pero una copia apartada por un
+    intercambio en curso no puede ser utilizada simultáneamente por otra operación.
+  • Una misma copia nunca puede terminar acreditada a dos usuarios.
+  • Un sobre abierto no vuelve a abrirse, ni cambia el contenido ya revelado.
+  • Ningún usuario puede recibir la copia que le corresponde a otro.
+  • Ninguna colección puede tener cantidades negativas.
+  • Ninguna operación de negocio puede ejecutarse sin una sesión de usuario autenticada válida.
+
+
+
+6. Fuera de alcance
+  • Pagos, compra de sobres, anti-fraude y fuerza bruta de códigos promocionales.
+  • Alta disponibilidad, autoscaling y acuerdos de latencia más allá de “el progreso secundario puede
+    demorar”.
+  • Aplicación móvil nativa o UI pulida: una API documentada más un cliente mínimo (HTTP, script o UI
+    simple) es suficiente.
+
+
+
+
+                                                     5
+
+===== PAGINA 6 =====
+
+7. Escenarios funcionales de aceptación
+La entrega debe poder reproducir cada uno de estos escenarios:
+  1. Apertura normal de un sobre propio y disponible.
+  2. Reintento del cliente al abrir el mismo sobre: mismo contenido, sin duplicar.
+  3. Intercambio 1:1 exitoso entre dos usuarios.
+  4. Dos ofertas activas están respaldadas por una misma copia ofrecible. Una aceptación logra apartarla
+     primero; otra aceptación concurrente no puede obtenerla y se rechaza sin producir pérdida, duplicación
+     ni reservas indefinidas.
+  5. Una interrupción ocurre después de apartar la copia de un solo usuario durante un intento de intercambio:
+     la operación no se confirma y la reserva se libera, sin quedar indefinida.
+  6. Una interrupción ocurre con ambas copias apartadas antes de confirmar: o se completa el intercambio
+     una sola vez o se liberan ambas reservas, sin pérdida ni duplicación.
+  7. El solicitante no recibe respuesta, pero la operación sí se completó: una consulta posterior permite
+     descubrir el resultado real sin transferir nuevamente las copias ni volver a ejecutar la operación.
+  8. Un evento de apertura o intercambio llega duplicado: no se duplican copias, no se re-completa el
+     intercambio y no se crean ni se liberan reservas adicionales de manera incorrecta.
+  9. Eventos de progreso fuera de orden: no se corrompen cantidades ni se aplica un progreso imposible.
+ 10. Actualización diferida: la colección es correcta de inmediato, el porcentaje/reto puede demorar.
+ 11. Dos aceptaciones concurrentes sobre la misma oferta intentan apartar las copias necesarias: solo una
+     puede confirmarse; la otra se rechaza y libera cualquier reserva que haya realizado durante su intento.
+ 12. Un vencimiento o una cancelación coincide con una aceptación: el resultado es único (intercambio
+     completado o oferta cerrada sin intercambio), y toda reserva que no termine en una transferencia se
+     libera.
+ 13. Intento de abrir un sobre ajeno o ya abierto: se rechaza, no se acredita nada.
+ 14. Oferta inválida (copia inexistente, ajena, no repetida, no disponible o ya apartada): no se publica.
+ 15. Doble canje simultáneo del último uso de un código promocional: solo uno se acepta.
+ 16. Solicitud sin sesión autenticada válida (token ausente, inválido o expirado): la operación se rechaza sin
+     ejecutar ningún efecto de negocio.
+
+
+
+8. Requerimientos no funcionales (condición de entrega)
+Estos requerimientos no son negociables: si no se cumplen, la entrega no se evalúa, sin importar cuán completos
+estén los requerimientos funcionales.
+  • RNF-01: El equipo debe contar con un pipeline de CI/CD que, ante cada cambio, compile y ejecute
+    automáticamente las pruebas unitarias y funcionales de cada servicio.
+  • RNF-02: El pipeline debe empaquetar los servicios y desplegarlos automáticamente a un ambiente de
+    staging.
+  • RNF-03: En staging, el pipeline debe ejecutar los tests de integración de los escenarios implementables
+    como gate: si fallan, el pipeline no debe promover el despliegue a producción (se detiene o marca el gate
+    como fallido, dejando producción intacta).
+  • RNF-04: El ambiente de producción debe ser un cluster de Kubernetes en AKS (Azure
+    Kubernetes Service). Solo se despliega a producción si el gate de integración en staging fue exitoso.
+  • RNF-05: La única forma de entrega aceptada es el despliegue en AKS a través de este
+    pipeline. No alcanza con ejecutar la demo únicamente en local (por ejemplo, con docker compose
+    up); esa capacidad puede existir para desarrollo, pero no reemplaza la entrega en AKS.
+  • RNF-06: La autenticación con Google debe usar credenciales reales de OAuth 2.0 (client ID/secret
+    propios del equipo o de la cátedra); no se acepta una simulación de login ni un userId pasado por
+    parámetro o header.
+
+
+
+
+                                                      6
+
+===== PAGINA 7 =====
+
+9. Criterios de entrega
+Para que la entrega se considere completa, el equipo debe presentar:
+  1. Despliegue en AKS funcionando, alcanzado a través del pipeline de CI/CD (RNF-01 a RNF-06),
+     con datos de prueba precargados: al menos dos usuarios (con sus cuentas de Google) con colecciones e
+     inventario suficiente para reproducir los escenarios 1 a 16.
+  2. README de reproducción: para cada escenario, los pasos exactos (llamadas HTTP, script o UI)
+     para provocarlo y verificar el resultado esperado sobre el ambiente desplegado en AKS, incluyendo cómo
+     autenticarse con Google.
+  3. Cobertura de actores: debe poder observarse el sistema desde la perspectiva del Coleccionista
+     (colección, sobres, intercambios, retos, códigos, rankings) y del Operador (inspección de ofertas y
+     reservas).
+  4. Evidencia de invariantes: al menos una corrida que muestre que, tras ejecutar una secuencia de
+     operaciones con fallos/reintentos/duplicados, las cantidades siguen siendo válidas (sin negativos, sin
+     pérdidas, sin duplicados).
+  5. User Stories y criterios de aceptación propios del equipo, derivados de (y coherentes con) los
+     requerimientos funcionales de este documento — se espera que el equipo los redacte con su propio nivel
+     de detalle, no que copie este listado.
+  6. Toda la funcionalidad descripta en este documento debe estar implementada y ser demostrable; no se
+     aceptan partes marcadas como “solo diseño”.
+
+
+
+10. Criterios de corrección
+
+Criterio                            Qué se mira                          Peso
+Autenticación real con Google       Login funcionando end-to-end,        10%
+                                    creación automática de álbum al
+                                    primer ingreso, rechazo de
+                                    solicitudes sin sesión válida
+Cobertura de requerimientos core    Colección, sobres y ofertas 1:1      25%
+del Coleccionista                   (RF-01 a RF-22) funcionando
+                                    end-to-end
+Cobertura de requerimientos         Ofertas N:M, retos, recompensas,     15%
+ampliados                           códigos promocionales, rankings y
+                                    vista de operador (RF-23 a RF-38)
+                                    funcionando end-to-end
+Correctud de reglas de negocio e    Disponible vs. apartada, última      20%
+invariantes                         copia, cantidades nunca negativas,
+                                    sin pérdida ni duplicación
+Cobertura de los escenarios de      Los 16 escenarios se reproducen      20%
+aceptación (sección 7)              con el resultado esperado,
+                                    incluyendo casos de fallo y
+                                    concurrencia
+Consistencia inmediata              La colección y el resultado de       5%
+vs. eventual percibida por el       sobres/ofertas son correctos al
+usuario                             instante; porcentaje/retos pueden
+                                    demorar sin romper nada
+Reproducibilidad de la demo         README y datos de prueba             5%
+                                    permiten a un tercero reproducir
+                                    cada escenario sin ayuda del
+                                    equipo
+
+
+
+
+                                                     7
+

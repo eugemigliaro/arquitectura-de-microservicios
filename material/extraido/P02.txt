@@ -1,0 +1,468 @@
+FUENTE: P02
+TITULO: Ejercicio de DDD: Huella
+ORIGINAL: material/catedra/practica/Ejercicio de DDD — “Huella”.pdf
+PAGINAS: 10
+
+===== PAGINA 1 =====
+
+Ejercicio de DDD — “Huella”
+Materia: Microservicios (73.40) · ITBA Duración: 45 minutos Formato: grupos de 2 personas.
+Algunos grupos exponen al final. Prerrequisito: clase de Domain-Driven Design (estratégico +
+táctico + EventStorming).
+
+
+
+
+1. Consigna
+Son la dupla de arquitectura contratada por Huella, una red de tres clínicas veterinarias de
+barrio que quiere reemplazar su sistema actual.
+
+No van a hablar con el negocio: el Project Manager ya hizo las entrevistas y les pasa las
+desgrabaciones crudas, más un par de mensajes sueltos que fue juntando en el camino.
+Nadie ordenó la información: cada persona cuenta su parte del mundo, con su vocabulario, y
+hay cosas que solo cierran cuando cruzan dos o tres entrevistas.
+
+Su trabajo: leer, cruzar y producir un diseño de dominio (no un diseño de base de datos, no
+un diagrama de despliegue).
+
+      ⚠️ Los actores se contradicen. Eso no es un error del enunciado: es el ejercicio.
+      Cuando dos personas usan la misma palabra para cosas distintas, no unifiquen —
+      acoten.
+
+
+
+
+2. Las entrevistas
+
+2.1 Martín Duarte — Dueño y director general
+      “Arrancamos con una sola clínica hace doce años. Hoy somos tres locales y una
+      guardia nocturna que tercerizamos.
+
+      Mirá, consultas veterinarias hay en cada esquina, eso no nos diferencia. Lo que
+      nos hace distintos es el Plan Huella: el cliente paga una cuota mensual y nosotros
+      nos hacemos cargo del calendario preventivo del animal. Vacunas,
+      antiparasitarios, control anual, castración si corresponde. Si algo se atrasa,
+      nosotros salimos a buscar al cliente, no al revés. Ese seguimiento es nuestro
+      negocio real: el 70% de la facturación recurrente sale de ahí y es lo que hace que
+      la gente no se vaya a la veterinaria de enfrente.
+
+===== PAGINA 2 =====
+
+    El plan tiene tres niveles: Básico, Full y Senior — el Senior es para animales de
+    más de ocho años y cubre estudios que los otros no. Cada nivel define qué
+    prácticas están cubiertas, cuántas veces por año, y cuánto copago paga el cliente
+    en el mostrador.
+
+    Lo que hoy me duele: no tengo idea de cuánta gente está al día con el plan. Lo
+    sabemos cuando alguien viene, no antes. Y facturar el plan es un dolor de cabeza
+    aparte.
+
+    Ah, y no quiero volver a desarrollar la facturación electrónica. Eso lo compramos
+    hecho, no es mi negocio.”
+
+
+
+
+2.2 Carla Ibáñez — Coordinadora de recepción (las tres sucursales)
+    “Yo manejo la agenda. Cada veterinario tiene bloques de 20 minutos, de 9 a 13 y
+    de 16 a 20. Cuando alguien llama, le doy un turno con el profesional y el horario.
+
+    Si es cliente nuevo, primero lo tengo que dar de alta: nombre, DNI, teléfono, y
+    después le cargo la mascota. Eso me lleva más tiempo que el turno en sí.
+
+    El tema son las urgencias. Si entra un perro atropellado a las 11 de la mañana, yo
+    meto un sobreturno y se corre todo. Tengo la regla no escrita de máximo dos
+    sobreturnos por profesional por franja, si no el veterinario me mata. Pero eso lo
+    decido yo a ojo.
+
+    También me pasa que la gente no viene y no avisa. Diría que uno de cada seis.
+    Ese espacio lo perdimos, no hay forma de recuperarlo.
+
+    Cuando el turno es de alguien del plan, en teoría tengo que fijarme si la práctica
+    está cubierta antes de que entre al consultorio, porque si no está cubierta el cliente
+    lo tiene que saber antes, no después. Hoy llamo a Noelia y le pregunto. Si Noelia
+    está almorzando, pasa igual y después vemos.
+
+    Y sí, tengo mascotas cargadas dos y tres veces. Si el dueño vino una vez a
+    Palermo y otra a Caballito, en el sistema viejo son dos fichas distintas.”
+
+
+
+
+2.3 Dra. Sofía Rendón — Veterinaria clínica
+    “Para mí el paciente es el animal. Punto. El humano es el responsable, y me
+    importa solo para dos cosas: que firme los consentimientos y que me cuente qué le
+    pasa al animal.
+
+===== PAGINA 3 =====
+
+    Cada vez que atiendo abro una consulta en la historia clínica del paciente:
+    motivo, peso, temperatura, diagnóstico, tratamiento. La historia clínica es del
+    animal y me tiene que seguir aunque cambie de dueño o de sucursal. Eso hoy no
+    pasa.
+
+    Si el caso es grave, lo dejo internado. Ahí llevo una hoja de evolución aparte, con
+    controles cada tantas horas, medicación, y cuando el animal se puede ir le doy el
+    alta. Ojo con esa palabra, porque Carla usa ‘alta’ para otra cosa completamente
+    distinta.
+
+    Cuando aplico una vacuna, para mí eso es un acto médico: quedó registrado que
+    este paciente recibió esta dosis, en esta fecha, y que la próxima le toca en tal
+    fecha. Que el frasco haya salido de la heladera de Palermo o de Caballito me da
+    exactamente igual, eso es problema de Julián.
+
+    Ah, y si el animal se muere, alguien tiene que apagar los recordatorios. La semana
+    pasada una clienta recibió un mensaje de ‘es hora de vacunar a Tobías’ cinco días
+    después de que dormimos a Tobías. Me quiero morir.
+
+    Los sábados a la noche derivamos a la guardia externa. Ellos atienden, y el lunes
+    nos mandan un PDF por mail con lo que hicieron. Yo lo transcribo a mano a la
+    historia clínica.”
+
+
+
+
+2.4 Julián Paz — Depósito y farmacia
+    “Yo no manejo vacunas, yo manejo lotes. Un lote tiene número, vencimiento,
+    cantidad de dosis y en qué heladera está. Si un lote se vence, se descarta entero,
+    no importa que quede media caja.
+
+    La regla es que siempre sale primero el que vence antes. Y nunca, jamás, se
+    aplica un lote vencido: eso me clausura la clínica.
+
+    El problema es que los veterinarios registran la práctica en su ficha y yo me entero
+    del consumo cuando hago inventario a fin de mes. Ahí descubro que faltan doce
+    dosis de antirrábica y nadie sabe de dónde salieron. Necesito que cuando se
+    aplique algo, se descuente del lote, ese mismo día.
+
+    Los psicotrópicos y los anestésicos son otro mundo: llevo un libro aparte, firmado,
+    porque me lo puede pedir SENASA. Ahí necesito trazabilidad completa: qué lote,
+    qué animal, qué profesional.
+
+===== PAGINA 4 =====
+
+    Y tengo mínimos por sucursal. Cuando bajo del mínimo genero un pedido al
+    proveedor, que tarda entre tres y diez días. Hoy eso lo miro en una planilla.”
+
+
+
+
+2.5 Noelia Ferrer — Administración y facturación
+    “Para mí el cliente es quien paga, o sea el titular. El animal es un ítem del
+    comprobante, no mucho más.
+
+    Tengo dos circuitos distintos y la gente los mezcla todo el tiempo. Uno es la cuota
+    mensual del plan, que se debita con tarjeta el día 10. El otro es la atención: cada
+    práctica que se hace tiene un código de nuestro nomenclador y un precio; si el
+    titular tiene plan, se aplica la cobertura y solo se cobra el copago en el mostrador.
+
+    Cuando digo alta hablo de la alta de la afiliación, o sea desde cuándo el plan
+    empieza a cubrir. Hay 30 días de carencia para las prácticas programadas, por eso
+    no puedo afiliar a alguien el martes y castrarle el perro el miércoles.
+
+    Si la tarjeta rebota, el plan queda suspendido. Suspendido no es dado de baja: si
+    paga dentro de los 30 días se reactiva sin perder la antigüedad, y la antigüedad
+    importa porque el nivel Senior la exige. Pero mientras está suspendido no hay
+    cobertura y se cobra todo a precio de lista. Nadie en el mostrador se entera de esto
+    a tiempo.
+
+    La factura electrónica la emite el sistema de AFIP a través de un proveedor que ya
+    contratamos. A veces tarda, a veces rechaza, y no lo puedo controlar.
+
+    Y el nomenclador de prácticas lo mantengo yo en un Excel. Sofía tiene el suyo, con
+    nombres médicos. Nunca coinciden.”
+
+
+
+
+2.6 Diego Salas — IT (una persona, medio tiempo)
+    “Todo corre sobre VetSoft, un sistema de escritorio con base Access que
+    compramos en 2013. Tiene doce años de historia clínica adentro, así que tirarlo a
+    la basura no es opción: hay juicios de mala praxis que se defienden con eso.
+
+    El modelo de VetSoft es delirante: la tabla se llama CLIENTES y ahí adentro está
+    mezclado el humano y el animal, un registro por combinación. Por eso hay
+    duplicados. Los campos se llaman CAMPO_LIBRE_1 a CAMPO_LIBRE_7 y cada
+    sucursal los usó para cosas distintas.
+
+===== PAGINA 5 =====
+
+     Los recordatorios los mando yo con un script que lee una planilla y dispara
+     WhatsApp por una API de terceros. Es mi mayor fuente de vergüenza profesional.
+
+     Los cobros con tarjeta van por una pasarela, tanto el débito mensual como el
+     copago del mostrador. La pasarela tiene su propio vocabulario (merchant,
+     settlement, chargeback) que no tiene nada que ver con cómo habla Noelia.
+
+     La guardia externa, Zoonos, tiene una API REST propia. Es tomarlo o dejarlo: su
+     formato, sus nombres de campos, su idea de qué es un paciente. No van a
+     cambiar nada por nosotros.
+
+     El login lo queremos resolver con un proveedor de identidad, no quiero volver a
+     escribir un ‘olvidé mi contraseña’ en mi vida.”
+
+
+
+
+2.7 Material suelto que juntó el PM
+Mensaje de Carla al grupo de WhatsApp, 09:41
+
+
+                                           🙃
+     “chicas el señor de la caniche blanca dice q el plan lo tiene la ex mujer, q el turno
+     se lo cobremos a ella. le digo q sí??   ”
+
+Ticket de soporte #4471
+
+     Asunto: Se aplicó vacuna a paciente equivocado Detalle: Dos perros del mismo
+     titular, mismo nombre (“Rocky”), fichas distintas. Se registró la dosis en la ficha del
+     que no era. Se pide poder corregir la historia clínica. Sofía: “una historia clínica no
+     se borra, se corrige con una nota que dice qué se corrigió y quién.”
+
+Mail de Martín, asunto: “idea para el año que viene”
+
+     “Quiero que el dueño vea desde el celular el calendario de vacunas de su mascota
+     y saque turno solo. Y que Zoonos, cuando atiende de noche, pueda ver si el animal
+     tiene plan.”
+
+Nota del PM al margen
+
+     “Ojo: Carla, Sofía y Noelia usan turno, consulta y práctica como si fueran
+     sinónimos. No lo son. Tampoco alta. Tampoco paciente/cliente. Tampoco vacuna.”
+
+===== PAGINA 6 =====
+
+3. Entregables
+Siete entregables. Todo a mano, en una hoja o en la pizarra. No escriban código.
+
+
+E1 — Ubiquitous Language conflictivo
+Tabla de términos por área. Mínimo 4 términos que signifiquen cosas distintas según quién
+hable. No los unifiquen: muestren el conflicto.
+
+
+Término               Recepción         Clínica            Depósito             Administración
+
+…                     …                 …                  …                    …
+
+
+E2 — Subdominios y clasificación
+Listen los subdominios y clasifiquen cada uno. Una línea de justificación por subdominio.
+
+
+Subdominio                           Core / Supporting / Generic         Por qué
+
+
+         Pista: hay una sola cosa en las entrevistas que Martín declara como diferencial
+         competitivo. Si su Core es “sacar turnos”, relean.
+
+
+E3 — Bounded Contexts
+Propongan entre 3 y 5 Bounded Contexts. Para cada uno:
+
+    -​    Nombre (en el lenguaje del negocio, no TurnoService)
+    -​    Responsabilidad en una frase
+    -​    3 términos de su Ubiquitous Language
+    -​    Qué NO es responsabilidad suya
+
+
+E4 — Context Map
+Dibujen los BCs y las relaciones tipadas. Deben aparecer, como mínimo:
+
+    -​    una ACL
+    -​    un Open Host Service + Published Language
+    -​    una relación Customer / Supplier con dirección upstream/downstream explícita
+    -​    un Conformist o un Separate Ways, justificado
+
+Marquen dónde alguien podría caer en la tentación de un Shared Kernel y por qué lo evitan.
+
+
+E5 — Táctico dentro del Core
+Elijan un Bounded Context (idealmente el Core) y modelen:
+
+===== PAGINA 7 =====
+
+         -​   1 Aggregate Root + qué entidades y value objects contiene
+         -​   2 Value Objects con su justificación (¿por qué no son entidades?)
+         -​   1 invariante que el aggregate debe garantizar siempre
+         -​   1 cosa que quedó afuera del aggregate y por qué (consistencia eventual)
+
+
+      E6 — Commands y Domain Events de cada Bounded Context
+      Este es el entregable que conecta el diseño con las próximas clases de la materia: los eventos
+      que escriban acá son los candidatos a mensajes entre servicios.
+
+      Para cada uno de los BCs que definieron en E3, completen una fila:
+
+
+Bounded Context      Commands que acepta         Domain Events que publica        Eventos de otros BC que
+                                                                                  consume
+
+…                    AfiliarTitular, …           AfiliacionActivada, …            PrestacionRegistrada
+                                                                                  (Historia Clínica)
+
+
+      Reglas:
+
+         -​   Mínimo 2 commands y 3 domain events por contexto.
+         -​   Commands en imperativo (ReservarTurno), events en pasado perfecto
+              (TurnoReservado). Si les sale CrearTurnoEvent, algo está mal.
+
+                           ⭐
+         -​   Cada command tiene que entrar a un aggregate del contexto: escriban al lado cuál.
+         -​   Marquen con       los eventos que cruzan el borde del contexto (integración, parte del
+              Published Language) y dejen sin marcar los que son internos. No todo evento de
+              dominio merece publicarse.
+         -​   Nombren los eventos con el lenguaje de ese contexto, no con uno global. Si el mismo
+              hecho del mundo real genera dos eventos con nombres distintos en dos contextos, está
+              bien: escriban los dos y expliquen la traducción.
+         -​   Incluyan al menos un evento de fracaso (algo que se rechaza, se suspende o no
+              alcanza).
+
+
+      E7 — EventStorming mínimo
+      Sobre el flujo “un cliente con Plan Huella trae su mascota a vacunarse”, usando los eventos y
+      commands que ya definieron en E6:
+
+      Armen la línea de tiempo del flujo, de izquierda a derecha, e indiquen en qué contexto cae
+      cada nota:
+
+         -​   6 a 8 Domain Events en orden temporal (tomados de E6)
+         -​   3 Commands con el actor que los dispara
+
+===== PAGINA 8 =====
+
+   -​   2 Policies en formato whenever … then … — son el pegamento entre contextos
+   -​   1 Read Model (¿qué pantalla o consulta necesita alguien y no sale de un solo
+        aggregate?)
+
+                   🔥
+   -​   1 sistema externo
+   -​   2 Hotspots      (las entrevistas están llenas)
+
+
+Bonus (si sobra tiempo)
+Si mañana tuvieran que desplegar un solo microservicio y dejar el resto como monolito
+modular, ¿cuál sacan primero y por qué?
+
+
+
+
+4. Plantilla de trabajo
+
+GRUPO: ______________________________
+E1 · LENGUAJE CONFLICTIVO
+  término ......... : recepción / clínica / depósito / administración
+E2 · SUBDOMINIOS
+  CORE ........ :
+  SUPPORTING .. :
+  GENERIC ..... :
+E3 · BOUNDED CONTEXTS
+  [ nombre ] responsabilidad:            lenguaje propio:        NO
+hace:
+E4 · CONTEXT MAP
+      [ BC ] --(tipo de relación)--> [ BC ]
+E5 · TÁCTICO
+  Aggregate Root:
+    ├── entidades:
+    ├── value objects:
+    └── INVARIANTE:
+  Fuera del aggregate (eventual):
+
+E6 · COMMANDS Y EVENTS POR BOUNDED CONTEXT    (              ⭐
+                                                 = cruza el borde)
+  ┌ BC: ....................................................
+  │   commands → ................ (aggregate: ..........)
+
+                                                ⭐
+  │                ................ (aggregate: ..........)
+  │   events    → ................
+  │                ................
+  │                ................ (fracaso)
+  │   consume   ← ................ (de: ..........)
+  └
+
+===== PAGINA 9 =====
+
+               (repetir por cada BC de E3)
+
+
+                                                                   ⭐
+           E7 · EVENTSTORMING — línea de tiempo del flujo
+
+                                                                                   🔥
+             actor → command → [aggregate] → EVENTO    → policy → command → ...
+             read model:                    externo:               hotspots:
+
+
+
+
+           5. Puesta en común
+           El docente asigna a cada grupo expositor una sola parte, para no repetir:
+
+
+       Grupo                              Expone                             Pregunta que le va a hacer el
+                                                                             docente
+
+       A                                  E1 + E2                            ¿Por qué eso es Core y no
+                                                                             Supporting?
+
+       B                                  E3 + E4                            ¿Qué se rompe si sacan la ACL?
+
+       C                                  E5                                 ¿Qué pasa si dos usuarios
+                                                                             modifican ese aggregate a la
+                                                                             vez?
+
+       D                                  E6                                 ¿Por qué ese evento cruza el
+                                                                             borde y ese otro no?
+
+       E                                  E7                                 ¿Qué BC publica ese evento y
+                                                                             cuál reacciona?
+
+
+           Cada exposición: 3 minutos, incluida la pregunta.
+
+
+
+
+           6. Rúbrica
+Criterio              Insuficiente                  Bien                               Muy bien
+
+Lenguaje              Un glosario único             Detecta conflictos                 Un lenguaje por contexto, con la
+                      “consolidado”                                                    traducción del borde explícita
+
+Subdominios           Todo es Core                  Clasifica razonablemente           Justifica la inversión distinta por
+                                                                                       tipo
+
+===== PAGINA 10 =====
+
+Criterio               Insuficiente                  Bien                            Muy bien
+
+Bounded Contexts       Un BC por tabla/entidad       Contextos por área de           Contextos por límite de modelo y
+                                                     negocio                         regla, con el “NO hace” claro
+
+Context Map            Flechas sin tipo              Relaciones tipadas              Dirección, traducción y contrato
+                                                                                     público bien elegidos
+
+Táctico                Aggregate = tabla con FKs     Root + VOs correctos            Invariante real y frontera de
+                                                                                     consistencia argumentada
+
+Commands /             Eventos en presente           Commands en imperativo y        Distingue interno vs publicado,
+Events                 (CrearTurno), CRUD            events en pasado, por           incluye fracasos y nombra en el
+                       disfrazado                    contexto                        lenguaje de cada BC
+
+EventStorming          Notas sueltas sin orden       Flujo temporal coherente        Policies y hotspots que capturan
+                                                                                     las contradicciones del relato
+
+
+           Descalificadores clásicos (si aparecen, se discuten en plenario):
+
+              -​   ClienteService, MascotaService, TurnoService — cortar por entidad.
+              -​   Una base de datos compartida entre contextos.
+              -​   Un único modelo global de Paciente que sirva para clínica, recepción y facturación.
+              -​   Adoptar el vocabulario de la pasarela de pagos o de VetSoft dentro del Core.
+              -​   Eventos que son EntidadCreada / EntidadActualizada / EntidadBorrada —
+                   eso es un changelog de base de datos, no lenguaje de negocio.
+              -​   Publicar todos los eventos internos de un contexto: si el borde expone cada latido del
+                   aggregate, el acoplamiento vuelve por la puerta de atrás.
+

@@ -36,6 +36,8 @@ La presentación contiene dos esquemas que no pueden reconciliarse sin una confi
 
 Evidencia: [T01, p. 7] [T01, p. 23] [T01, p. 24]. Hasta confirmar cuál es vigente, esta wiki no debe usarse como autoridad administrativa; el caso queda registrado en [Dudas y conflictos](../dudas-y-conflictos.md).
 
+La consigna específica del Álbum agrega otra diferencia relevante: la versión 1.1 declara obligatorios todos sus requerimientos, establece que los RNF son un gate sin el cual la entrega no se evalúa y exige que toda la funcionalidad sea demostrable. Esto no coincide de manera evidente con el umbral general de 70 % de requerimientos mencionado en `T01`; ambas versiones se conservan y el nuevo conflicto también queda registrado. [T01, p. 24] [E01, p. 1] [E01, p. 6] [E01, p. 7]
+
 ## Cómo usar este mapa
 
-Los primeros temas ya desarrollados son [Fundamentos de microservicios](fundamentos-de-microservicios.md), [Diseño de servicios](diseno-de-servicios.md), [DDD estratégico](ddd-estrategico.md) y [DDD táctico y EventStorming](ddd-tactico-y-eventstorming.md). El resto del recorrido funciona por ahora como índice del programa, no como contenido ya dictado o documentado en profundidad.
+Los temas ya desarrollados son [Fundamentos de microservicios](fundamentos-de-microservicios.md), [Diseño de servicios](diseno-de-servicios.md), [DDD estratégico](ddd-estrategico.md), [DDD táctico y EventStorming](ddd-tactico-y-eventstorming.md), [Práctica de DDD](practica-ddd.md) y [Contenedores sobre Linux](contenedores-linux.md). La [entrega del Álbum 2026](entrega-album-2026.md) tiene su propia página de requisitos. El resto del recorrido funciona por ahora como índice del programa, no como contenido ya dictado o documentado en profundidad.

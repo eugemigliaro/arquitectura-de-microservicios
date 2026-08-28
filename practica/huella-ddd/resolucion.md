@@ -7,7 +7,7 @@ Resolución propia, acompañada y en progreso. No es una solución oficial de la
 - Consigna oficial: `P02`, *Ejercicio de DDD: Huella*.
 - El trabajo pedido es un diseño de dominio, no un esquema de base de datos, un diagrama de despliegue ni una implementación. [P02, p. 1]
 - La resolución debe conservar los conflictos de lenguaje y acotarlos por contexto, no reemplazarlos por un glosario global. [P02, p. 1] [P02, p. 6]
-- Estado actual: comprensión de la consigna y E1–E6 resueltos; E7 pendiente.
+- Estado actual: comprensión de la consigna y E1–E7 resueltos. Ejercicio completo; bonus opcional pendiente.
 
 ## Comprensión inicial del negocio
 
@@ -410,8 +410,126 @@ Cobranza: ⭐ CobroRechazado
 
 Con esto se cumplen todos los requisitos obligatorios de E6. [P02, p. 7]
 
+## E7 — EventStorming mínimo
+
+EventStorming ordena hechos del dominio en una línea temporal y permite descubrir qué actores envían commands, qué aggregates aplican reglas y qué policies conectan contextos. Un read model es una proyección orientada a consulta que puede combinar datos de varios aggregates; un hotspot conserva una pregunta abierta en vez de esconderla. [T03, p. 41] [T03, p. 42]
+
+### Alcance y supuesto del camino feliz
+
+El flujo comienza cuando recepción atiende a una persona que ya llegó con el animal; el turno existente es una precondición y no se cuenta entre los ocho eventos. Para hacer visible la integración externa, se supone que la vacuna está cubierta pero tiene un copago mayor que cero, existe una dosis válida y el pago se confirma. Si el copago es cero, el flujo termina después de actualizar calendario e inventario.
+
+### Línea temporal
+
+```text
+Recepción
+  └─ AutorizarCobertura
+       → [Cuidado Preventivo: AfiliacionPreventiva]
+       → 1. CoberturaAutorizada ⭐
+            └─ POLICY P1: whenever CoberturaAutorizada,
+                          then ReservarDosis
+                 → [Inventario: StockFarmaceutico]
+                 → 2. DosisReservada ⭐
+
+Veterinario
+  └─ RegistrarVacunacion
+       → [Atención Clínica: HistoriaClinica]
+       → 3. VacunaAplicada                         (interno)
+            ├─ 4. PrestacionRegistrada ⭐
+            │    └─ POLICY P2: whenever PrestacionRegistrada,
+            │                  then RegistrarCumplimientoPreventivo
+            │         → [Cuidado Preventivo: AfiliacionPreventiva]
+            │         → 6. PracticaPreventivaCumplida              (interno)
+            │
+            └─ 5. DosisAplicada ⭐
+                 └─ POLICY P3: whenever DosisAplicada,
+                               then ConsumirDosis
+                      → [Inventario: StockFarmaceutico]
+                      → 7. DosisConsumida                           (interno)
+
+Recepción / caja
+  └─ CobrarCopago
+       → [Cobranza: ObligacionDePago]
+       → [SISTEMA EXTERNO: Pasarela de pagos]
+       → ACL: RegistrarResultadoDeCobro
+       → 8. CobroConfirmado ⭐
+```
+
+`PrestacionRegistrada` y `DosisAplicada` se publican a partir de la misma confirmación clínica; su numeración solo permite seguir el diagrama, no exige que uno ocurra materialmente antes que el otro.
+
+### Eventos, publicador y reacción
+
+| # | Domain Event de E6 | Contexto que lo publica | Quién reacciona |
+|---:|---|---|---|
+| 1 | `⭐ CoberturaAutorizada` | Cuidado Preventivo | Policy P1 ordena reservar una dosis en Inventario; Agenda/recepción actualiza su vista. |
+| 2 | `⭐ DosisReservada` | Inventario Farmacéutico | Atención Clínica habilita la aplicación con una referencia de lote válida. |
+| 3 | `VacunaAplicada` | Atención Clínica | Reacción interna: confirma el acto médico y prepara contratos mínimos para otros contextos. |
+| 4 | `⭐ PrestacionRegistrada` | Atención Clínica | Policy P2 ordena registrar el cumplimiento en Cuidado Preventivo; Cobranza correlaciona la prestación con el copago. |
+| 5 | `⭐ DosisAplicada` | Atención Clínica | Policy P3 ordena consumir la dosis en Inventario. |
+| 6 | `PracticaPreventivaCumplida` | Cuidado Preventivo | Reacción interna: actualiza el calendario y calcula la próxima fecha. |
+| 7 | `DosisConsumida` | Inventario Farmacéutico | Reacción interna: actualiza existencias, trazabilidad y evaluación del mínimo. |
+| 8 | `⭐ CobroConfirmado` | Cobranza | La proyección de recepción muestra el copago saldado; al ser un copago, no cambia por sí mismo el estado de la afiliación. |
+
+### Commands con actor
+
+| Actor | Command | Aggregate | Intención |
+|---|---|---|---|
+| Recepcionista | `AutorizarCobertura` | `AfiliacionPreventiva` | Confirmar antes de la atención si la práctica está cubierta y qué copago corresponde. |
+| Veterinario | `RegistrarVacunacion` | `HistoriaClinica` | Registrar el acto médico sobre el paciente inequívocamente identificado. |
+| Recepcionista o cajero | `CobrarCopago` | `ObligacionDePago` | Cobrar al pagador el importe resultante de la cobertura. |
+
+Los commands `ReservarDosis`, `RegistrarCumplimientoPreventivo` y `ConsumirDosis` no tienen actor humano: los disparan las policies. El modelo contiene tres policies aunque la consigna exige dos, porque omitir cualquiera escondería una consecuencia real en otro contexto.
+
+### Policies
+
+1. **Whenever** `CoberturaAutorizada`, **then** `ReservarDosis` en Inventario Farmacéutico.
+2. **Whenever** `PrestacionRegistrada`, **then** `RegistrarCumplimientoPreventivo` en Cuidado Preventivo.
+3. **Whenever** `DosisAplicada`, **then** `ConsumirDosis` en Inventario Farmacéutico.
+
+Cada policy convierte un evento público en un nuevo command. El contexto receptor vuelve a validar sus invariantes; la policy no modifica directamente el aggregate.
+
+### Read Model
+
+**`PreparacionDeVacunacion`**, consultado por recepción y por el veterinario antes de aplicar la dosis:
+
+| Información | Fuente |
+|---|---|
+| Animal, profesional, sucursal y horario | Agenda |
+| Identificación clínica inequívoca y antecedentes de vacunación relevantes | Atención Clínica |
+| Nivel, estado de afiliación, práctica pendiente, cobertura y copago | Cuidado Preventivo |
+| Lote reservado, vencimiento y ubicación | Inventario Farmacéutico |
+| Estado del copago | Cobranza |
+
+La vista no es fuente de verdad ni puede autorizar por sí sola: puede tener retraso. Los commands `AutorizarCobertura`, `ReservarDosis` y `RegistrarVacunacion` vuelven a comprobar las invariantes en sus respectivos aggregates.
+
+### Sistema externo
+
+La **pasarela de pagos** procesa el copago. Cobranza la invoca mediante su ACL y traduce la respuesta técnica al command local `RegistrarResultadoDeCobro`, que produce `CobroConfirmado` o, en la rama de fracaso, `CobroRechazado`. El vocabulario `merchant`, `settlement` o `chargeback` no entra al flujo de negocio. [P02, p. 5]
+
+### Hotspots
+
+1. **Identidad inequívoca del paciente.** Existen animales duplicados y dos perros del mismo titular pueden tener el mismo nombre. Falta definir qué identificador o procedimiento de verificación evita aplicar la vacuna al animal equivocado y cómo se corrige el error sin borrar la historia. [P02, p. 2] [P02, p. 5]
+2. **Titular, responsable, acompañante y pagador.** El Plan puede estar a nombre de la ex pareja de quien trae al animal. Falta definir quién puede autorizar la práctica, a quién se aplica la cobertura y a quién se puede cobrar el copago. [P02, p. 5]
+
+### Ramas de fracaso relevantes
+
+- `CoberturaRechazada`: recepción debe informar el precio de lista antes de la consulta; queda por decidir si el flujo continúa sin cobertura.
+- `DosisNoDisponible` o `ConsumoRechazadoPorVencimiento`: la vacuna no se aplica y debe reprogramarse o resolverse el stock.
+- `VacunacionRechazada`: se detiene el registro si el paciente no está identificado o no existe una reserva válida.
+- `CobroRechazado`: queda pendiente definir la política específica para un copago rechazado; no se debe asumir que equivale al rechazo de una cuota mensual.
+
+### Comprobación de E7
+
+- Ocho domain events de E6 en orden temporal.
+- Tres commands con actor explícito.
+- Tres policies en formato whenever/then; se exigían dos.
+- Un read model que combina cinco contextos.
+- Un sistema externo detrás de una ACL.
+- Dos hotspots tomados de contradicciones de la entrevista.
+- Cada evento indica qué contexto lo publica y quién reacciona.
+
+Con esto se cumplen todos los requisitos obligatorios de E7. [P02, p. 7] [P02, p. 8]
+
 ## Próximos pasos
 
-1. Construir E7 con seis a ocho eventos de E6 en orden temporal para el flujo de vacunación.
-2. Incluir tres commands con actor, dos policies, un read model, un sistema externo y dos hotspots.
-3. Verificar que cada evento indique qué contexto lo publica y cuál reacciona. [P02, p. 7] [P02, p. 8]
+1. Revisar integralmente E1–E7 contra la rúbrica antes de una exposición.
+2. Resolver, si se desea, el bonus sobre qué bounded context desplegar primero como microservicio. [P02, p. 8]

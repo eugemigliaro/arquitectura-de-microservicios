@@ -21,6 +21,7 @@
 - [Docker CLI, redes y volúmenes](temas/docker-cli-redes-y-volumenes.md): ciclo de vida, diagnóstico, modos de red, publicación de puertos, DNS y persistencia.
 - [Docker Compose](temas/docker-compose.md): servicios, redes, volúmenes, configuración, secretos, builds y orden de arranque.
 - [Entrega: Álbum de Figuritas Mundial 2026](temas/entrega-album-2026.md): versión 1.1, invariantes, RF/RNF, escenarios y rúbrica.
+- [Primera entrega TP1: análisis DDD del Álbum](temas/primera-entrega-album-ddd.md): alcance, estructura obligatoria, trazabilidad y rúbrica del primer avance.
 - [DDD moderno: lectura complementaria](temas/ddd-complementario.md): Event Modeling, arquitectura hexagonal, outbox, idempotencia y Data Mesh desde una fuente externa.
 
 ## Fuentes incorporadas
@@ -38,4 +39,5 @@
 | `P01` | *Ejercicio DDD: Pedidos — resolución* — oficial, ciclo 2025 | 16 | Fronteras, EventStorming y detalle por dominio |
 | `P02` | *Ejercicio de DDD: Huella* — oficial | 10 | Taller sin solución, entregables y rúbrica |
 | `E01` | *Requerimientos funcionales: Álbum de Figuritas Mundial 2026* — oficial, v1.1 | 7 | Consigna evaluada, invariantes, escenarios y condiciones de entrega |
+| `E02` | *Primera entrega TP1: análisis de dominio DDD del Álbum 2026* — oficial | — | Primer avance grupal, estructura de `docs/analisis-ddd.md`, alcance y rúbrica |
 | `B01` | *Modern Domain-Driven Design Guide* — externa | 17 | Extensiones y patrones complementarios de DDD |

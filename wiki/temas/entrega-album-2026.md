@@ -6,6 +6,8 @@ La fuente incorporada es la versión 1.1 de la consigna funcional. Declara oblig
 
 Esta síntesis sirve para localizar requisitos; para implementar o verificar la entrega debe consultarse la redacción exacta de cada RF, RNF y escenario en `E01`.
 
+La [primera entrega del TP1](primera-entrega-album-ddd.md) usa esta consigna como fuente de verdad, pero tiene un alcance distinto: pide exclusivamente análisis de dominio DDD y excluye implementación, arquitectura e infraestructura. [E02]
+
 ## Lenguaje e invariantes de colección
 
 - **Figurita:** tipo del catálogo, identificado por número dentro de la edición.
@@ -88,4 +90,3 @@ La rúbrica pondera autenticación (10 %), requerimientos core (25 %), ampliados
 La exigencia de implementar todo y el gate no funcional presentan una incompatibilidad aparente con el umbral general del material introductorio; está documentada en [Dudas y conflictos](../dudas-y-conflictos.md). [T01, p. 24] [E01, p. 1] [E01, p. 6] [E01, p. 7]
 
 > Nota operativa del repositorio: aunque `E01` exige credenciales reales, no se deben guardar client secrets ni otros secretos en este repositorio. Esta es una política del repositorio, no una afirmación del material académico.
-

@@ -105,6 +105,14 @@ Preguntas recuperables por tema. Mantener las respuestas separadas o plegadas cu
 69. Diferenciá volumen, bind mount y `tmpfs` por responsable, persistencia y caso de uso.
 70. ¿Por qué un bind mount puede producir problemas de permisos aunque los nombres de usuario parezcan coincidir?
 
+## Primera entrega DDD del Álbum
+
+71. ¿Cuáles son las cinco secciones obligatorias de `docs/analisis-ddd.md`?
+72. ¿Por qué identificar bounded contexts no equivale todavía a diseñar microservicios?
+73. ¿Qué debe hacerse cuando una regla de negocio no puede garantizarse dentro de un único agregado?
+74. ¿Qué trazabilidad exige la consigna entre `E01` y cada elemento del modelo?
+75. ¿Qué tres flujos deben aparecer como mínimo en el encadenamiento de eventos?
+
 <details>
 <summary>Respuestas orientativas</summary>
 
@@ -178,6 +186,11 @@ Preguntas recuperables por tema. Mantener las respuestas separadas o plegadas cu
 68. El bridge predeterminado deja una red plana y no ofrece resolución automática por nombre; una red propia aísla el grupo y ofrece DNS embebido por nombre y alias mediante el resolver `127.0.0.11`. [T08, p. 24] [T08, p. 25]
 69. Docker gestiona el volumen fuera de OverlayFS y éste sobrevive al contenedor; el usuario gestiona el path de un bind, que persiste como parte del host; el kernel mantiene `tmpfs` en RAM y lo destruye con el contenedor. Se usan, respectivamente, para datos importantes, paths del host y contenido que no debe persistir. [T08, p. 35] [T08, p. 43]
 70. El kernel compara UID/GID numéricos, no nombres. Un usuario llamado igual dentro y fuera puede tener otro número; un contenedor root puede además dejar archivos de root en el host. [T08, p. 42]
+71. Lenguaje ubicuo, mapeo estratégico, diseño táctico, eventos de dominio, y supuestos y preguntas abiertas. [E02]
+72. Porque un bounded context delimita un modelo y un lenguaje; la partición en unidades de runtime y despliegue pertenece a una etapa posterior y está fuera del alcance de esta entrega. [E02] [T03, p. 31]
+73. Señalarlo como hallazgo y explicar qué coordinación o mecanismo de dominio la sostiene, en lugar de adjudicarla artificialmente a un agregado incapaz de garantizarla. [E02]
+74. Cada término, contexto, agregado y evento debe derivarse de la consigna funcional o justificarse; cada requisito de `E01` debe quedar representado para no convertirse en una omisión. [E02]
+75. Apertura de sobre, intercambio completado e intercambio no concretado. [E02]
 
 </details>
 

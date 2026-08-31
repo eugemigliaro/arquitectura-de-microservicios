@@ -11,3 +11,4 @@ B01	bibliografia	Modern Domain-Driven Design Guide	material/externo/Modern Domai
 T06	teoria	Imágenes de contenedores	material/catedra/teoria/Imágenes de Contenedores - Slidev.pdf	42	2026	vigente	Imágenes de Contenedores - Slidev.pdf
 T07	teoria	Docker Compose	material/catedra/teoria/Docker Compose.pdf	25	2026	vigente	Docker Compose.pdf
 T08	teoria	Docker CLI, redes y volúmenes	material/catedra/teoria/Docker CLI, redes y volúmenes.pdf	47	2026	vigente	Docker CLI, redes y volúmenes.pdf
+E02	consigna	Primera entrega TP1: análisis de dominio DDD del Álbum 2026	material/catedra/practica/consigna-primera-entrega-tp1.md		2026	vigente	consigna-primera-entrega-tp1.md

@@ -16,7 +16,7 @@ estudio:
 
 practica:
   guias_son_entregables: false
-  trabajo_grupal_activo: false
+  trabajo_grupal_activo: true
 
 laboratorio:
   herramienta: "ninguna"

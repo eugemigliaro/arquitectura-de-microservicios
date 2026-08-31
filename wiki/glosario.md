@@ -5,6 +5,7 @@ Definiciones breves y enlaces al apunte donde se desarrolla cada término. Toda 
 | Término | Definición |
 |---|---|
 | Acoplamiento | Grado de dependencia entre servicios; es bajo cuando un cambio local no fuerza cambios coordinados en sus consumidores. [T02, p. 20] Ver [Diseño de servicios](temas/diseno-de-servicios.md). |
+| Análisis de dominio | Trabajo de descubrir y acordar el vocabulario, las fronteras, el modelo interno, las invariantes y los hechos relevantes del negocio antes del diseño técnico. En la primera entrega del Álbum excluye implementación y arquitectura. [E02] Ver [Primera entrega DDD](temas/primera-entrega-album-ddd.md). |
 | Aggregate | Conjunto de entidades y value objects tratado como unidad y frontera de consistencia transaccional. [T03, p. 37] Ver [DDD táctico](temas/ddd-tactico-y-eventstorming.md). |
 | Aggregate Root | Entidad raíz mediante la cual el exterior accede al aggregate. [T03, p. 37] |
 | Anticorruption Layer (ACL) | Adaptador que traduce entre modelos y evita que el lenguaje de otro contexto contamine el propio. [T03, p. 26] Ver [DDD estratégico](temas/ddd-estrategico.md). |

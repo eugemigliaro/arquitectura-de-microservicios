@@ -74,6 +74,37 @@ Preguntas recuperables por tema. Mantener las respuestas separadas o plegadas cu
 47. ¿Qué dual write intenta evitar Transactional Outbox y cómo se publica luego el evento?
 48. ¿Por qué un outbox no elimina por sí solo la necesidad de consumidores idempotentes?
 
+## Imágenes de contenedores
+
+49. ¿Por qué un binario puede existir dentro de una imagen `scratch` y aun así no arrancar?
+50. Diferenciá `ENTRYPOINT` y `CMD`, y explicá qué reemplaza `docker run IMAGEN argumentos`.
+51. ¿Cómo se invalidan `COPY`/`ADD` y `RUN`, y por qué conviene copiar las dependencias antes que el código?
+52. ¿Qué es el build context y qué dos clases de problemas evita `.dockerignore`?
+53. ¿Qué queda fuera de una imagen final multi-stage y qué tradeoff introducen `scratch` o distroless?
+54. ¿Por qué menos CVEs informadas no demuestra por sí solo que una base sea más segura o esté actualizada?
+55. Compará un tag, un tag que el registry impide sobrescribir y un digest como referencias de despliegue.
+
+## Docker Compose
+
+56. Diferenciá `ports`, `expose`, `volumes` y `networks` por el efecto que declara cada uno.
+57. ¿Cómo evita Compose hardcodear secretos y dónde aparecen dentro del contenedor?
+58. ¿Por qué `depends_on` sin healthcheck no resuelve necesariamente el orden de arranque?
+59. Reconstruí los estados de un healthcheck y explicá si un fallo reinicia el contenedor.
+60. Diferenciá readiness y liveness; ¿a cuál se aproxima `service_healthy`?
+61. ¿Cuándo conviene definir el healthcheck en el Dockerfile y cuándo en Compose?
+62. En el ejemplo proxy + backend + MariaDB, asigná el rol de puerto, red, secreto, volumen y dependencia saludable.
+
+## Docker CLI, redes y volúmenes
+
+63. ¿Por qué la CLI no crea contenedores directamente y qué riesgo especial tiene el socket del daemon?
+64. Reconstruí los estados principales del ciclo de vida y explicá qué combinan o eliminan `docker run`, `pause` y `rm`.
+65. Diferenciá `exec` y `attach`, y describí la parada ordenada que inicia `docker stop`.
+66. En una red bridge, separá qué coordina el engine de los objetos y funciones que aporta el kernel.
+67. ¿Qué transformación implementa `-p 8080:80` y cómo cambia la exposición al escribir `127.0.0.1:8080:80`?
+68. Compará el bridge predeterminado con uno creado por el usuario en DNS y aislamiento.
+69. Diferenciá volumen, bind mount y `tmpfs` por responsable, persistencia y caso de uso.
+70. ¿Por qué un bind mount puede producir problemas de permisos aunque los nombres de usuario parezcan coincidir?
+
 <details>
 <summary>Respuestas orientativas</summary>
 
@@ -125,6 +156,28 @@ Preguntas recuperables por tema. Mantener las respuestas separadas o plegadas cu
 46. La fuente externa usa EventStorming para exploración colaborativa del dominio y Event Modeling para un storyboard más estructurado de UI, commands, eventos y read models. [B01, p. 7]
 47. Evita que el cambio de dominio se confirme y la publicación falle por ser dos escrituras independientes. Estado y evento pendiente se guardan en una transacción local; un relay publica luego mediante polling o CDC. [B01, p. 11] [B01, p. 12]
 48. El relay puede publicar más de una vez ante reintentos o fallos; por eso el consumidor todavía debe tolerar duplicados, por ejemplo registrando `message_id` procesados. [B01, p. 12] [B01, p. 13]
+49. Porque un binario enlazado dinámicamente necesita el intérprete ELF y bibliotecas como `libc`; si `scratch` solo contiene el ejecutable, Docker puede informar `no such file or directory` aunque el archivo esté presente. [T06, p. 10] [T06, p. 11]
+50. `ENTRYPOINT` fija el ejecutable y `CMD` aporta comando o argumentos predeterminados. Los argumentos escritos después de la imagen reemplazan `CMD` y se aplican sobre `ENTRYPOINT`; con solo `CMD`, pueden reemplazar el comando entero. [T06, p. 14] [T06, p. 15]
+51. `COPY`/`ADD` usan checksum del contenido y `RUN` compara exactamente el string del comando. Un miss invalida esa capa y las posteriores; separar manifiestos de dependencias del código permite reutilizar la instalación mientras aquellos no cambien. [T06, p. 20] [T06, p. 21] [T06, p. 22]
+52. Es el conjunto enviado por el cliente al engine y la única entrada de archivos del build aislado. `.dockerignore` reduce tamaño e invalidaciones de cache y evita transferir o incorporar secretos y basura del repositorio. [T06, p. 23] [T06, p. 24]
+53. Quedan fuera compiladores, dependencias de desarrollo y todo lo no copiado desde la etapa builder. La imagen se achica y pierde superficie de ataque, pero `scratch` o distroless también quitan shell y utilidades de diagnóstico; además el binario debe incluir sus dependencias necesarias. [T06, p. 27] [T06, p. 28] [T06, p. 29]
+54. Porque el conteo depende del scanner, su base y la fecha; incluye hallazgos no necesariamente explotables desde el contenedor y hay que distinguir los que tienen fix. Una base distroless desactualizada puede quedar peor que otra mayor pero actualizada. [T06, p. 30] [T06, p. 31]
+55. Un tag puede moverse; una política de registry puede impedir que se sobrescriba; el digest identifica criptográficamente el contenido del manifiesto y no depende de que se respete una convención de nombres. [T06, p. 35] [T06, p. 36]
+56. `ports` publica host:contenedor; `expose` declara acceso interno sin publicar al host; `volumes` monta almacenamiento persistente; `networks` define conectividad y resolución por nombre entre servicios. [T07, p. 8] [T07, p. 9]
+57. Declara un secreto externo o basado en un archivo excluido de Git y lo referencia desde el servicio; Compose lo monta como `/run/secrets/<nombre>`. [T07, p. 11]
+58. Porque contenedor iniciado no equivale a servicio listo. Sin prueba de salud el consumidor puede conectarse durante el warm-up; `condition: service_healthy` lo mantiene esperando. [T07, p. 15] [T07, p. 16]
+59. Empieza `starting`; código 0 produce `healthy` y otro código, `unhealthy`, con transiciones posteriores según los resultados. El healthcheck informa estado y no reinicia por sí solo. [T07, p. 17]
+60. Readiness indica capacidad de aceptar trabajo; liveness, si el proceso sigue vivo y la plataforma debería reiniciarlo. `service_healthy` se aproxima a readiness y solo coordina a los dependientes. [T07, p. 18]
+61. En el Dockerfile cuando la prueba es intrínseca y portable con la imagen; en Compose cuando depende del entorno donde se despliega. [T07, p. 19]
+62. El proxy publica HTTP al cliente; los servicios se conectan internamente; la contraseña se monta como secreto en backend y base; el volumen conserva datos; y el backend espera que MariaDB esté `service_healthy`. [T07, p. 21] [T07, p. 22] [T07, p. 23]
+63. La CLI es un cliente HTTP que solicita operaciones al daemon, que delega en `containerd`, `runc` y el kernel. El socket permite usar toda esa API, incluidos montajes del host; por eso su acceso equivale en la práctica a root y no debe exponerse a contenedores no confiables. [T08, p. 4] [T08, p. 5]
+64. El flujo principal es `created → running → exited → rm`, con `paused` como suspensión reversible. `run` combina create y start; `pause` congela mediante el cgroup freezer; `rm` elimina el objeto y su capa escribible. [T08, p. 7]
+65. `exec` crea un proceso nuevo dentro de los namespaces del contenedor; `attach` conecta la terminal al PID 1 y puede enviarle señales. `stop` envía primero `SIGTERM` y, si vence el período de gracia, `SIGKILL`; `--init` ayuda a reenviar señales y recolectar zombis. [T08, p. 13] [T08, p. 14]
+66. El engine elige subred mediante IPAM, crea y conecta endpoints y escribe configuración. El kernel aporta net namespaces, pares `veth`, bridge L2, forwarding y reglas de NAT/filtro; el egress se enmascara con la IP del host. [T08, p. 20] [T08, p. 21]
+67. Instala DNAT desde el puerto 8080 del host al 80 del contenedor. Sin dirección explícita puede quedar publicado en interfaces externas; anteponer `127.0.0.1` lo limita a loopback. [T08, p. 22]
+68. El bridge predeterminado deja una red plana y no ofrece resolución automática por nombre; una red propia aísla el grupo y ofrece DNS embebido por nombre y alias mediante el resolver `127.0.0.11`. [T08, p. 24] [T08, p. 25]
+69. Docker gestiona el volumen fuera de OverlayFS y éste sobrevive al contenedor; el usuario gestiona el path de un bind, que persiste como parte del host; el kernel mantiene `tmpfs` en RAM y lo destruye con el contenedor. Se usan, respectivamente, para datos importantes, paths del host y contenido que no debe persistir. [T08, p. 35] [T08, p. 43]
+70. El kernel compara UID/GID numéricos, no nombres. Un usuario llamado igual dentro y fuera puede tener otro número; un contenedor root puede además dejar archivos de root en el host. [T08, p. 42]
 
 </details>
 
@@ -135,3 +188,4 @@ Preguntas recuperables por tema. Mantener las respuestas separadas o plegadas cu
 - Dibujá el proceso y las vistas del kernel para un contenedor que usa PID, mount, user y net namespaces, un cgroup de memoria y OverlayFS. Señalá qué sigue compartiendo con el host. [T04, p. 14] [T04, p. 18] [T04, p. 19]
 - Para Huella, elegí cuatro términos conflictivos y proponé cómo se traducen en el borde, sin resolver todavía los bounded contexts. [P02, p. 6]
 - Construí una tabla de estados para oferta, operación de intercambio y copia que cubra aceptación, timeout, cancelación y vencimiento sin violar los invariantes. [E01, p. 3] [E01, p. 4] [E01, p. 6]
+- Diagnosticá este caso: dos contenedores comparten una red propia, el nombre resuelve, pero el cliente recibe `connection refused` y desde el host tampoco funciona el puerto publicado. Ordená las comprobaciones de red, escucha y DNAT. [T08, p. 22] [T08, p. 32]

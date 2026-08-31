@@ -17,6 +17,9 @@
 - [DDD táctico y EventStorming](temas/ddd-tactico-y-eventstorming.md): entidades, value objects, aggregates, comandos, eventos y taller de e-commerce.
 - [Práctica de DDD](temas/practica-ddd.md): resolución 2025 de Pedidos y ejercicio abierto 2026 de Huella.
 - [Contenedores sobre Linux](temas/contenedores-linux.md): namespaces, cgroups, OverlayFS, OCI, runtime stack, seguridad y demo manual.
+- [Imágenes de contenedores y Dockerfile](temas/imagenes-de-contenedores.md): capas, instrucciones, cache, build context, multi-stage, seguridad y trazabilidad.
+- [Docker CLI, redes y volúmenes](temas/docker-cli-redes-y-volumenes.md): ciclo de vida, diagnóstico, modos de red, publicación de puertos, DNS y persistencia.
+- [Docker Compose](temas/docker-compose.md): servicios, redes, volúmenes, configuración, secretos, builds y orden de arranque.
 - [Entrega: Álbum de Figuritas Mundial 2026](temas/entrega-album-2026.md): versión 1.1, invariantes, RF/RNF, escenarios y rúbrica.
 - [DDD moderno: lectura complementaria](temas/ddd-complementario.md): Event Modeling, arquitectura hexagonal, outbox, idempotencia y Data Mesh desde una fuente externa.
 
@@ -29,6 +32,9 @@
 | `T03` | *Domain-Driven Design* — oficial | 58 | DDD estratégico y táctico, context mapping y EventStorming |
 | `T04` | *Linux y contenedores* — oficial | 41 | Primitivas de kernel, capas, runtimes y seguridad |
 | `T05` | *Demo: construyendo un container a mano* — oficial | 59 | Laboratorio paso a paso y ciclo de vida manual |
+| `T06` | *Imágenes de contenedores* — oficial | 42 | Dockerfile, cache, build context, multi-stage, seguridad, tags y digests |
+| `T07` | *Docker Compose* — oficial | 25 | Orquestación local, configuración, secretos, redes, volúmenes y healthchecks |
+| `T08` | *Docker CLI, redes y volúmenes* — oficial | 47 | Operación y diagnóstico, drivers de red, NAT, DNS, mounts y persistencia |
 | `P01` | *Ejercicio DDD: Pedidos — resolución* — oficial, ciclo 2025 | 16 | Fronteras, EventStorming y detalle por dominio |
 | `P02` | *Ejercicio de DDD: Huella* — oficial | 10 | Taller sin solución, entregables y rúbrica |
 | `E01` | *Requerimientos funcionales: Álbum de Figuritas Mundial 2026* — oficial, v1.1 | 7 | Consigna evaluada, invariantes, escenarios y condiciones de entrega |

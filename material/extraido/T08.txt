@@ -1,0 +1,892 @@
+FUENTE: T08
+TITULO: Docker CLI, redes y volúmenes
+ORIGINAL: material/catedra/teoria/Docker CLI, redes y volúmenes.pdf
+PAGINAS: 47
+
+===== PAGINA 1 =====
+
+Arquitectura de
+Microservicios con
+Contenedores
+Docentes
+
+— Ing. Federico Castañeda
+— Ing. Carlos Maceira
+— Ing. Franco Rupnik
+
+
+
+                            Microservicios (73.40) · ITBA
+
+===== PAGINA 2 =====
+
+Usando Docker
+CLI · redes · volúmenes
+
+
+
+
+                          Microservicios (73.40) · ITBA
+
+===== PAGINA 3 =====
+
+ Objetivos de la clase
+ Al finalizar esta clase vas a poder:
+     Manejar el ciclo de vida de un container desde la CLI y diagnosticarlo cuando falla
+     Explicar qué hace el engine y qué hace el kernel en cada modo de red
+     Elegir el driver de red correcto y publicar puertos entendiendo el NAT que hay detrás
+     Distinguir volumes, bind mounts y tmpfs, y saber dónde vive cada dato
+     Anticipar los problemas clásicos de permisos, persistencia y DNS
+
+
+
+
+Microservicios (73.40)                                                                       3
+
+===== PAGINA 4 =====
+
+ Arquitectura cliente–servidor
+ docker es solo un cliente HTTP. No crea containers:           docker (CLI)
+                                                                cliente HTTP
+ le pide al daemon que los cree.
+                                                       unix:///var/run/docker.sock
+ El daemon (dockerd) expone una REST API y                        REST API
+
+                         →     →
+ delega en containerd runc kernel.
+                                                                 dockerd
+                                                         imágenes, redes, volúmenes
+ Consecuencia práctica: docker ps en tu laptop
+ puede listar containers de otra máquina.                   containerd + runc
+                                                         bundle OCI, clone(), cgroups
+
+
+                                                               Linux kernel
+                                                        namespaces · cgroups · overlay
+
+
+
+
+Microservicios (73.40)                                                                   4
+
+===== PAGINA 5 =====
+
+ El socket es la superficie de ataque
+             la API sin la CLI
+
+   curl --unix-socket /var/run/docker.sock http://localhost/containers/json
+   DOCKER_HOST=ssh://user@servidor docker ps      # mismo cliente, otro daemon
+
+
+    Hecho                                        Consecuencia
+
+    El socket lo posee root:docker               Estar en el grupo docker equivale a ser root
+
+    La API permite montar / del host             Un container con el socket montado puede tomar la máquina
+
+    No hay autenticación en el socket            La autorización es el permiso del archivo
+
+
+
+
+Microservicios (73.40)                                                                                       5
+
+===== PAGINA 6 =====
+
+ La CLI: objeto + verbo
+ Estructura moderna: docker <objeto> <verbo>. Los comandos "cortos" son alias históricos.
+
+    Objeto               Comandos típicos                         Alias corto
+
+    container            run ls logs exec stop rm inspect         docker run, docker ps
+
+    image                pull ls tag push rm history              docker images, docker rmi
+
+    network              create ls connect inspect rm             —
+
+    volume               create ls inspect rm                     —
+
+    system               df prune info events                     —
+
+
+
+
+Microservicios (73.40)                                                                        6
+
+===== PAGINA 7 =====
+
+ Ciclo de vida
+                                                                  docker pause
+                                                                                       paused
+                                                                docker unpause
+        docker create    created   docker start   running
+                                                            proceso termina / docker
+                                                                       stop
+                                                                                       exited   docker rm
+                                                                  docker start
+
+ docker run = create + start. docker rm borra el container y su capa de escritura.
+ docker pause usa el cgroup freezer: los procesos quedan congelados, no reciben señales.
+
+
+
+
+Microservicios (73.40)                                                                                      7
+
+===== PAGINA 8 =====
+
+ Anatomía de docker run
+             docker run    -d      -p 8080:80 -v datos:/data nginx:1.27 nginx -g 'daemon off;'
+                          DETACH     PUERTO       VOLUMEN      IMAGEN           COMANDO
+
+
+ Todo lo que va después de la imagen es el comando: reemplaza al CMD de la imagen.
+ Sin --name, el daemon inventa uno (nostalgic_turing) y lo tenés que buscar cada vez.
+
+
+
+
+Microservicios (73.40)                                                                           8
+
+===== PAGINA 9 =====
+
+Flags que vas a usar siempre
+Flag               Qué hace                           Qué toca por debajo
+
+-d / -it           Background / interactivo con TTY   stdin y pty del proceso
+
+--rm               Borra el container al terminar     capa RW + metadata
+
+-e / --env-file    Variables de entorno               env del exec()
+
+-p / -P            Publica puertos                    reglas DNAT de iptables
+
+-v / --mount       Volúmenes y bind mounts            mounts en el mount namespace
+
+--network          Modo de red                        network namespace
+
+-u, -w             Usuario y working dir              UID/GID y chdir
+
+--memory, --cpus   Límites                            memory.max, cpu.max (cgroup v2)
+
+--restart          Política de reinicio               supervisión del daemon
+
+===== PAGINA 10 =====
+
+ Qué pasa cuando hacés docker run
+ 1. La CLI arma un POST /containers/create y lo manda al socket
+ 2. El daemon resuelve la referencia de la imagen y hace pull si falta
+ 3. containerd desempaqueta los layers   → lowerdir; crea upperdir para este container
+ 4. El daemon crea el endpoint de red: netns, par veth, IP del IPAM, reglas de iptables
+ 5. Genera el config.json OCI: namespaces, mounts, cgroups, capabilities
+ 6. runc hace clone(), aplica cgroups, pivot_root, seccomp y exec()
+
+ Los pasos 3 a 6 son exactamente los que hicimos a mano en la demo.
+
+
+
+
+Microservicios (73.40)                                                                    10
+
+===== PAGINA 11 =====
+
+Inspección: la caja de herramientas
+Comando                                                    Para qué
+
+docker ps -a                                               Qué corre, qué murió y con qué exit code
+
+docker logs -f --tail 100 api                              Stdout/stderr del proceso principal
+
+docker inspect api                                         JSON completo: mounts, red, config, estado
+
+docker exec -it api sh                                     Shell adentro del container que ya corre
+
+docker stats                                               CPU/RAM/red en vivo (lee los cgroups)
+
+docker top api                                             Procesos, con los PID del host
+
+docker diff api                                            Qué cambió respecto de la imagen (el upperdir)
+
+docker events                                              Stream de eventos del daemon
+
+       inspect con formato
+
+docker inspect -f '{{ .NetworkSettings.IPAddress }}' api
+docker inspect -f '{{ json .Mounts }}' api | jq
+
+===== PAGINA 12 =====
+
+ Logs: qué son y dónde están
+ docker logs no lee un archivo del container: lee lo
+                                                        Driver        Dónde va
+ que el daemon capturó de stdout y stderr del PID
+ 1.                                                     json-         /var/lib/docker/containers/<id>/*.js
+                                                        file          (default)
+ Si tu app escribe a /var/log/app.log, docker
+ logs no muestra nada.                                  local         Formato binario, más eficiente
+
+ Por eso la convención en containers es loguear a       journald      journal de systemd
+ stdout.
+                                                        fluentd,
+                                                        gelf,         Colector externo
+                                                        awslogs
+
+
+                                                       docker run --log-opt max-size=10m \
+                                                                  --log-opt max-file=3 …
+
+
+
+
+Microservicios (73.40)                                                                                   12
+
+===== PAGINA 13 =====
+
+ exec vs attach
+ docker exec lanza un proceso nuevo dentro de                docker attach te conecta al stdin/stdout del
+ los namespaces del container.                               PID 1.
+ Salir del shell no afecta al proceso principal. Es lo que   Ctrl-C le manda SIGINT al proceso principal y
+ querés el 99% de las veces.                                 mata el container.
+
+  docker exec -it api sh                                     Para desconectarse sin matarlo: Ctrl-P Ctrl-Q.
+  docker exec -u root api apk add curl
+                                                             -i mantiene stdin abierto · -t asigna un pseudo-TTY
+
+
+
+
+Microservicios (73.40)                                                                                             13
+
+===== PAGINA 14 =====
+
+ Señales y parada ordenada
+                                                                  sí   exited (143)
+
+
+       docker stop       SIGTERM al PID 1      ¿terminó en 10s?
+
+
+                                                                  no     SIGKILL         exited (137)
+
+
+
+     docker stop -t 30 cambia el período de gracia · docker kill -s HUP manda otra señal
+     PID 1 no tiene handlers por defecto: si tu proceso ignora SIGTERM, siempre esperás los 10 s
+     --init inyecta un init mínimo (tini) que reapea zombies y reenvía señales
+
+
+
+
+Microservicios (73.40)                                                                                  14
+
+===== PAGINA 15 =====
+
+ Mover cosas dentro y fuera
+    Comando                  Qué hace                                     Cuándo
+
+    docker cp                Copia archivos host   ↔ container            Sacar un dump, meter un config puntual
+
+    docker commit            Crea una imagen desde un container           Casi nunca: anti-patrón
+
+    docker export / import   Tar del filesystem, sin historia ni layers   Aplanar una imagen
+
+    docker save / load       Tar de la imagen con layers y metadata       Mover imágenes sin registry
+
+
+
+
+Microservicios (73.40)                                                                                             15
+
+===== PAGINA 16 =====
+
+Imágenes y limpieza
+docker pull nginx:1.27           docker images
+docker tag nginx:1.27 midominio.io/nginx:1.27
+docker push midominio.io/nginx:1.27
+
+
+ Comando                                         Qué borra
+
+ docker system df                                (no borra) muestra cuánto ocupan imágenes, containers, volúmenes y cache
+
+ docker container prune                          Containers detenidos
+
+ docker image prune -a                           Imágenes sin container que las use
+
+ docker volume prune                             Volúmenes sin usar — puede borrar datos
+
+ docker system prune -a --volumes                Todo lo anterior
+
+Cómo se construyen y versionan esas imágenes: clase 04.
+
+===== PAGINA 17 =====
+
+Redes
+Qué hace el engine y qué hace el kernel
+
+===== PAGINA 18 =====
+
+ Punto de partida: el net namespace
+ Cada container arranca con su propio network               dentro del container
+
+ namespace: interfaces, tabla de rutas, reglas de    $ ip addr
+ firewall y puertos propios.                         1: lo: <LOOPBACK,UP>
+                                                         inet 127.0.0.1/8
+ Por eso dos containers pueden escuchar en el        12: eth0@if13: <BROADCAST,UP>
+                                                         inet 172.17.0.2/16
+ puerto 80 sin chocar.                               $ ip route
+                                                     default via 172.17.0.1 dev eth0
+ El "modo de red" define solo una cosa: cómo se
+ conecta ese namespace al mundo.                    eth0@if13: la punta 12 de un par veth cuyo otro
+                                                    extremo es la interfaz 13 del host.
+
+
+
+
+Microservicios (73.40)                                                                                18
+
+===== PAGINA 19 =====
+
+ Los modos de red
+    Driver                          Idea                                                Aislamiento
+
+    bridge                          Netns propio + switch virtual + NAT (default)       Alto
+
+    host                            Sin netns propio: usa el del host                   Ninguno
+
+    none                            Netns propio con solo lo                            Total
+
+    container:<id>                  Comparte el netns de otro container                 Compartido
+
+    macvlan / ipvlan                Interfaz propia sobre la NIC física, IP de la LAN   L2 de la red física
+
+    overlay                         Red L2 entre varios hosts vía VXLAN                 Multi-host
+
+
+  docker network ls      # bridge, host, none vienen predefinidas
+
+
+
+
+Microservicios (73.40)                                                                                        19
+
+===== PAGINA 20 =====
+
+ Bridge: qué construye el engine
+ 1. Crea un bridge (docker0 o br-<id>) — un switch
+                                                                                 Host
+                                                            netns c1                               netns c2
+
+    L2 en software                                       eth0 172.17.0.2                        eth0 172.17.0.3
+
+
+ 2. Le asigna una subnet del IPAM (172.17.0.0/16)
+                                                              veth                                   veth
+ 3. Por container: un par veth, una punta adentro del
+    netns como eth0, la otra enslavada al bridge                           docker0 172.17.0.1
+
+
+ 4. Le da al container una IP libre y ruta por defecto                       MASQUERADE
+
+    hacia la IP del bridge
+                                                                             eth0 del host
+ 5. Escribe reglas de iptables para el egress y para
+    los puertos publicados
+                                                                                Internet
+
+
+
+
+Microservicios (73.40)                                                                                            20
+
+===== PAGINA 21 =====
+
+Bridge: qué hace el kernel
+ Objeto del kernel                     Quién lo pide                            Qué logra
+
+ netns                                 runc vía clone(CLONE_NEWNET)             Stack de red privado
+
+ veth pair                             Daemon vía netlink                       Cable virtual entre netns y host
+
+ bridge (br_netfilter)                 Driver bridge del kernel                 Reenvío L2 entre containers
+
+ net.ipv4.ip_forward=1                 El daemon lo activa al arrancar          Routing entre bridge y NIC
+
+ Reglas nat / filter                   Daemon vía iptables/nftables             SNAT de salida y DNAT de entrada
+
+
+El tráfico container   → internet sale enmascarado con la IP del host (SNAT). Desde afuera, el container no existe.
+
+===== PAGINA 22 =====
+
+ Publicar un puerto es hacer DNAT
+                                           docker run -d -p 8080:80 nginx
+                                                               HOST:CONTAINER
+
+
+
+  # tabla nat, cadena DOCKER (simplificado)
+  -A DOCKER ! -i docker0 -p tcp --dport 8080 -j DNAT --to-destination 172.17.0.2:80
+  # y para el egress
+  -A POSTROUTING -s 172.17.0.0/16 ! -o docker0 -j MASQUERADE
+
+     -p 8080:80          → puerto 8080 del host hacia el 80 del container
+     -p 127.0.0.1:8080:80 lo publica solo en loopback: no queda expuesto en la LAN
+     -P publica todos los EXPOSE de la imagen en puertos altos aleatorios
+
+
+
+
+Microservicios (73.40)                                                                22
+
+===== PAGINA 23 =====
+
+ El firewall del host no te protege
+ Docker inserta sus reglas antes que las de ufw o   La cadena DOCKER-USER se evalúa antes que las
+ firewalld.                                         reglas de Docker: es el lugar previsto para tus
+                                                    propias restricciones.
+ Un -p 8080:80 queda accesible desde la LAN
+ aunque ufw diga que el 8080 está cerrado.          iptables -I DOCKER-USER -i eth0 \
+                                                      ! -s 10.0.0.0/8 -j DROP
+
+                                                    O más simple: publicar en 127.0.0.1 y poner un
+                                                    reverse proxy adelante.
+
+
+
+
+Microservicios (73.40)                                                                                23
+
+===== PAGINA 24 =====
+
+ bridge default vs redes propias
+ Red bridge por defecto                           Red creada por vos
+     Sin resolución DNS por nombre: solo IPs      docker network create app-net
+                                                  docker run -d --name db --network app-net postgres
+     Todos los containers en la misma red plana   docker run --rm --network app-net alpine \
+     --link es legacy y está deprecado              ping -c1 db     # ← resuelve por nombre
+
+                                                    DNS interno por nombre de container y por alias
+                                                    Aislada de otras redes; conectable en caliente
+
+
+
+
+Microservicios (73.40)                                                                                 24
+
+===== PAGINA 25 =====
+
+ El DNS embebido
+ En una red propia, el /etc/resolv.conf del                      dentro del container
+
+ container apunta a 127.0.0.11.                           $ cat /etc/resolv.conf
+                                                          nameserver 127.0.0.11
+ Ese resolver es el daemon, escuchando dentro del         options ndots:0
+ netns del container.
+                                                          $ getent hosts db
+     Nombre de container, alias de red y nombre de        172.19.0.3   db
+
+                 →
+     servicio IP interna                                 Se puede sobreescribir con --dns y agregar
+     Lo que no resuelve, lo reenvía a los DNS del host   entradas fijas con --add-host.
+
+
+
+
+Microservicios (73.40)                                                                                25
+
+===== PAGINA 26 =====
+
+ host: sin aislamiento de red
+  docker run -d --network host nginx                      Cuándo sirve
+
+ El proceso no tiene netns propio: usa el del host.         Throughput alto o latencia crítica (se ahorra el hop
+ runc simplemente no pasa CLONE_NEWNET.                     del bridge y el NAT)
+                                                            Apps que necesitan ver la red real: descubrimiento
+     Sin veth, sin bridge, sin NAT
+                                                            por broadcast/multicast, monitoreo
+     -p se ignora: la app ya está en las interfaces del
+     host                                                 Cuándo no
+     Choques de puertos como cualquier proceso              Multi-tenant o cualquier cosa expuesta: el
+                                                            container ve localhost del host, incluidos
+                                                            servicios que creías privados
+
+
+
+
+Microservicios (73.40)                                                                                         26
+
+===== PAGINA 27 =====
+
+ none y container:
+ --network none                                    --network container:<id>
+ Netns propio con solo lo. Sin veth, sin rutas.    Comparte el netns de otro container: misma IP,
+ Para jobs puramente de cómputo, o para procesar   mismas interfaces, mismo localhost.
+ archivos no confiables sin salida a internet.     docker run --network container:api netshoot ss -ltnp
+
+  docker run --network none alpine ip addr         Es el modelo del pod de Kubernetes y de los
+                                                   sidecars: varios procesos, una sola identidad de red.
+
+
+
+
+Microservicios (73.40)                                                                                     27
+
+===== PAGINA 28 =====
+
+ macvlan e ipvlan
+ El kernel crea una sub-interfaz sobre la NIC física. El   docker network create -d macvlan \
+ container obtiene una IP de la LAN y aparece como           --subnet=192.168.1.0/24 \
+                                                             --gateway=192.168.1.1 \
+ un equipo más.                                              -o parent=eth0 lan
+     macvlan: MAC propia por container      → el switch     Sin NAT y sin publicación de puertos: la IP es
+     la ve; suele requerir modo promiscuo                   alcanzable directo
+     ipvlan: comparte la MAC del host, separa por           El host no se comunica con sus propios
+     IP (L2) o rutea (L3)                                   containers macvlan (el kernel no hace hairpin)
+                                                            Muchos entornos cloud y Wi-Fi lo bloquean
+
+
+
+
+Microservicios (73.40)                                                                                       28
+
+===== PAGINA 29 =====
+
+ overlay: red entre varios hosts
+ Una L2 virtual que abarca varios nodos. Es la base           Host A                                  Host B
+
+
+ de Docker Swarm.                                        container 10.0.9.2   VXLAN / UDP 4789   container 10.0.9.3
+
+
+
+
+ Los paquetes del container se encapsulan en
+ VXLAN (UDP 4789) y viajan por la red física entre    Costo: MTU menor (~1450) por el encabezado, y
+ hosts.                                               overhead de encapsulado. --opt encrypted
+                                                      agrega IPsec.
+ El plano de control (qué IP está en qué nodo) lo
+ distribuye el cluster.
+
+
+
+
+Microservicios (73.40)                                                                                                29
+
+===== PAGINA 30 =====
+
+Cuándo usar cada modo
+Modo               Usalo cuando                                  Evitalo cuando
+
+bridge propio      Es el caso normal: stack local, Compose       —
+
+bridge default     Nunca en algo real                            Necesitás DNS o aislamiento
+
+host               Latencia/throughput crítico, escaneo de red   Multi-tenant o exposición pública
+
+none               Jobs sin red, procesamiento no confiable      La app necesita salir
+
+container:         Sidecars, debugging con netshoot              Necesitás aislar
+
+macvlan / ipvlan   Legacy con IP propia en la LAN                Cloud, Wi-Fi, o si el host debe hablarles
+
+overlay            Varios hosts (Swarm)                          Un solo host
+
+===== PAGINA 31 =====
+
+ Comandos de red
+  docker network create --driver bridge --subnet 10.10.0.0/24 app-net
+  docker network create --internal db-net        # sin salida a internet
+  docker network ls
+  docker network inspect app-net                 # containers, IPs, opciones
+  docker network connect db-net api              # en caliente
+  docker network disconnect app-net api
+  docker network prune
+
+ Un container puede estar en varias redes a la vez: una interfaz eth0, eth1… por red.
+ Patrón típico: api en la red pública y en la red interna; db solo en la interna.
+
+
+
+
+Microservicios (73.40)                                                                  31
+
+===== PAGINA 32 =====
+
+ Diagnóstico de red
+             receta de debugging
+
+   docker network inspect app-net | jq '.[0].Containers'   # ¿están en la misma red?
+   docker exec api getent hosts db                         # ¿resuelve el nombre?
+   docker exec api sh -c 'nc -zv db 5432'                  # ¿llega al puerto?
+   docker run --rm --network container:api nicolaka/netshoot ss -ltnp
+   sudo iptables -t nat -L DOCKER -n                       # ¿está el DNAT?
+
+ Orden mental: misma red           → nombre resuelve → puerto abierto → la app escucha en 0.0.0.0.
+
+
+
+
+Microservicios (73.40)                                                                               32
+
+===== PAGINA 33 =====
+
+Volúmenes
+Dónde vive el estado
+
+===== PAGINA 34 =====
+
+ El problema: la capa de escritura
+ Todo lo que el container escribe va al upperdir del   Consecuencias
+ overlay. Ese directorio se borra con docker rm.         Sin volumen, docker rm = datos perdidos
+ Además, modificar un archivo grande que viene de la     Escrituras intensivas sobre la capa RW son lentas
+ imagen dispara un copy-up: el kernel copia el           (copy-up + union)
+ archivo entero al upperdir antes de escribirlo.         Los datos quedan atados al ciclo de vida de un
+                                                         container
+
+                                                       Bases de datos, uploads y logs no van en la capa de
+                                                       escritura.
+
+
+
+
+Microservicios (73.40)                                                                                       34
+
+===== PAGINA 35 =====
+
+ Los tres tipos de mount
+                                               Container · mount namespace
+
+                   /var/lib/mysql                             /app/src             /tmp/cache
+
+
+
+
+                    volume                                  bind mount                tmpfs
+       /var/lib/docker/volumes/…/_data                 cualquier path del host     RAM del host
+
+
+
+    Tipo                       Lo gestiona                     Sobrevive a rm     Uso típico
+
+    volume                     Docker                          Sí                 Datos de producción, bases
+
+    bind mount                 Vos (path del host)             Sí (es del host)   Código en desarrollo, configs
+
+    tmpfs                      Kernel (RAM)                    No                 Secretos, scratch
+
+
+Microservicios (73.40)                                                                                            35
+
+===== PAGINA 36 =====
+
+ Dos sintaxis
+ -v / --volume — corta, posicional                  --mount — explícita, con clave=valor
+
+  -v datos:/var/lib/mysql                            --mount type=volume,src=datos,dst=/var/lib/mysql
+  -v /host/app:/app:ro                               --mount type=bind,src=/host/app,dst=/app,readonly
+  -v /app/node_modules      # anónimo                --mount type=tmpfs,dst=/tmp,tmpfs-size=64m
+
+ Ambigua: si el primero no tiene /, es un volumen   Falla si el origen del bind no existe: es lo que querés.
+ nombrado; si tiene, es un bind mount.
+ Y crea el directorio del host si no existe.
+
+
+
+
+Microservicios (73.40)                                                                                     36
+
+===== PAGINA 37 =====
+
+ Volúmenes nombrados
+  docker volume create datos                          Detalles que importan
+  docker run -v datos:/var/lib/mysql mysql
+                                                        Si el volumen está vacío, Docker copia el
+ Viven en                                               contenido que la imagen tenga en ese path
+ /var/lib/docker/volumes/<nombre>/_data,                (permisos incluidos)
+ fuera de la unión de OverlayFS.                        Un volumen anónimo (-v /path) recibe un ID
+ Independientes del container: se pueden compartir,     aleatorio y queda huérfano al borrar el container
+ respaldar y reusar.                                    VOLUME en el Dockerfile crea uno anónimo en
+                                                        cada docker run
+
+
+
+
+Microservicios (73.40)                                                                                      37
+
+===== PAGINA 38 =====
+
+Bind mounts: el kernel al desnudo
+Un bind mount es literalmente mount --bind: el mismo inodo del host, visible en otro path dentro del mount
+namespace del container.
+
+ Opción                      Qué hace
+
+ readonly / :ro              Monta con MS_RDONLY
+
+ bind-propagation            rprivate (default), rshared, rslave — cómo se propagan mounts nuevos
+
+ :z / :Z                     Reetiqueta para SELinux (compartido / privado)
+
+
+  No hay copia: es el mismo archivo. Lo que escribe el container lo ve el host al instante
+  Tapa lo que la imagen tuviera en ese path
+  En macOS y Windows pasa por la VM (VirtioFS): funciona, pero es notablemente más lento
+
+===== PAGINA 39 =====
+
+ tmpfs y memoria compartida
+  docker run --tmpfs /tmp:size=64m,noexec app          Para qué
+  docker run --mount type=tmpfs,dst=/tmp,\
+  tmpfs-size=64m app
+                                                         Material sensible que no debe persistir (es donde
+                                                         Compose monta los secrets)
+ Un filesystem en RAM dentro del mount namespace.
+                                                         Scratch de alta frecuencia: caches, archivos
+ Se destruye con el container y nunca toca el disco.
+                                                         temporales
+ Cuenta contra el límite de memoria del cgroup.          Complemento de --read-only: filesystem
+                                                         inmutable + /tmp escribible
+
+                                                       --shm-size ajusta /dev/shm (default 64 MB), que
+                                                       suele quedar chico para Chrome o PostgreSQL.
+
+
+
+
+Microservicios (73.40)                                                                                       39
+
+===== PAGINA 40 =====
+
+ Drivers de volumen
+ El driver local es el default, pero acepta opciones   docker volume create --driver local \
+ de mount: podés montar NFS o CIFS sin plugins.          --opt type=nfs \
+                                                         --opt o=addr=10.0.0.5,rw \
+ Los plugins de terceros (NFS, Ceph, EBS, Portworx)      --opt device=:/exports/datos \
+                                                         nfs-datos
+ exponen almacenamiento remoto como un volumen
+ normal.                                               # bind con opciones, como volumen nombrado
+                                                       docker volume create --driver local \
+ En Kubernetes esta idea se estandariza como CSI.        --opt type=none --opt o=bind \
+                                                         --opt device=/srv/datos datos
+
+
+
+
+Microservicios (73.40)                                                                              40
+
+===== PAGINA 41 =====
+
+ Comandos y respaldo
+  docker volume create datos      docker volume ls -f dangling=true
+  docker volume inspect datos     docker volume rm datos
+
+  # backup: un container efímero que ve el volumen y un directorio del host
+  docker run --rm -v datos:/data:ro -v "$PWD":/backup alpine \
+    tar czf /backup/datos.tar.gz -C /data .
+
+  # restore
+  docker run --rm -v datos:/data -v "$PWD":/backup alpine \
+    tar xzf /backup/datos.tar.gz -C /data
+
+ docker volume prune borra los volúmenes que ningún container usa: con el stack bajado, eso incluye
+ tus datos.
+
+
+
+
+Microservicios (73.40)                                                                                41
+
+===== PAGINA 42 =====
+
+ Permisos: el problema de los UID
+ El kernel solo compara números. El usuario node        docker run -u "$(id -u):$(id -g)" -v "$PWD":/app node …
+ (UID 1000) de la imagen y tu usuario del host son el
+                                                          Volumen vacío: hereda el dueño del path en la
+ mismo UID o no lo son; los nombres no existen del
+                                                          imagen
+ lado del kernel.
+                                                          Bind mount: manda el dueño del host, sin
+ Síntoma: permission denied sobre un directorio           traducción
+ bind-montado que se ve perfectamente accesible.
+                                                          Archivos creados por un container que corre como
+                                                          root quedan de root en tu host
+
+                                                        El user namespace (userns-remap) mapea los UID
+                                                        del container a un rango sin privilegios del host.
+
+
+
+
+Microservicios (73.40)                                                                                            42
+
+===== PAGINA 43 =====
+
+Cuándo usar cada tipo
+ Necesito                                                             Uso
+
+ Datos de una base que deben sobrevivir                               Volumen nombrado
+
+ Editar código y ver el cambio sin rebuildear                         Bind mount (solo desarrollo)
+
+ Un archivo de configuración del host                                 Bind mount :ro
+
+ Secretos o temporales que no deben tocar disco                       tmpfs
+
+ Compartir datos entre containers                                     Volumen nombrado
+
+ Almacenamiento de red                                                Volumen con driver/opciones
+
+
+Regla: volumen si el dato importa · bind si el path del host importa · tmpfs si no debe persistir.
+
+===== PAGINA 44 =====
+
+ Quiz rápido
+ 1. ¿Por qué dos containers pueden escuchar en el puerto 80 al mismo tiempo?
+ 2. ¿Qué diferencia práctica hay entre la red bridge por defecto y una creada por vos?
+ 3. docker run -p 8080:80: ¿qué objeto del kernel se crea y en qué tabla?
+ 4. Borro el container de la base con docker rm. ¿Perdí los datos?
+ 5. La app anda con docker exec pero no desde el host. ¿Primera hipótesis?
+
+
+
+
+Microservicios (73.40)                                                                   44
+
+===== PAGINA 45 =====
+
+ Resumen
+     El docker CLI es un cliente de la API del daemon; el socket es acceso root
+     Cada flag de run se traduce en objetos del kernel: netns, cgroups, mounts, iptables
+     Red: bridge propio como default sensato; publicar un puerto es DNAT, y el firewall del host no alcanza
+     Volúmenes: la capa de escritura es efímera — volumen si el dato importa, bind si el path importa, tmpfs si
+     no debe persistir
+     Todo esto es lo que en la próxima clase se escribe declarativamente en Compose
+
+
+
+
+Microservicios (73.40)                                                                                            45
+
+===== PAGINA 46 =====
+
+ Para seguir leyendo
+     Docker CLI reference — docs.docker.com/reference/cli/docker
+     Networking overview — docs.docker.com/engine/network
+     Packet filtering y firewalls — docs.docker.com/engine/network/packet-filtering-firewalls
+     Storage: volumes, binds, tmpfs — docs.docker.com/engine/storage
+     netshoot — github.com/nicolaka/netshoot
+
+
+
+
+Microservicios (73.40)                                                                          46
+
+===== PAGINA 47 =====
+
+¿Preguntas?
+
+
+              Microservicios (73.40) · ITBA
+

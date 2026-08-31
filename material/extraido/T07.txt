@@ -1,0 +1,567 @@
+FUENTE: T07
+TITULO: Docker Compose
+ORIGINAL: material/catedra/teoria/Docker Compose.pdf
+PAGINAS: 25
+
+===== PAGINA 1 =====
+
+Arquitectura de
+Microservicios con
+Contenedores
+Docentes
+
+— Ing. Federico Castañeda
+— Ing. Carlos Maceira
+— Ing. Franco Rupnik
+
+
+
+                            Microservicios (73.40) · ITBA
+
+===== PAGINA 2 =====
+
+docker compose
+Orquestación local
+
+
+
+
+                     Microservicios (73.40) · ITBA
+
+===== PAGINA 3 =====
+
+ Objetivos
+ Al finalizar esta parte vas a poder:
+     Declarar un stack multicontenedor: servicios, redes, volúmenes
+     Parametrizar con variables de entorno y manejar secretos sin hardcodearlos
+     Buildear imágenes desde el propio Compose
+     Resolver el orden de arranque con healthchecks y depends_on
+
+
+
+
+Microservicios (73.40)                                                            3
+
+===== PAGINA 4 =====
+
+ docker compose
+ Permite construir aplicaciones utilizando un archivo YAML para indicar las acciones de:
+     ejecutar uno o más contenedores
+     definir la cantidad de instancias para cada contenedor
+     crear y usar volúmenes
+     crear y usar redes
+     definir variables de ambiente
+     definir qué pasa si un contenedor falla
+     definir dependencia entre contenedores
+
+ docker compose implementa, de una forma más simple, el concepto de orquestación de contenedores.
+
+
+
+
+Microservicios (73.40)                                                                              4
+
+===== PAGINA 5 =====
+
+ Ejemplo: Contenedor simple
+  services:
+    db:
+      image: mysql
+      restart: always
+      environment:
+        MYSQL_DATABASE: 'db'
+        MYSQL_USER: 'user'
+        MYSQL_PASSWORD: 'password'
+        MYSQL_ROOT_PASSWORD: 'password'
+      ports:
+        - '3306:3306'
+      expose:
+        - '3306'
+      volumes:
+        - my-db:/var/lib/mysql
+  volumes:
+    my-db:
+
+
+
+
+                                          Fuente: https://docs.docker.com/compose/compose-file/
+
+Microservicios (73.40)                                                                       5
+
+===== PAGINA 6 =====
+
+ Services · image · restart
+  services:                               Services (contenedores)
+    db:
+      image: mysql
+                                          Cada objeto dentro de esta clave representa un
+      restart: always                     contenedor a ejecutar. En este ejemplo, db.
+      environment:
+        MYSQL_DATABASE: 'db'              Image
+        MYSQL_USER: 'user'
+        MYSQL_PASSWORD: 'password'        Formato URL/image:version. Si se omite la URL,
+        MYSQL_ROOT_PASSWORD: 'password'
+                                          Docker Hub. Es la misma referencia que vimos en la
+      ports:
+        - '3306:3306'                     primera parte.
+      expose:
+        - '3306'                          Restart
+      volumes:
+        - my-db:/var/lib/mysql            Qué hace el orquestador cuando el contenedor no
+  volumes:                                está en ejecución: no, always, on-failure,
+    my-db:
+                                          unless-stopped.
+
+
+
+                                                           Fuente: https://docs.docker.com/compose/compose-file/
+
+Microservicios (73.40)                                                                                        6
+
+===== PAGINA 7 =====
+
+ Environment
+  services:                               Environment
+    db:
+      image: mysql
+                                          Variables de ambiente creadas dentro del
+      restart: always                     contenedor. Es la forma más simple de parametrizar
+      environment:
+                                          su comportamiento; acá setean el usuario
+        MYSQL_DATABASE: 'db'
+        MYSQL_USER: 'user'                administrador de la base.
+        MYSQL_PASSWORD: 'password'
+        MYSQL_ROOT_PASSWORD: 'password'   ⚠️ Passwords hardcodeadas en el YAML, que va a git.
+      ports:                              En un rato lo arreglamos.
+        - '3306:3306'
+      expose:
+        - '3306'
+      volumes:
+        - my-db:/var/lib/mysql
+  volumes:
+    my-db:
+
+
+
+
+                                                            Fuente: https://docs.docker.com/compose/compose-file/
+
+Microservicios (73.40)                                                                                         7
+
+===== PAGINA 8 =====
+
+ Ports · expose · volumes
+  services:                               Ports — publica un puerto del contenedor en el host
+    db:                                   (host:contenedor). Sólo en modo bridge.
+      image: mysql
+      restart: always                     Expose — expone el puerto al resto de los
+      environment:
+        MYSQL_DATABASE: 'db'
+                                          contenedores de la red, sin publicarlo en el host.
+        MYSQL_USER: 'user'
+                                          Volumes — referencia (dentro del servicio) y
+        MYSQL_PASSWORD: 'password'
+        MYSQL_ROOT_PASSWORD: 'password'   declaración (global). Misma sintaxis que el -v de
+      ports:
+        - '33060:3306'
+                                          docker run.
+      expose:
+        - '3306'
+      volumes:
+        - my-db:/var/lib/mysql
+  volumes:
+    my-db:
+
+
+
+
+                                                             Fuente: https://docs.docker.com/compose/compose-file/
+
+Microservicios (73.40)                                                                                          8
+
+===== PAGINA 9 =====
+
+ Multi contenedor y redes
+  networks:                                                    net_a (internal)
+    net_a:
+      internal: true                default               alp1                   alp2
+  services:
+    alp1:
+      image: alpine
+      networks:
+        - default               Networks se declara global y se referencia por
+        - net_a
+      command: sleep infinity
+                                servicio. internal: true deshabilita la salida fuera
+    alp2:                       del host.
+      image: alpine
+      networks:                 Dentro de una red, los servicios se resuelven por
+        - net_a
+      command: sleep infinity
+                                nombre: alp1 llega a alp2 como http://alp2.
+
+
+
+
+                                                  Fuente: https://docs.docker.com/compose/compose-file/
+
+Microservicios (73.40)                                                                               9
+
+===== PAGINA 10 =====
+
+ Variables de ambiente
+  services:                                        services:
+    db:                                              db:
+      image: mysql                                     env_file:
+      environment:                                       - .env1
+        MYSQL_DATABASE: ${DB_MYSQL_DB-db}                - .env2
+        MYSQL_USER: ${DB_MYSQL_USER-mysql}             environment:
+        MYSQL_PASSWORD: ${DB_MYSQL_PASSWD}               - USER=fede
+    app:
+      image: myapp                                 # .env1         # .env2
+      environment:                                 USER=carlos     PASSWD=pizza123
+        - MYSQL_USER=${DB_MYSQL_USER-mysql}        PASSWD=asado123 SOURCE=carbón
+        - MYSQL_PASSWORD=${DB_MYSQL_PASSWD}
+                                                   El container termina con:
+ Dos formatos válidos: objeto ENV: valor o lista
+ ENV=valor. ${VAR-default} toma el default si no   USER=fede       ← environment gana
+                                                   PASSWD=pizza123 ← .env2 pisa a .env1
+ está definida.                                    SOURCE=carbón
+
+
+
+
+Microservicios (73.40)                                                                    10
+
+===== PAGINA 11 =====
+
+ Gestión de secretos
+  secrets:                              external: true — definido en el Docker engine,
+    server-certificate:                 fuera de este compose. Compartible entre varios.
+      external: true
+    db-password:                        file: — se lee de un archivo relativo al compose
+      file: ./secrets/db-password.txt
+                                        (que no va a git).
+  services:
+    db:
+                                        Cada secreto referenciado se monta como archivo
+      image: mysql                      en:
+      restart: always
+      secrets:                          /run/secrets/<nombre-del-secreto>
+        - server-certificate
+        - db-password                   Montado hasta la destrucción del contenedor.
+
+
+
+
+                                                          Fuente: https://docs.docker.com/compose/compose-file/
+
+Microservicios (73.40)                                                                                      11
+
+===== PAGINA 12 =====
+
+ Building desde compose
+ Cada servicio puede buildear su propia imagen en    services:
+ vez de bajarla:                                       a:
+                                                         image: service_a
+     build: ruta al build context                        build:
+                                                           context: ./service-a
+     dockerfile: nombre del Dockerfile si no es el         dockerfile: a.Dockerfile
+     default                                               target: production
+                                                           args:
+     args: los ARG que vimos en la primera parte             NODE_VERSION: 20
+                                                       b:
+     target: qué stage del multi-stage buildear          image: service_b
+                                                         build: ./service-b
+
+                                                     docker compose build --no-cache
+                                                     docker compose up --build
+
+
+
+
+Microservicios (73.40)                                                                 12
+
+===== PAGINA 13 =====
+
+ docker compose watch
+ Actualiza servicios automáticamente al guardar cambios. Sólo funciona con servicios que usan build.
+
+  services:
+    web:
+      build: .
+      command: npm start
+      develop:
+        watch:
+          - action: sync
+            path: ./web
+            target: /src/web
+            ignore:
+              - node_modules/
+          - action: rebuild
+            path: package.json
+
+ Acciones: sync (copia archivos), rebuild (reconstruye la imagen), sync+restart.
+
+
+
+
+Microservicios (73.40)                                                                                 13
+
+===== PAGINA 14 =====
+
+Orden de arranque
+El problema de fondo de todo stack multicontenedor
+
+===== PAGINA 15 =====
+
+ La race condition
+    C O M P O S E · S TA R T U P O R D E R
+                                                                                                                                          Avanzar tiempo      Reset
+
+
+                                                                              t = 0 ms · fork
+
+
+      Sin healthcheck                                                                                                                                depends_on: db
+
+        POSTGRES
+
+        starting
+                                                                                      →     API
+
+                                                                                            esperando
+
+
+
+
+      service_healthy                                                                                                                     condition: service_healthy
+
+        POSTGRES
+
+        starting
+                                                                                      →     API
+
+                                                                                            esperando
+
+
+
+
+                                         Container started no es servicio ready. depends_on sin healthcheck conecta demasiado temprano.
+
+
+
+
+Microservicios (73.40)                                                                                                                                                 15
+
+===== PAGINA 16 =====
+
+ Dos formas de resolverlo
+  # ANTI-PATTERN: mete lógica de infra dentro de la imagen de la app
+  ENTRYPOINT ["./wait-for-it.sh", "db:5432", "--", "npm", "start"]
+
+  # FIX: healthcheck + depends_on condicional
+  services:
+    core_database:
+      image: postgres:18
+      healthcheck:
+        test: ["CMD", "pg_isready", "-U", "postgres"]
+        interval: 10s
+        timeout: 5s
+        retries: 5
+        start_period: 30s
+
+     backend_api:
+       build: .
+       depends_on:
+         core_database:
+           condition: service_healthy
+
+
+
+
+Microservicios (73.40)                                                 16
+
+===== PAGINA 17 =====
+
+ Estados del healthcheck
+ Un comando que Docker ejecuta periódicamente dentro del contenedor para comprobar si está "sano".
+                                  exit ≠ 0
+
+           starting
+                                             exit ≠ 0   unhealthy
+                         exit 0   healthy
+                                             exit 0
+
+
+ Exit code de la prueba: 0 = healthy · cualquier otro = unhealthy.
+ No reinicia contenedores automáticamente; solo informa del estado.
+
+
+
+
+Microservicios (73.40)                                                                               17
+
+===== PAGINA 18 =====
+
+ Readiness vs liveness
+ Readiness — ¿puede aceptar trabajo?                      Liveness — ¿sigue vivo, o hay que matarlo?
+ Si falla, los dependientes no deberían usarlo todavía.   Si falla, el workload está roto y la plataforma debe
+ En Compose, service_healthy los mantiene                 reiniciarlo.
+ esperando.                                               El healthcheck de Compose está más cerca de
+                                                          readiness: no reinicia el container cuando los checks
+                                                          fallan.
+
+
+
+
+Microservicios (73.40)                                                                                           18
+
+===== PAGINA 19 =====
+
+ ¿Dónde se define el healthcheck?
+ Dos lugares posibles: en el Dockerfile (HEALTHCHECK ...) o en el docker-compose.yml
+ (healthcheck:). Si el chequeo es intrínseco a la imagen, va en el Dockerfile; si depende del entorno, en
+ Compose.
+ El campo test admite ["CMD", "exe", "arg"] (exec directo) y ["CMD-SHELL", "comando"] (pasa por
+ sh -c).
+
+  # HTTP                                                          # Redis
+  ["CMD-SHELL", "curl -fsS http://localhost:8080/health || exit   ["CMD", "redis-cli", "ping"]
+
+  # Postgres                                                      # Mongo
+  ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER:-postgres}"]      ["CMD-SHELL", "mongosh --quiet --eval 'db.runCommand({ping:1})
+
+ Buenas prácticas: comandos rápidos y locales · start_period acorde al warm-up · sin red externa · las
+ dependencias del test (curl, pg_isready) tienen que estar en la imagen.
+
+
+
+
+Microservicios (73.40)                                                                                                        19
+
+===== PAGINA 20 =====
+
+Un stack completo
+
+===== PAGINA 21 =====
+
+ apigw + backend + mariadb
+     External Resources
+
+
+      db/password.txt     used_by_secret   secret: db-password
+
+
+
+                                                                                   Services
+                                                                                      mount_secret                                                               Volumes
+                                                                 mount_secret
+
+                                                                                                            waits for      db (MariaDB)   persists data   db-data (Docker volume)
+                                                                      waits for
+                                                                                         backend
+                                                                        HTTP
+                                              proxy (nginx)
+                                                                                                              SQL
+
+                                                                      exposes 80
+
+
+
+
+                                                                                   (external http client)
+
+
+
+
+                                                                                                                        Fuente: https://github.com/docker/awesome-compose/blob/master/nginx-golang-
+                                                                                                                                                                               mysql/compose.yaml
+
+Microservicios (73.40)                                                                                                                                                                          21
+
+===== PAGINA 22 =====
+
+ El servicio de base de datos
+  services:
+    db:
+      image: mariadb:10-focal
+      command: '--default-authentication-plugin=mysql_native_password'
+      restart: always
+      healthcheck:
+        test:
+          - 'CMD-SHELL'
+          - 'mysqladmin ping -h 127.0.0.1 --password="$$(cat /run/secrets/db-password)" --silent'
+        interval: 3s
+        retries: 5
+        start_period: 30s
+      secrets:
+        - db-password
+      volumes:
+        - db-data:/var/lib/mysql
+      environment:
+        - MYSQL_DATABASE=example
+        - MYSQL_ROOT_PASSWORD_FILE=/run/secrets/db-password
+      expose:
+        - 3306
+
+ Más abajo, las declaraciones globales: volumes: db-data: y secrets: db-password: {file:
+ db/password.txt}.
+                                                                               Fuente: https://github.com/docker/awesome-compose/blob/master/nginx-golang-
+                                                                                                                                      mysql/compose.yaml
+
+Microservicios (73.40)                                                                                                                                 22
+
+===== PAGINA 23 =====
+
+ El backend espera a la base
+  services:
+    backend:
+      build:
+        context: backend
+        target: builder
+      secrets:
+        - db-password
+      depends_on:
+        db:
+          condition: service_healthy
+
+     proxy:
+       image: nginx
+       volumes:
+         - type: bind
+           source: ./proxy/nginx.conf
+           target: /etc/nginx/conf.d/default.conf
+           read_only: true
+       ports:
+         - 80:80
+       depends_on:
+         - backend                                  Fuente: https://github.com/docker/awesome-compose/blob/master/nginx-golang-
+                                                                                                           mysql/compose.yaml
+
+Microservicios (73.40)                                                                                                      23
+
+===== PAGINA 24 =====
+
+ Para seguir
+     Compose file reference — docs.docker.com/compose/compose-file
+     Startup order y healthchecks — docs.docker.com/compose/how-tos/startup-order
+     Ejemplos oficiales — docs.docker.com/reference/samples
+     awesome-compose — github.com/docker/awesome-compose
+
+
+
+
+Microservicios (73.40)                                                              24
+
+===== PAGINA 25 =====
+
+A la práctica
+Stack multicontenedor: App + DB
+
+
+
+
+                                  Microservicios (73.40) · ITBA
+

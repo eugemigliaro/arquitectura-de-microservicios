@@ -8,3 +8,6 @@ P01	resolucion	Ejercicio DDD: Pedidos — resolución	material/catedra/practica/
 P02	ejercicio	Ejercicio de DDD: Huella	material/catedra/practica/Ejercicio de DDD — “Huella”.pdf	10	2026	vigente	Ejercicio de DDD — “Huella”.pdf
 E01	consigna	Requerimientos funcionales: Álbum de Figuritas Mundial 2026	material/catedra/practica/consigna-funcional-v1-1.pdf	7	2026	vigente-v1.1	consigna-funcional-v1-1.pdf
 B01	bibliografia	Modern Domain-Driven Design Guide	material/externo/Modern Domain-Driven Design Guide.pdf	17		complementaria	Modern Domain-Driven Design Guide.pdf
+T06	teoria	Imágenes de contenedores	material/catedra/teoria/Imágenes de Contenedores - Slidev.pdf	42	2026	vigente	Imágenes de Contenedores - Slidev.pdf
+T07	teoria	Docker Compose	material/catedra/teoria/Docker Compose.pdf	25	2026	vigente	Docker Compose.pdf
+T08	teoria	Docker CLI, redes y volúmenes	material/catedra/teoria/Docker CLI, redes y volúmenes.pdf	47	2026	vigente	Docker CLI, redes y volúmenes.pdf

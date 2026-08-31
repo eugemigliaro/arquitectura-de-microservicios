@@ -15,3 +15,6 @@ __pycache__/
 laboratorio/**/data/
 laboratorio/**/.venv/
 laboratorio/**/node_modules/
+
+# Repositorio Git independiente del TP1 grupal
+/entregas/tp1-album-figuritas/

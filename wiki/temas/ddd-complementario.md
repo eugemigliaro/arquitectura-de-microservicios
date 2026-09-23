@@ -43,7 +43,7 @@ El problema de *dual write* aparece cuando un servicio confirma el cambio de neg
 
 Un relay publica luego el outbox mediante polling o Change Data Capture. El primero simplifica la infraestructura a costa de latencia y consultas; CDC reduce el polling, pero agrega infraestructura y complejidad operativa. [B01, p. 12]
 
-Como la publicación puede entregar duplicados, la guía exige consumidores idempotentes y describe un Inbox que registra `message_id` ya procesados. Su afirmación de que esto produce semántica “exactly once” necesita una precisión posterior en la unidad oficial de mensajería; por ahora se conserva como postura de la fuente externa. [B01, p. 13]
+Como la publicación puede entregar duplicados, la guía exige consumidores idempotentes y describe un Inbox que registra `message_id` ya procesados. Su afirmación de que esto produce semántica “exactly once” se conserva como postura de la fuente externa. [B01, p. 13] La unidad oficial prefiere hablar de **efecto idempotente**: la infraestructura puede entregar varias veces, el inbox transaccional hace que el cambio se aplique una sola vez, y “exactly-once” exige declarar su alcance porque no garantiza un efecto externo único. [T12, p. 21] [T12, p. 26] Ver [Estado distribuido](estado-distribuido.md).
 
 ## Extensión analítica: Data Mesh
 

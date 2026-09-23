@@ -1,0 +1,802 @@
+FUENTE: T12
+TITULO: Estado distribuido: patrones con Valkey
+ORIGINAL: material/catedra/teoria/Estado distribuido_Patterns - Slidev.pdf
+PAGINAS: 33
+
+===== PAGINA 1 =====
+
+Estado
+distribuido/Patterns
+Patrones con Valkey
+
+DOCENTES:
+
+
+— Ing. Federico Castañeda
+— Ing. Carlos Maceira
+— Ing. Franco Rupnik
+
+===== PAGINA 2 =====
+
+ Arquitectura de un servicio con múltiples instancias
+     El microservicio es una unidad lógica desplegada                                    Clientes
+
+     como múltiples procesos.
+     Cada instancia posee memoria y ciclo de vida
+     independientes.                                                               Load balancer
+
+
+     El balanceador puede dirigir cada request a una
+     instancia diferente.                                 Instancia 1                   Instancia 2               Instancia 3
+
+     El autoscaling, los reinicios y los despliegues
+     reemplazan instancias continuamente.
+                                                        Memoria local   Base de Datos                 Memoria local             Memoria local
+
+
+
+
+Microservicios (73.40)                                                                                                                          2
+
+===== PAGINA 3 =====
+
+ Condiciones de carrera entre instancias
+                         Cliente 1                      Instancia 1                       Base de Datos                       Instancia 2                      Cliente 2
+
+
+                                     reservar recurso
+
+
+                                                                                                                                            reservar recurso
+
+
+                                                                  consultar disponibilidad
+
+
+                                                                                                     consultar disponibilidad
+
+
+                                                                          disponible
+
+
+                                                                                                             disponible
+
+
+                                                                      confirmar reserva
+
+
+                                                                                                          confirmar reserva
+
+
+
+
+        La secuencia «consultar, decidir y actualizar» debe preservar la invariante del negocio como una única operación.
+
+
+Microservicios (73.40)                                                                                                                                                     3
+
+===== PAGINA 4 =====
+
+ Requerimientos de sincronización distribuida
+ Coordinación                                          Estado y comunicación
+     Exclusión mutua: una sola instancia ejecuta una    Base de datos: las instancias consultan una
+     sección crítica.                                   representación de datos común.
+     Control de capacidad: como máximo N procesos       Propagación de cambios: un evento se
+     usan un recurso.                                   comunica a los interesados.
+     Deduplicación: una operación lógica se procesa     Distribución de trabajo: cada tarea se asigna a
+     una sola vez.                                      un consumidor.
+
+
+
+
+Microservicios (73.40)                                                                                    4
+
+===== PAGINA 5 =====
+
+ Clasificación del estado de aplicación
+    Tipo de estado        Ejemplos                                 Propiedad esperada
+
+                          request en curso, pool de conexiones,
+    Local y efímero                                                Puede perderse con la instancia
+                          buffer
+
+    Compartido de
+                          cupos, leases, claves de idempotencia    Operaciones atómicas y expiración
+    coordinación
+
+    Durable de negocio    pedidos, pagos, inventario               Fuente de verdad y persistencia
+
+                                                                   Reconstruible; admite obsolescencia
+    Derivado o cacheado   rankings, consultas frecuentes, vistas
+                                                                   controlada
+
+
+   Las decisiones sobre recursos compartidos no pueden depender exclusivamente del estado local
+                                          de una instancia.
+
+
+
+
+Microservicios (73.40)                                                                                   5
+
+===== PAGINA 6 =====
+
+Valkey
+
+===== PAGINA 7 =====
+
+ Proyecto Valkey
+ Qué es                                                     Origen de la separación
+     Un motor de datos in-memory, distribuido y de código   20 de marzo de 2024 — Redis
+     abierto.
+                                                            Redis Ltd. anunció que las versiones nuevas dejarían BSD-
+     Nació como un fork de Redis 7.2.4 y conservó           3-Clause y usarían RSALv2 y SSPLv1 para restringir ciertos
+     inicialmente su protocolo, comandos y estructuras de   usos comerciales como servicio administrado.
+     datos.
+                                                            28 de marzo de 2024 — Valkey
+     Se publica bajo licencia BSD-3-Clause y posee
+     gobernanza neutral dentro de la Linux Foundation.      Contribuidores de Redis continuaron el último código BSD
+                                                            bajo un proyecto independiente de la Linux Foundation.
+   Un fork copia una base de código para continuar su       Desde mayo de 2025
+   desarrollo como un proyecto independiente.
+                                                            Redis 8 volvió a ofrecer una opción open source mediante
+                                                            AGPLv3. Redis y Valkey permanecen como proyectos
+                                                            separados.
+
+
+
+
+                                                                                            Fuente: https://valkey.io/topics/history/
+
+Microservicios (73.40)                                                                                                             7
+
+===== PAGINA 8 =====
+
+ Atomicidad de las operaciones
+ Secuencia no atómica                                 Operación atómica
+  disponibles = GET recurso                             Verifica la precondición.
+                                                        Modifica el estado.
+  if disponibles > 0:
+      DECR recurso                                      Devuelve el resultado.
+      confirmar()
+                                                        No admite intercalaciones durante su ejecución.
+ Entre la lectura y la modificación, otra instancia
+                                                      Puede implementarse mediante una operación
+ puede observar el mismo valor y tomar la misma
+                                                      nativa, un script, una transacción o una actualización
+ decisión.
+                                                      condicional en la base de datos.
+
+
+
+
+Microservicios (73.40)                                                                                         8
+
+===== PAGINA 9 =====
+
+ Mutex local y exclusión mutua distribuida
+
+          Instancia 1                     Instancia 2    Propiedad     Mutex local   Lock distribuido
+
+                                                         Alcance       Un proceso    Varias instancias
+
+                                                                       Memoria
+                                                         Coordinador                 Servicio compartido
+                                                                       local
+        Mutex local 1                    Mutex local 2
+                                                         Caída del     Libera el
+                                                                                     Requiere expiración
+                                                         proceso       mutex
+
+                                                                                     Red y
+                                                         Costo         Bajo
+                                                                                     almacenamiento
+                         Base de Datos
+
+
+ Cada mutex serializa los threads de su propio
+ proceso, pero ambos procesos pueden acceder
+ simultáneamente al recurso.
+
+
+Microservicios (73.40)                                                                                     9
+
+===== PAGINA 10 =====
+
+ Lock con propietario y expiración
+ Adquisición                                      Liberación condicional
+  SET lock:recurso <owner-id> NX PX 30000         if server.call("GET", KEYS[1]) == ARGV[1] then
+                                                    return server.call("DEL", KEYS[1])
+     NX: sólo crea la key si no existe.           end
+                                                  return 0
+     PX: establece la vigencia en milisegundos.
+     owner-id: identifica esta adquisición.       La comparación y el borrado se ejecutan
+                                                  atómicamente.
+
+
+
+
+                                                                                  Fuente: https://valkey.io/topics/distlock/
+
+Microservicios (73.40)                                                                                                   10
+
+===== PAGINA 11 =====
+
+ Expiración del lease y fencing tokens
+                                      Instancia A                    Coordinador                    Instancia B                Recurso protegido
+
+
+                                                    adquirir lease
+
+
+                                                       token 33
+
+
+                                pausa mayor que el TTL
+
+                                                               expira el lease de A
+
+                                                                                   adquirir lease
+
+
+                                                                                     token 34
+
+
+                                                                                                              escribir con token 34
+
+
+                                                                                                                    aceptado
+
+
+                                                                              escribir con token 33
+
+
+                                                                            rechazado: token obsoleto
+
+
+
+     Cada adquisición recibe un token estrictamente creciente.
+     El recurso conserva el mayor token observado y rechaza valores anteriores.
+     El owner-id protege la liberación; el fencing token protege el recurso frente a operaciones atrasadas.
+                                                                                          Fuente: https://martin.kleppmann.com/2016/02/08/how-to-do-distributed-locking.html
+
+Microservicios (73.40)                                                                                                                                                   11
+
+===== PAGINA 12 =====
+
+ Valkey — Semáforo
+     Implementación de un semáforo distribuido.
+     Se usa para controlar recursos limitados en un ambiente distribuido.
+     Se emplea una lista como estructura de datos. Sus elementos pueden identificar cada recurso disponible.
+     Se define una key por semáforo y los procesos ejecutan BLPOP y LPUSH a medida que adquieren o liberan
+     recursos.
+
+
+
+
+                                                                                        Fuente: https://valkey.io/topics/lists/
+
+Microservicios (73.40)                                                                                                      12
+
+===== PAGINA 13 =====
+
+ Valkey — Semáforo: adquisición y timeout
+ Liberación normal                                                Espera con timeout
+
+                Proceso                                  Valkey          Proceso                                Valkey
+
+
+                             BLPOP semaphore:slots 0                               BLPOP semaphore:slots 5
+
+                                      slot-1
+                                                                                                         la lista sigue vacía
+
+            usa el recurso
+                                                                                         nil (timeout)
+
+                          LPUSH semaphore:slots slot-1
+
+                                                                         Proceso                                Valkey
+                                        1
+
+
+
+                Proceso                                  Valkey
+
+
+                                                                                                     Fuente: https://valkey.io/topics/lists/
+
+Microservicios (73.40)                                                                                                                   13
+
+===== PAGINA 14 =====
+
+ Valkey — Message Queue
+     Implementación de una cola de mensajes.                                                BRPOP / RPOP          Worker 1
+
+     Una key por cola.
+     Se hace LPUSH para agregar mensajes y BRPOP o
+                                                     Productor   LPUSH                      BRPOP / RPOP          Worker 2
+     RPOP para desencolarlos.                                            Lista en Valkey
+
+     Los destinatarios pueden bloquearse
+     indefinidamente con timeout 0.                                                         BRPOP / RPOP          Worker 3
+
+
+
+
+                                                                                           Fuente: https://valkey.io/topics/lists/
+
+Microservicios (73.40)                                                                                                         14
+
+===== PAGINA 15 =====
+
+ Valkey — Cache-Aside: hit y miss
+ Database Cache                                                                 Cliente
+
+ En búsquedas específicas o genéricas:
+
+  select *
+    from table                                                                API Gateway
+    where id = 1
+
+  GET table_1
+                                                           Microservicio 1                  Microservicio 2
+  sha1("select * from table where id = 1")
+  GET hash_1fde35...
+                                             GET / SET            GET / SET
+
+
+
+
+                                              Valkey compartido                 Base de datos 1               Base de datos 2
+
+
+
+
+Microservicios (73.40)                                                                                                          15
+
+===== PAGINA 16 =====
+
+ Valkey — Query Caching
+                         Aplicación                                Valkey       Base de datos
+
+
+                                           GET table:1
+
+                              alt                              [cache hit]
+
+
+                                               valor
+
+
+                                                           [cache miss]
+
+
+                                                nil
+
+
+                                                      SELECT ... WHERE id = 1
+
+
+                                                             resultado
+
+
+                                    SET table:1 resultado EX 60
+
+
+                                                OK
+
+
+
+
+                         Aplicación                                Valkey       Base de datos
+
+
+
+
+Microservicios (73.40)                                                                          16
+
+===== PAGINA 17 =====
+
+ Valkey — Top N tables
+     Con un Sorted Set se implementa una tabla de IDs
+     y valores.
+     La tabla se ordena automáticamente ante cada
+     ingreso o modificación del valor.
+     Es ideal para rankings, conteo de eventos
+     distribuidos o procesamiento de datos por lotes.
+
+
+
+
+Microservicios (73.40)                                  17
+
+===== PAGINA 18 =====
+
+ Origen de ejecuciones duplicadas
+         Cliente                                Instancia 1                Estado durable                 Instancia 2             Un timeout no informa si la operación falló o si se
+                   POST /operaciones (key: op-42)                                                                                 perdió la respuesta.
+                                                          aplicar operación                                                       Clientes, SDKs, gateways y servicios intermedios
+                                                              confirmada
+                                                                                                                                  pueden reintentar.
+                         respuesta perdida
+                                                                                                                                  Un consumidor puede caer después del commit y
+                                                     retry (key: op-42)
+                                                                                                                                  antes del ACK.
+                                                                                       ¿aplicar nuevamente?
+
+                                                                                                                                  Un mensaje pendiente puede entregarse
+         Cliente                                Instancia 1                Estado durable                 Instancia 2
+                                                                                                                                  nuevamente durante la recuperación.
+
+
+
+
+                                                                                                                        Fuente: https://aws.amazon.com/builders-library/making-retries-safe-with-idempotent-APIs/
+
+Microservicios (73.40)                                                                                                                                                                                        18
+
+===== PAGINA 19 =====
+
+ Ciclo de vida de una clave de idempotencia
+                                                                             El registro puede incluir:
+
+                             primera solicitud                                   identidad del cliente y de la operación;
+                                                                                 hash de los parámetros;
+                                  PROCESSING
+                                                                                 estado de procesamiento y propietario;
+                                                                                 código y cuerpo de la respuesta;
+      error definitivo solicitud
+                        reintentoconcurrente
+                                  permitido      operación confirmada
+                                                                                 timestamps y política de expiración.
+                         FAILED                      COMPLETED
+                                                                             La misma key con parámetros diferentes debe
+                                                                             rechazarse.
+                                                   repetir respuesta
+
+
+
+
+                                                                       Fuente: https://aws.amazon.com/builders-library/making-retries-safe-with-idempotent-APIs/
+
+Microservicios (73.40)                                                                                                                                       19
+
+===== PAGINA 20 =====
+
+ Ventanas de falla en la deduplicación
+ Registrar antes del efecto                           Registrar después del efecto
+  1. SADD processed message:42                        1. aplicar cambio de negocio
+  2. [caída del proceso]                              2. [caída del proceso]
+  3. aplicar cambio de negocio                        3. SADD processed message:42
+
+ El mensaje queda registrado, pero el cambio nunca    Una nueva entrega vuelve a aplicar el cambio.
+ se realiza. Las entregas posteriores se descartan.   Requisito: el registro de idempotencia y el efecto
+                                                      de negocio deben compartir una frontera atómica, o
+                                                      debe existir un protocolo de recuperación.
+
+
+
+
+Microservicios (73.40)                                                                                     20
+
+===== PAGINA 21 =====
+
+ Inbox transaccional para consumidores
+                                  Stream                    Consumidor                                             Base de datos
+
+
+                                             mensaje 42
+
+
+                                                                                          BEGIN
+
+
+                                                                         INSERT inbox(42) ON CONFLICT DO NOTHING
+
+                                                      alt                        [identificador nuevo]
+
+
+                                                                                aplicar cambio de dominio
+
+                                                                             [identificador repetido]
+
+                                                          omitir el cambio
+
+
+                                                                                          COMMIT
+
+
+                                           XACK mensaje 42
+
+
+     inbox.message_id posee una restricción UNIQUE.
+     El registro y el cambio de dominio se confirman en la misma transacción.
+     Si el ACK se pierde, la siguiente entrega detecta el identificador repetido.
+
+                                                                              Fuente: https://microservices.io/patterns/communication-style/idempotent-consumer.html
+
+Microservicios (73.40)                                                                                                                                           21
+
+===== PAGINA 22 =====
+
+ Valkey — Idempotencia bajo concurrencia
+     Con un Set se puede adquirir atómicamente el                                     valkey> SADD claims job:42
+     derecho a procesar un identificador.                                             (integer) 1
+                                                                                      valkey> SADD claims job:42
+     SADD devuelve 1 para el primer registro y 0 si el                                (integer) 0
+     miembro ya existía.                                                              valkey> SISMEMBER claims job:42
+                                                                                      (integer) 1
+     Esto evita la ejecución concurrente, pero no
+     demuestra que el proceso haya finalizado.
+
+                                                        Sí   Adquirir procesamiento
+
+
+    ID job:42        SADD claims job:42   ¿Se agregó?
+
+
+                                                        No      Ya fue adquirido
+
+
+
+
+                                                                                                                    Fuente: https://valkey.io/commands/sadd/
+
+Microservicios (73.40)                                                                                                                                   22
+
+===== PAGINA 23 =====
+
+ Valkey — Adquisición concurrente
+                               Worker 1                Worker 2                        Valkey
+
+
+                                                   SADD claims job:42
+
+
+                                                      1 — agregado
+
+
+                                                                  SADD claims job:42
+
+
+                                                                     0 — ya existía
+
+
+                     adquiere el procesamiento
+
+                                                 no ejecuta en paralelo
+
+                         La marca de adquisición requiere expiración, finalización y recuperación explícitas.
+
+
+
+
+Microservicios (73.40)                                                                                          23
+
+===== PAGINA 24 =====
+
+ Valkey — Distributed Hash Map
+     Permite realizar operaciones CRUD sobre registros                                              Valkey
+
+
+     en memoria.
+                                                                                                  user:12345
+
+     Los hashes asocian pares atributo-valor a una key.
+     Los atributos se pueden establecer, incrementar,     id: 12345   name: Bob   birthday: xxx                gender: male   posts: 10   friends: 3
+
+
+
+
+     decrementar o borrar.
+     Son ideales para almacenar sesiones con múltiples
+     atributos.
+
+
+
+
+Microservicios (73.40)                                                                                                                                 24
+
+===== PAGINA 25 =====
+
+ Valkey — Pub/Sub
+     Funciona como un típico Pub/Sub.                                                                            mensaje   Subscriber 1
+
+     Los canales no necesitan estar predefinidos: al     Publisher   PUBLISH noticias mensaje      Valkey
+                                                                                                canal noticias
+     publicar un mensaje, el canal queda disponible.                                                             mensaje   Subscriber 2
+
+     Los suscriptores indican a qué canales se desean
+     suscribir y pueden hacerlo a más de uno a la vez.
+     Los mensajes no se persisten y no pueden
+     consultarse después de su publicación.
+     La entrega es at-most-once: si el suscriptor no
+     recibe el mensaje, se pierde.
+
+
+
+
+                                                                                                   Fuente: https://valkey.io/topics/pubsub/
+
+Microservicios (73.40)                                                                                                                    25
+
+===== PAGINA 26 =====
+
+ Semánticas de entrega de mensajes
+ At-most-once                                             Efecto idempotente
+     Cada mensaje se entrega una vez o ninguna.            La infraestructura puede entregar más de una vez.
+     No existe reentrega frente a una falla.               El consumidor reconoce la identidad del mensaje.
+     Evita duplicados, pero admite pérdida.                El cambio de negocio se aplica una sola vez.
+     Ejemplo: Valkey Pub/Sub.
+                                                          Exactly-once
+ At-least-once                                             Debe especificarse el alcance de la garantía.
+     Se reintenta hasta obtener confirmación.              Una entrega única no garantiza un efecto externo
+     Evita pérdida mientras el mensaje esté disponible.    único.
+     Admite entregas y ejecuciones repetidas.              Requiere coordinación entre consumo, estado y
+                                                           efectos.
+
+
+
+
+                                                                        Fuente: https://valkey.io/topics/pubsub/#delivery-semantics
+
+Microservicios (73.40)                                                                                                          26
+
+===== PAGINA 27 =====
+
+ Posición del ACK y ventanas de falla
+ ACK antes del efecto                                          ACK después del efecto
+
+                                                                       Stream                  Consumidor               Base de datos
+                  Stream                    Consumidor
+                                                                                mensaje 42
+
+                               mensaje 42                                                                      COMMIT
+
+
+                                                                                         caída antes del ACK
+                                XACK 42
+                                                                                reentrega 42
+
+                                      caída antes del efecto
+                                                                       Stream                  Consumidor               Base de datos
+             no se reentrega
+
+                                                               El mensaje puede aplicar el efecto más de una vez si
+                                                               el consumidor no es idempotente.
+                  Stream                    Consumidor
+
+                                                                                                 Fuente: https://valkey.io/topics/streams-intro/
+
+Microservicios (73.40)                                                                                                                       27
+
+===== PAGINA 28 =====
+
+ Alcance del ordenamiento
+          Stream                      Consumer 1    Consumer 2               Estado derivado    El log conserva el orden de sus IDs.
+                   ID 41 — estado A
+                                                                                                La distribución entre consumidores permite
+                                ID 42 — estado B
+                                                                                                procesamiento paralelo.
+
+                              procesamiento lento
+                                                                                                El orden de finalización puede diferir del orden de
+                                                                 aplicar B
+                                                                                                entrega.
+
+                                                     aplicar A
+                                                                                                Productores independientes tampoco establecen
+                                                                                                automáticamente un orden causal.
+          Stream                      Consumer 1    Consumer 2               Estado derivado
+                                                                                                Si una entidad requiere orden, sus mensajes
+                                                                                                deben compartir una ruta serializada.
+
+
+
+
+                                                                                               Fuente: https://valkey.io/topics/streams-intro/#differences-with-kafka-tm-partitions
+
+Microservicios (73.40)                                                                                                                                                          28
+
+===== PAGINA 29 =====
+
+ Valkey — Streaming
+     Un stream es una secuencia ordenada de datos.
+     El feeder agrega datos sólo al final de la secuencia.
+     Los readers registran el último dato leído y consultan nuevos datos a partir de esa posición.
+     En cualquier momento, el reader puede volver a leer desde el principio de la secuencia.
+     Hay distintas estrategias para recortar el comienzo de la secuencia y liberar memoria.
+
+
+
+
+                                                                                      Fuente: https://valkey.io/topics/streams-intro/
+
+Microservicios (73.40)                                                                                                            29
+
+===== PAGINA 30 =====
+
+ Valkey — Streaming: log y truncado
+
+
+
+
+Microservicios (73.40)                30
+
+===== PAGINA 31 =====
+
+ Valkey — Streaming: producers y consumer groups
+
+
+
+
+Microservicios (73.40)                             31
+
+===== PAGINA 32 =====
+
+ Valkey — Streaming: distribución y ACK
+     Consumer Groups
+         Grupos de consumidores que pueden procesar
+         indistintamente cualquier elemento del stream.
+         Cada consumer se identifica unívocamente.
+
+     Valkey asegura que:
+         Cada elemento se envía a un solo consumidor
+         dentro del grupo.
+         Siempre se envía el primer ID nunca consumido.
+
+     Se espera un ACK del consumidor por cada
+     mensaje enviado.
+
+
+
+
+                                                          Fuente: https://valkey.io/topics/streams-intro/
+
+Microservicios (73.40)                                                                                32
+
+===== PAGINA 33 =====
+
+ Valkey — Streaming Recovery/Claim
+ Recovery                                                         Claim
+                                                                            Consumer 1       Consumer 2                                          Valkey
+                         Consumer 1                      Valkey
+                                                                                                    XREADGROUP ... >
+
+
+                                                                                                          mensaje 42
+                                      XREADGROUP ... >
+                                                                          caída permanente
+
+
+                                                                                                          XAUTOCLAIM stream group C2 60000 0-0
+                                         mensaje 42
+                                                                                                                       mensaje 42
+
+
+                   falla antes del ACK                                                                            XACK stream group 42
+
+
+
+                                      XREADGROUP ... 0                      Consumer 1       Consumer 2                                          Valkey
+
+
+
+
+                                  mensaje 42 pendiente
+
+
+                                  XACK stream group 42
+
+
+
+                         Consumer 1                      Valkey
+
+
+
+
+                                                                                                           Fuente: https://valkey.io/topics/streams-intro/
+
+Microservicios (73.40)                                                                                                                                    33
+

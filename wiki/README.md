@@ -20,6 +20,11 @@
 - [Imágenes de contenedores y Dockerfile](temas/imagenes-de-contenedores.md): capas, instrucciones, cache, build context, multi-stage, seguridad y trazabilidad.
 - [Docker CLI, redes y volúmenes](temas/docker-cli-redes-y-volumenes.md): ciclo de vida, diagnóstico, modos de red, publicación de puertos, DNS y persistencia.
 - [Docker Compose](temas/docker-compose.md): servicios, redes, volúmenes, configuración, secretos, builds y orden de arranque.
+- [Comunicación síncrona](temas/comunicacion-sincrona.md): REST, gRPC, GraphQL, ConnectRPC, capacidad, sobrecarga y arquitectura multi-protocolo.
+- [Testing de microservicios](temas/testing.md): niveles y dimensiones de prueba, contract testing, dobles, estructura, cobertura y seguridad.
+- [Sistemas distribuidos](temas/sistemas-distribuidos.md): modelos de falla de red, nodos y tiempo, RPC, orquestación, serializabilidad, locking, 2PC y coreografía.
+- [Estado distribuido y patrones con Valkey](temas/estado-distribuido.md): estado entre instancias, locks con fencing, semáforos, colas, cache, idempotencia, inbox, semánticas de entrega y streams.
+- [DevOps y CI/CD](temas/devops-y-ci-cd.md): ciclo DevOps, CI y CD, pull requests, pipelines en GitLab, estrategias de despliegue y shift-left.
 - [Entrega: Álbum de Figuritas Mundial 2026](temas/entrega-album-2026.md): versión 1.1, invariantes, RF/RNF, escenarios y rúbrica.
 - [Primera entrega TP1: análisis DDD del Álbum](temas/primera-entrega-album-ddd.md): alcance, estructura obligatoria, trazabilidad y rúbrica del primer avance.
 - [DDD moderno: lectura complementaria](temas/ddd-complementario.md): Event Modeling, arquitectura hexagonal, outbox, idempotencia y Data Mesh desde una fuente externa.
@@ -36,6 +41,11 @@
 | `T06` | *Imágenes de contenedores* — oficial | 42 | Dockerfile, cache, build context, multi-stage, seguridad, tags y digests |
 | `T07` | *Docker Compose* — oficial | 25 | Orquestación local, configuración, secretos, redes, volúmenes y healthchecks |
 | `T08` | *Docker CLI, redes y volúmenes* — oficial | 47 | Operación y diagnóstico, drivers de red, NAT, DNS, mounts y persistencia |
+| `T09` | *Comunicación síncrona* — oficial | 37 | REST, gRPC, GraphQL, ConnectRPC, sobrecarga y arquitectura multi-protocolo |
+| `T10` | *Testing* — oficial | 24 | Pirámide, niveles y dimensiones de prueba, contratos, cobertura y seguridad |
+| `T11` | *Sistemas distribuidos* — oficial | 40 | Modelos de falla, RPC, transacciones concurrentes, 2PC, orquestación y coreografía |
+| `T12` | *Estado distribuido: patrones con Valkey* — oficial | 33 | Coordinación entre instancias, locks, cache, idempotencia, entrega de mensajes y streams |
+| `T13` | *DevOps* — oficial | 47 | Ciclo DevOps, CI/CD, repositorios y PR, pipeline, despliegues y shift-left |
 | `P01` | *Ejercicio DDD: Pedidos — resolución* — oficial, ciclo 2025 | 16 | Fronteras, EventStorming y detalle por dominio |
 | `P02` | *Ejercicio de DDD: Huella* — oficial | 10 | Taller sin solución, entregables y rúbrica |
 | `E01` | *Requerimientos funcionales: Álbum de Figuritas Mundial 2026* — oficial, v1.1 | 7 | Consigna evaluada, invariantes, escenarios y condiciones de entrega |

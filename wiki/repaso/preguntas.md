@@ -113,6 +113,64 @@ Preguntas recuperables por tema. Mantener las respuestas separadas o plegadas cu
 74. ¿Qué trazabilidad exige la consigna entre `E01` y cada elemento del modelo?
 75. ¿Qué tres flujos deben aparecer como mínimo en el encadenamiento de eventos?
 
+## Comunicación síncrona
+
+76. ¿Qué acoplamiento introduce una llamada síncrona y qué fallos propios de la red deben asumirse?
+77. Compará REST, gRPC y GraphQL por contrato, fortaleza y borde recomendado.
+78. ¿Por qué un deadline es obligatorio en gRPC y qué riesgo evita?
+79. ¿Qué problema resuelve ConnectRPC sin abandonar el contrato `.proto`?
+80. Diferenciá `λ` y `μ`; ¿qué ocurre si `λ > μ` de manera sostenida?
+81. ¿Qué protege un bulkhead y por qué un retry sin esa protección puede empeorar la sobrecarga?
+82. ¿Por qué la cola no agrega capacidad y qué intercambia por evitar pérdida?
+83. ¿Qué limitaciones impiden generalizar la demo de cola a garantías reales de entrega?
+
+## Testing
+
+84. ¿Qué dimensiones cambian al subir en la pirámide de testing y qué áreas quedan fuera de ella?
+85. ¿Por qué `component` y `functional` no representan necesariamente dos escalones?
+86. ¿Cómo conviven la nota oral sobre `integration test`/`functional testing` y la clasificación escrita de `T10`?
+87. Compará unit, integration, component, contract y end-to-end por alcance.
+88. Diferenciá stub, mock y fake.
+89. ¿Cómo valida un contract test al consumidor y al proveedor sin levantar el sistema completo?
+90. Reconstruí Arrange–Act–Assert–Clean-up y nombrá una trampa de cada fase.
+91. ¿Cómo se relaciona Given–When–Then con las cuatro fases y por qué es business-facing?
+92. ¿Qué puede demostrar la cobertura y qué no garantiza ni siquiera al 100 %?
+93. Diferenciá linter, SAST, SCA y DAST por objeto y momento de análisis.
+94. ¿Qué riesgo aparece si un modelo genera a la vez la implementación y el test?
+
+## Sistemas distribuidos
+
+95. ¿Qué ventajas de un sistema centralizado se pierden al distribuir y qué razones justifican hacerlo igual?
+96. Compará los modelos de falla de red, de nodos y de tiempo. ¿Qué modelo de enlace mitiga TLS?
+97. ¿Por qué no se puede distinguir un nodo caído de uno lento y qué consecuencia tiene para un timeout en RPC?
+98. En el ejemplo de transferencia y auditoría, ¿qué ejecución viola la invariante `X + Y = 20` y por qué?
+99. Compará control de concurrencia pesimista y optimista por mecanismo, costo y caso de uso.
+100. ¿Qué pasa en 2PC si un participante cae después de votar SÍ, o si el coordinador cae después de enviar algunos commits?
+101. ¿Cuándo recomienda la cátedra usar 2PC?
+102. Contrastá orquestación y coreografía, y describí la compensación del ejemplo de venta cuando falla el pago.
+
+## Estado distribuido
+
+103. ¿Por qué un mutex local no alcanza cuando un servicio corre en varias instancias?
+104. Clasificá cupos, pedidos, un pool de conexiones y un ranking según el tipo de estado y su propiedad esperada.
+105. ¿Qué protege el `owner-id` de un lock y qué protege un fencing token?
+106. ¿Qué ventana de falla aparece si el registro de idempotencia se hace antes del efecto y cuál si se hace después?
+107. ¿Cómo evita el inbox transaccional aplicar dos veces un mensaje cuya confirmación se perdió?
+108. ¿Qué garantiza y qué no garantiza `SADD claims job:42`?
+109. Diferenciá at-most-once, at-least-once, efecto idempotente y exactly-once. ¿Qué semántica tiene Valkey Pub/Sub?
+110. ¿Qué garantizan los consumer groups de un stream y cómo se recupera un mensaje pendiente de un consumidor caído?
+111. Si un stream conserva el orden de sus IDs, ¿por qué puede alterarse el orden en que se aplica el estado?
+
+## DevOps y CI/CD
+
+112. Nombrá las etapas del ciclo DevOps y ubicá release y delivery.
+113. Diferenciá Continuous Integration, Continuous Delivery y Continuous Deployment.
+114. ¿Cómo se integra un pull request con el pipeline de CI/CD?
+115. Definí stage, job y runner, y explicá cómo intercambian archivos los pasos en GitLab.
+116. Enumerá las etapas típicas de un pipeline y qué se preserva de la etapa de build.
+117. Compará basic, rolling, blue/green y canary por riesgo y requisitos.
+118. ¿Qué es shift-left y qué costo reduce?
+
 <details>
 <summary>Respuestas orientativas</summary>
 
@@ -191,6 +249,49 @@ Preguntas recuperables por tema. Mantener las respuestas separadas o plegadas cu
 73. Señalarlo como hallazgo y explicar qué coordinación o mecanismo de dominio la sostiene, en lugar de adjudicarla artificialmente a un agregado incapaz de garantizarla. [E02]
 74. Cada término, contexto, agregado y evento debe derivarse de la consigna funcional o justificarse; cada requisito de `E01` debe quedar representado para no convertirse en una omisión. [E02]
 75. Apertura de sobre, intercambio completado e intercambio no concretado. [E02]
+76. El cliente espera una respuesta y queda temporalmente acoplado a la disponibilidad del servidor; la red agrega latencia, fallos y particiones. [T09, p. 4] [T09, p. 7]
+77. REST usa JSON/HTTP y OpenAPI y se orienta a APIs públicas; gRPC usa Protobuf/HTTP2 y `.proto` y se orienta al tráfico interno; GraphQL usa schema SDL y queries flexibles y se orienta a BFF/frontends complejos. [T09, p. 17]
+78. Impide que una llamada lenta quede bloqueada indefinidamente y propague un hang por toda la cadena de servicios. [T09, p. 12] [T09, p. 13]
+79. Permite servir desde el mismo `.proto` Connect con HTTP/1.1 y JSON, gRPC y gRPC-Web, habilitando browsers y depuración con `curl`. [T09, p. 20]
+80. `λ` es la tasa de llegada y `μ` la tasa que el sistema termina. Si la llegada supera sostenidamente la capacidad, el backlog crece hasta que el trabajo espera, se rechaza o se pierde; ninguna cola finita evita ese límite. [T09, p. 22] [T09, p. 33]
+81. Acota ejecución y espera, rechazando barato antes de consumir recursos. Un retry sin ese límite multiplica intentos sobre un servidor ya saturado; en la demo rindió peor que no reintentar. [T09, p. 26] [T09, p. 27]
+82. Conserva la misma tasa de procesamiento: guarda el exceso para terminarlo más tarde. En la demo convierte pérdida en latencia y agrega el costo del broker. [T09, p. 29] [T09, p. 30]
+83. La cola era en memoria, perdía el backlog ante un crash, podía entregar duplicados y no resolvía una sobrecarga sostenida. [T09, p. 33]
+84. Aumentan alcance, fragilidad, duración, costo y trabajo manual, y disminuye la cantidad. La pirámide clásica cubre pruebas automatizadas de desarrollo; quedan fuera testing exploratorio, usabilidad, performance y seguridad. [T10, p. 3]
+85. `Component` define alcance —el servicio entero aislado— y `functional` define intención —cumplir el requerimiento—; una misma prueba puede describirse en ambos ejes. [T10, p. 9]
+86. La nota conserva el uso terminológico oral que equipara los nombres, pero el material escrito define integration por alcance y functional por intención. Hasta una aclaración, conviene explicitar qué eje se está usando. [N-2026-09-11-integration-test-functional-testing] [T10, p. 7] [T10, p. 9]
+87. Unit cubre una función; integration, la interacción mínima con otro límite; component, un servicio entero aislado; contract, la interfaz consumidor/proveedor; end-to-end, gran parte de la infraestructura y el recorrido de usuario. [T10, p. 5] [T10, p. 7] [T10, p. 9] [T10, p. 10] [T10, p. 12]
+88. Stub devuelve una respuesta fija; mock también verifica la interacción; fake es una implementación real simplificada. [T10, p. 6]
+89. El consumidor prueba contra un provider mock y publica expectativas; el verificador ejecuta ese contrato contra el proveedor real. [T10, p. 10] [T10, p. 11]
+90. Arrange prepara datos; Act ejecuta una acción; Assert verifica un concepto; Clean-up restaura el ambiente. Trampas: setup desproporcionado, varios pasos en Act, ausencia de assert y contaminación entre pruebas. [T10, p. 16]
+91. Given expresa el estado preparado, When la acción y Then el resultado esperado. Lo cuenta en lenguaje de negocio para que producto pueda leer el comportamiento. [T10, p. 17]
+92. Demuestra qué código se ejecutó y detecta huecos. Incluso al 100 % no garantiza que los asserts ni los casos elegidos comprueben el comportamiento correcto. [T10, p. 18] [T10, p. 19]
+93. El linter mira convenciones al escribir; SAST busca vulnerabilidades en código en el commit; SCA analiza dependencias en el build; DAST ataca la app en ejecución en un ambiente de prueba. [T10, p. 20]
+94. Ambos artefactos pueden acomodarse al mismo supuesto equivocado y hacer que el test pase sin validar independientemente el requerimiento. [T10, p. 21]
+95. Se pierden artefacto único, debugging directo, ACID real, latencia mínima y consistencia inmediata. Se distribuye por aplicaciones inherentemente distribuidas, confiabilidad, performance, datos que no caben en una máquina y tolerancia a fallos. [T11, p. 2] [T11, p. 5]
+96. La red puede ser confiable, fair-loss, arbitraria, con demoras arbitrarias o particionada; los nodos, crash-stop, crash-recovery o bizantinos; el tiempo, sincrónico o asincrónico. TLS mitiga los enlaces arbitrarios. [T11, p. 8] [T11, p. 9] [T11, p. 10]
+97. No hay reloj global ni memoria compartida y la red puede demorar sin límite, por lo que un timeout no demuestra que la operación falló; reintentar puede duplicarla. [T11, p. 11] [T11, p. 18]
+98. La ejecución entrelazada: la auditoría lee `X = 11` después de la primera escritura y `Y = 10` antes de la segunda, e imprime una suma de 21. No equivale a ningún orden secuencial, por lo que no es serializable. [T11, p. 22] [T11, p. 26]
+99. El pesimista bloquea antes de operar, paga con esperas y sirve con conflictos frecuentes, como reservar asientos; el optimista detecta conflictos al final mediante versión o CAS, paga con reintentos y sirve con conflictos raros, como editar un perfil. [T11, p. 27] [T11, p. 28]
+100. El participante ya se comprometió y los demás harán su parte, por lo que su voto debe ser durable. Si el coordinador cae tras algunos commits, debe recordar la transacción de forma durable; si cae antes de enviarlos, se aborta. [T11, p. 32] [T11, p. 33]
+101. Cuando se necesita consistencia inmediata sin estados intermedios ni compensaciones: finanzas core, transacciones entre bases, operaciones regulatorias y sistemas legacy. [T11, p. 35]
+102. El orquestador conoce y controla toda la secuencia; en la coreografía cada servicio conoce solo su parte y reacciona a eventos. Al fallar el pago se publica `PAYMENT_FAILED`, inventario revierte la reserva y publica `ROLLBACK_INVENTORY`, y la venta queda `CANCELED`. [T11, p. 20] [T11, p. 37] [T11, p. 39]
+103. Serializa solo los threads de su proceso; otra instancia, con su propio mutex, puede acceder al mismo recurso a la vez. [T12, p. 9]
+104. Cupos son estado compartido de coordinación, que requiere atomicidad y expiración; pedidos, estado durable de negocio; el pool, estado local y efímero; el ranking, derivado y reconstruible con obsolescencia controlada. [T12, p. 5]
+105. El `owner-id` impide liberar un lock ajeno; el fencing token hace que el recurso rechace escrituras atrasadas de quien perdió el lease por una pausa. [T12, p. 10] [T12, p. 11]
+106. Antes del efecto, una caída deja el mensaje marcado sin aplicarse y se descartan las reentregas; después, una caída provoca que la reentrega vuelva a aplicarlo. [T12, p. 20]
+107. Inserta el identificador con restricción `UNIQUE` en la misma transacción que el cambio de dominio y confirma el mensaje recién después del commit; la reentrega encuentra el identificador y omite el cambio. [T12, p. 21]
+108. Garantiza que un solo worker adquiera el procesamiento de forma atómica; no prueba que haya terminado, por lo que requiere expiración, finalización y recuperación. [T12, p. 22] [T12, p. 23]
+109. At-most-once admite pérdida sin reentrega; at-least-once reintenta y admite repeticiones; el efecto idempotente aplica el cambio una sola vez pese a entregas múltiples; exactly-once exige declarar su alcance. Pub/Sub es at-most-once. [T12, p. 25] [T12, p. 26]
+110. Cada elemento va a un solo consumidor del grupo, siempre se entrega el primer ID no consumido y se espera un ACK. El consumidor puede releer sus pendientes con `XREADGROUP ... 0`, u otro reclamarlos con `XAUTOCLAIM`. [T12, p. 32] [T12, p. 33]
+111. Porque los consumidores paralelos pueden terminar en otro orden y los productores independientes no fijan un orden causal; una entidad que requiere orden debe tener una ruta serializada. [T12, p. 28]
+112. Plan, code, build, test, release, deploy, operate y monitor. El release es la versión habilitada para producción; su delivery equivale a publicarla en la registry. [T13, p. 5] [T13, p. 9]
+113. CI construye y prueba automáticamente cada cambio; Continuous Delivery agrega integración, performance y UAT y deja listo para desplegar sin hacerlo; Continuous Deployment despliega a producción automáticamente todo lo que pasa. [T13, p. 16] [T13, p. 17] [T13, p. 18]
+114. El SCM dispara un webhook en cada estado del PR, el CI ejecuta build y tests y publica el resultado en el mismo PR, que luego pasa por revisión de pares antes del merge. [T13, p. 24] [T13, p. 26]
+115. Stage es una etapa con función propia; job, un paso dentro de ella; runner, el ambiente de ejecución. En GitLab cada paso corre en un contenedor aislado y comparte archivos por artefactos o cache. [T13, p. 29] [T13, p. 30]
+116. Preparation, build, unit test, deliver, integration test y deploy. Cada artefacto de build es un posible release candidate que debe preservarse hasta ser rechazado. [T13, p. 31] [T13, p. 33]
+117. Basic es el más simple pero corta el servicio; rolling es progresivo y requiere retrocompatibilidad; blue/green conmuta tráfico entre dos ambientes; canary expone primero a un grupo y limita el impacto. La elección depende del riesgo e impacto de negocio. [T13, p. 38] [T13, p. 40] [T13, p. 41] [T13, p. 42] [T13, p. 43]
+118. Avisar al desarrollador de inmediato de cualquier falla funcional, de performance o de seguridad del pipeline; reduce los costos de operación al resolver antes de producción. [T13, p. 45]
 
 </details>
 
@@ -202,3 +303,5 @@ Preguntas recuperables por tema. Mantener las respuestas separadas o plegadas cu
 - Para Huella, elegí cuatro términos conflictivos y proponé cómo se traducen en el borde, sin resolver todavía los bounded contexts. [P02, p. 6]
 - Construí una tabla de estados para oferta, operación de intercambio y copia que cubra aceptación, timeout, cancelación y vencimiento sin violar los invariantes. [E01, p. 3] [E01, p. 4] [E01, p. 6]
 - Diagnosticá este caso: dos contenedores comparten una red propia, el nombre resuelve, pero el cliente recibe `connection refused` y desde el host tampoco funciona el puerto publicado. Ordená las comprobaciones de red, escucha y DNAT. [T08, p. 22] [T08, p. 32]
+- Un endpoint de reserva de entradas corre en tres instancias y recibe reintentos del gateway. Diseñá la protección contra sobreventa y duplicados: qué estado va en Valkey, qué va en la base, dónde queda la frontera atómica y qué pasa si una instancia pausa más que el TTL. [T12, p. 3] [T12, p. 11] [T12, p. 20]
+- Elegí estrategia de despliegue para el Álbum 2026 y justificá según riesgo, retrocompatibilidad entre versiones y costo de rollback. [T13, p. 43]

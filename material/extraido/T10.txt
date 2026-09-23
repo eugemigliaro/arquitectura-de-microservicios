@@ -1,0 +1,417 @@
+FUENTE: T10
+TITULO: Testing
+ORIGINAL: material/catedra/teoria/Testing.pdf
+PAGINAS: 24
+
+===== PAGINA 1 =====
+
+Arquitectura de
+Microservicios con
+Contenedores
+— Ing. Federico Castañeda
+— Ing. Carlos Maceira
+— Ing. Franco Rupnik
+
+
+
+
+                            Docentes:
+
+===== PAGINA 2 =====
+
+Testing
+
+===== PAGINA 3 =====
+
+ Testing: Pirámide de Mike Cohn
+                           Al subir, todas las dimensiones se mueven
+                           juntas: más scope, más frágil, más lento, más caro de
+                           escribir, menos cantidad, más manual.
+                           Lo que la pirámide no cubre: solo habla de tests
+                           automatizados de desarrollo. Quedan afuera el
+                           testing exploratorio, la usabilidad, la performance y la
+                           seguridad.
+                           La mayoría de los equipos hace solo la base — y
+                           después se sorprende cuando producción explota
+                           por algo que ni miraron: se cayó bajo carga, o
+                           funcionaba pero nadie entendía cómo usarlo.
+
+
+
+
+Microservicios (73.40)                                                                3
+
+===== PAGINA 4 =====
+
+ Estructura de microservicio
+
+
+
+
+                               Fuente: https://martinfowler.com/articles/microservice-testing/
+
+Microservicios (73.40)                                                                      4
+
+===== PAGINA 5 =====
+
+ Unit Test
+ Orientado a evaluar una única función o método. Se desarrollan como parte del código y tienen como
+ objetivo validar todos esos controles inherentes a la función.
+     Valida correctamente los parámetros de ingreso.
+     Dada una serie de parámetros particulares, verifica que la respuesta sea la esperada.
+     Debe existir un test por cada “caso de uso” de la función
+     Dan rápido feedback.
+     Se realiza en las primeras etapas del pipeline.
+     Primera barrera de contención para que el código no llegue al branch main sin haber sido testeado.
+
+ !! Si la escritura del test no es sencilla, entonces se debería dividir el módulo
+ Esa señal llegaba porque escribir ocho mocks dolía. Hoy no duele: hay que ir a buscarla.
+
+
+
+
+Microservicios (73.40)                                                                                    5
+
+===== PAGINA 6 =====
+
+ Unit Test: Mocking
+                                                       El vocabulario que vas a encontrar en cualquier
+                                                       framework:
+                                                         Stub — devuelve una respuesta fija. No verifica
+                                                         nada. "Cuando te pidan la colección, devolvé estas
+                                                         tres figuritas."
+                                                         Mock — además verifica que la interacción ocurrió.
+                                                         "Comprobá que se llamó a guardar()
+                                                         exactamente una vez."
+                                                         Fake — implementación real pero simplificada.
+ Solitary — todo lo de afuera mockeado. Si falla,        Una base en memoria.
+ sabés exactamente qué componente es.                  Mockear de más te da tests que pasan siempre
+ Sociable — usa algunas dependencias reales. Te dice   y no prueban nada: terminás testeando tus propios
+ que las piezas encajan, pero cuando falla hay que     mocks. Es el problema que resuelve Contract
+ investigar cuál de las cinco se rompió.               Testing.
+
+Microservicios (73.40)                                                                                        6
+
+===== PAGINA 7 =====
+
+ Integration Test
+ Se focaliza en la integración entre servicio. Se realiza sobre la menor cantidad de servicios posible,
+ idealmente, sólo dos.
+     Busca verificar que las configuraciones necesarias para la integración están bien definidas.
+     Evalúa ida y vuelta, requerimientos y respuesta.
+     Implementan mocks y stubs para simular el resto de los componentes no evaluados.
+
+
+
+
+Microservicios (73.40)                                                                                    7
+
+===== PAGINA 8 =====
+
+ Integration Test: los dos límites
+                              Integración con servicios externos
+                                Headers HTTP
+                                Request/Response
+                                Timeouts
+                                Circuit breakers
+
+                              Integración con persistencia
+                                Mapeo ORM a BDD
+                                Transaccionalidad
+                                Timeouts
+                                Configuración de conexión
+
+
+
+
+Microservicios (73.40)                                             8
+
+===== PAGINA 9 =====
+
+ Component vs Functional Test
+                                                    Functional define una intención: que haga lo que
+                                                    el requerimiento pide. Se opone a lo no funcional —
+                                                    performance, seguridad, usabilidad.
+                                                    Valida en tres niveles:
+                                                      Sintaxis: ¿el campo es un número? Lo agarra el
+                                                      framework.
+                                                      Semántica: ¿tiene sentido en el dominio? Una
+                                                      figurita nº900 en un álbum de 700.
+                                                      Lógica: ¿tiene sentido en este estado? Aceptar
+ Component define un alcance: el servicio entero,     una oferta que ya fue aceptada.
+ aislado. Base efímera, vecinos stubbeados con
+                                                    No son dos escalones: son dos preguntas
+ WireMock.
+                                                    distintas.
+ Se opone a unit / integration / e2e.
+
+
+Microservicios (73.40)                                                                                    9
+
+===== PAGINA 10 =====
+
+ Contract Testing
+ Se testean las interfaces entre servicios bajo un contrato. Se especifica un protocolo y se define qué tipos de
+ mensajes viajan por esa interfaz.
+     Permite la validación del consumidor y del proveedor por separado.
+     Normalmente mantiene un repositorio único y común de contratos.
+     La simulación del consumidor o del proveedor permite simplificar el ambiente de pruebas.
+     Son fundamentales en la implementación de Consumer-Driven Contracts (CDC).
+     Son automatizables y suelen realizarse antes del deployment.
+
+
+
+
+Microservicios (73.40)                                                                                             10
+
+===== PAGINA 11 =====
+
+ Contract Testing
+
+
+
+
+                         Fuente: https://microsoft.github.io/code-with-engineering-playbook/automated-testing
+
+Microservicios (73.40)                                                                                    11
+
+===== PAGINA 12 =====
+
+ End-to-End testing
+ Implementan toda o gran parte de la infraestructura para producción de modo que emular todas las
+ integraciones entre servicios.
+     Son muy costosos de implementar y no permiten demasiada concurrencia.
+     Deben diseñarse según la perspectiva del usuario final. Testear historias.
+     Debe considerar múltiples escenarios dentro de esas historias.
+     Escribirlos se abarató; mantenerlos no — y se rompen a la velocidad a la que cambia el sistema.
+     Requieren un trabajo previo de análisis de las acciones más comunes de los usuarios para elegir las
+     historias que más podrían impactar en el uso de la aplicación.
+
+
+
+
+Microservicios (73.40)                                                                                     12
+
+===== PAGINA 13 =====
+
+ End-to-End testing
+
+
+
+
+                         Fuente: https://martinfowler.com/articles/microservice-testing/
+
+Microservicios (73.40)                                                               13
+
+===== PAGINA 14 =====
+
+ End-to-End testing
+ Recomendaciones
+     Escribir la menor cantidad posible
+     Enfocarse en historias de usuario
+     Elegir el scope del test con criterio
+     Hacer pruebas independientes de datos
+     Mejorar monitoreo en producción
+
+
+
+
+Microservicios (73.40)                       14
+
+===== PAGINA 15 =====
+
+ Resumen
+
+
+
+
+                         Fuente: https://martinfowler.com/articles/microservice-testing/
+
+Microservicios (73.40)                                                               15
+
+===== PAGINA 16 =====
+
+ Four-Phase Test
+ La anatomía de cualquier test, sea unit o de integración.
+
+    Fase                 Qué hace                                                      La trampa
+
+    1.                   Define datos y contexto. Unit: unas variables. Integración:   Si es más largo que Act + Assert juntos, el test es
+    Arrange              un despliegue ad-hoc                                          demasiado grande
+
+                                                                                       Debería ser una línea. Cinco pasos = probás un
+    2. Act               Ejecuta la acción sobre el ambiente
+                                                                                       flujo, no una acción
+
+                                                                                       Un assert por concepto. Y el peor de todos: el
+    3. Assert            Evalúa el resultado contra el esperado
+                                                                                       test sin assert
+
+    4. Clean-                                                                          La que todos se saltean, y la causa #1 de tests
+                         Destruye o resetea el ambiente para el test siguiente
+    up                                                                                 que "fallan a veces"
+
+ Los tests deben reutilizar el ambiente y no ser destructivos entre ellos: si B necesita que A haya corrido
+ antes, no tenés dos tests.
+
+
+Microservicios (73.40)                                                                                                                       16
+
+===== PAGINA 17 =====
+
+ Given-When-Then
+ Es Arrange-Act-Assert contado en lenguaje de           def test_ping(test_app):
+ negocio. Misma estructura, otro lector.                    # Given
+                                                            client = test_app.test_client()
+     Given: el estado del sistema antes de la acción.
+                                                           # When
+     When: la acción en sí.                                resp = client.get('/ping')
+     Then: el estado que esperamos después.                data = json.loads(resp.data.decode())
+
+ Por eso vive en el cuadrante Q2: business facing. Un      # Then
+                                                           assert resp.status_code == 200
+ product owner lo puede leer.                              assert 'pong' in data['message']
+                                                           assert 'success' in data['status']
+
+
+
+
+Microservicios (73.40)                                                                             17
+
+===== PAGINA 18 =====
+
+ Cobertura
+ A la hora de evaluar la calidad de los testeos
+ realizados, se suele medir por medio del concepto
+ de cobertura del código (code coverage).
+ Se define la cobertura como cuánto código, de todo
+ el existente, fue ejecutado durante las pruebas.
+ Obviamente, si hay código que no fue ejecutado,
+ entonces no fue testeado.
+
+
+
+
+Microservicios (73.40)                                18
+
+===== PAGINA 19 =====
+
+ Cobertura
+
+
+
+
+ IMPORTANTE: Tener una cobertura del 100% de código no asegura que los tests estén cubriendo una
+ evaluación efectiva del código. Testear al 100% no significa testear las cosas correctas.
+ Y generar tests que ejecuten todo el código hoy es trivial: como número vale menos que nunca; como
+ detector de huecos sigue sirviendo.
+
+
+
+Microservicios (73.40)                                                                                19
+
+===== PAGINA 20 =====
+
+ Linting y Testing de Seguridad
+ Cuatro formas de revisar el código sin correr un test. Cambia qué miran y cuándo.
+
+                                   Qué busca                                            Cuándo                   Herramienta
+
+                                   Cómo está escrito: convenciones del equipo,          Al escribir, en el       ESLint, Checkstyle,
+    Linter
+                                   patrones peligrosos                                  IDE                      Hadolint
+
+    SAST                           Vulnerabilidades en tu código: SQL injection, XSS,
+    Static Application Security                                                         En el commit             SonarQube, Semgrep
+    Testing                        input sin validar
+
+    SCA
+    Software Composition           Vulnerabilidades en tus dependencias                 En el build              Trivy
+    Analysis
+
+    DAST                                                                                Ambiente de
+    Dynamic Application Security   La app corriendo, atacándola desde afuera                                     OWASP ZAP
+    Testing                                                                             prueba
+
+ SCA es el que más rinde: el 90% del código que deployás no lo escribiste vos. Log4Shell fue exactamente
+ eso.
+ Ninguno verifica que el código haga lo correcto — eso es el test.
+ También vas a ver IAST (instrumenta la app en desarrollo) y RASP que no es testing: es defensa en producción.
+Microservicios (73.40)                                                                                                                 20
+
+===== PAGINA 21 =====
+
+ Test-Then-Code
+                                                          Qué cambió
+                                                           Hoy los tests son gratis. La objeción de siempre
+                                                           a TDD era el costo de escribirlos primero. Esa
+                                                           objeción ya no existe.
+                                                           Lo que no es gratis: saber qué tiene que hacer. El
+                                                           test vale por el requerimiento que codifica, no por
+                                                           existir.
+                                                           Nunca dejes que el modelo ajuste el test al
+ Escribís el test que falla   → lo mínimo para que pase    código. Si escribe los dos, el test se acomoda a la
+ → limpiás.                                                implementación y pasa siempre.
+
+ El test es el primer cliente de tu código: te obliga a
+ definir cómo se usa antes de cómo se hace.
+
+
+
+Microservicios (73.40)                                                                                           21
+
+===== PAGINA 22 =====
+
+ Función NextDate
+ Historia                                                User Stories
+
+ El sistema debe calcular el día siguiente a una fecha    #
+ ingresada.                                               1     The program compiles.
+                                                          2     A day can be input and displayed.
+                                                          3     An input month can be displayed.
+                                                          4     An input year can be displayed.
+                                                          5     A day below minimum can be detected.
+                                                          6     A day above maximum can be detected.
+                                                          7     A month below minimum can be detected.
+                                                          8     A month above maximum can be detected.
+                                                          9     A year below minimum can be detected.
+                                                          10    A year above maximum can be detected.
+
+
+
+
+Microservicios (73.40)                                                                                   22
+
+===== PAGINA 23 =====
+
+ Función NextDate
+    #                                                           #
+
+    11      Day = 31 in a 30 day month.                         19   Increment a non-last day of a month.
+
+            Day = 30 in February (note: also need Day = 31 in   20   Increment the last day of a 30-day month.
+    12
+            February).
+                                                                21   Increment the last day of a 31-day month.
+    13      Day = 29 in February in a common year.
+                                                                22   Increment December 31.
+    14      Day = 29 in February in a leap year.
+                                                                23   Increment February 28 in a common year.
+            A year divisible by 4 is a leap year (except for
+    15                                                          24   Increment February 28 in a leap year.
+            century years).
+
+    16      A year not divisible by 4 is a common year.         25   Increment February 29 in a leap year.
+
+            A century year not divisible by 400 is a common
+    17
+            year.
+
+    18      A century year divisible by 400 is a leap year.
+
+Microservicios (73.40)                                                                                           23
+
+===== PAGINA 24 =====
+
+Fin !!
+

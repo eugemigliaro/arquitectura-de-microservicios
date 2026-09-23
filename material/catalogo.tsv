@@ -12,3 +12,8 @@ T06	teoria	Imágenes de contenedores	material/catedra/teoria/Imágenes de Conten
 T07	teoria	Docker Compose	material/catedra/teoria/Docker Compose.pdf	25	2026	vigente	Docker Compose.pdf
 T08	teoria	Docker CLI, redes y volúmenes	material/catedra/teoria/Docker CLI, redes y volúmenes.pdf	47	2026	vigente	Docker CLI, redes y volúmenes.pdf
 E02	consigna	Primera entrega TP1: análisis de dominio DDD del Álbum 2026	material/catedra/practica/consigna-primera-entrega-tp1.md		2026	vigente	consigna-primera-entrega-tp1.md
+T09	teoria	Comunicación síncrona	material/catedra/teoria/Comunicación Síncrona.pdf	37	2026	vigente	Comunicación Síncrona.pdf
+T10	teoria	Testing	material/catedra/teoria/Testing.pdf	24	2026	vigente	Testing.pdf
+T11	teoria	Sistemas distribuidos	material/catedra/teoria/Sistemas Distribuidos - Slidev.pdf	40	2026	vigente	Sistemas Distribuidos - Slidev.pdf
+T12	teoria	Estado distribuido: patrones con Valkey	material/catedra/teoria/Estado distribuido_Patterns - Slidev.pdf	33	2026	vigente	Estado distribuido_Patterns - Slidev.pdf
+T13	teoria	DevOps	material/catedra/teoria/devops.pdf	47	2026	vigente	devops.pdf

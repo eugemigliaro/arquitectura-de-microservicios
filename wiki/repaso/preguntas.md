@@ -171,6 +171,23 @@ Preguntas recuperables por tema. Mantener las respuestas separadas o plegadas cu
 117. Compará basic, rolling, blue/green y canary por riesgo y requisitos.
 118. ¿Qué es shift-left y qué costo reduce?
 
+## Comunicación asincrónica y Kafka
+
+119. Compará síncrono y asíncrono en acoplamiento temporal, latencia percibida, falla en cascada, complejidad operativa y trazabilidad. ¿Cuándo no conviene async?
+120. Diferenciá cola y pub/sub, y explicá cómo se obtiene cada modelo con consumer groups de Kafka.
+121. Compará event notification, event-carried state transfer y comando. ¿Cuándo aplicarías claim check?
+122. ¿Qué es CQRS light y en qué se diferencia de Event Sourcing?
+123. Describí la compensación coreografiada cuando falla el pago y explicá qué agrega un motor de orquestación durable.
+124. ¿Por qué una Saga necesita timeouts explícitos?
+125. ¿Qué orden garantiza Kafka y qué rol cumple la key? Nombrá tres formas de elegirla mal.
+126. ¿Por qué en Kafka leer no es sacar? Explicá offset, replay y consumer lag.
+127. Un topic tiene 4 particiones y su consumer group, 5 consumers. ¿Qué ocurre? ¿Y si en un grupo de 2 consumers cae uno?
+128. ¿Qué es el dual write y cómo lo resuelve el Transactional Outbox? ¿Qué falla produce publicaciones duplicadas?
+129. Compará poller y CDC para vaciar el outbox.
+130. ¿Qué evita el Inbox y por qué el exactly-once de Kafka no reemplaza la idempotencia del handler?
+131. ¿Por qué reintentar para siempre es especialmente dañino en Kafka y qué regla propone la cátedra?
+132. ¿Para qué sirven `correlationId` y `causationId`, y cómo se evoluciona el esquema de un evento sin romper consumidores?
+
 <details>
 <summary>Respuestas orientativas</summary>
 
@@ -292,6 +309,20 @@ Preguntas recuperables por tema. Mantener las respuestas separadas o plegadas cu
 116. Preparation, build, unit test, deliver, integration test y deploy. Cada artefacto de build es un posible release candidate que debe preservarse hasta ser rechazado. [T13, p. 31] [T13, p. 33]
 117. Basic es el más simple pero corta el servicio; rolling es progresivo y requiere retrocompatibilidad; blue/green conmuta tráfico entre dos ambientes; canary expone primero a un grupo y limita el impacto. La elección depende del riesgo e impacto de negocio. [T13, p. 38] [T13, p. 40] [T13, p. 41] [T13, p. 42] [T13, p. 43]
 118. Avisar al desarrollador de inmediato de cualquier falla funcional, de performance o de seguridad del pipeline; reduce los costos de operación al resolver antes de producción. [T13, p. 45]
+119. Async baja el acoplamiento temporal, reduce la latencia percibida al primer hop y amortigua fallas en cascada, pero suma broker, DLQ, idempotencia y observabilidad, y la trazabilidad se vuelve indirecta. No conviene si se necesita la respuesta para seguir, el flujo es simple, no se puede operar un broker o importa la consistencia inmediata. [T14, p. 6] [T14, p. 8]
+120. Una cola entrega cada mensaje a un grupo consumidor para repartir trabajo; pub/sub lo entrega a N suscriptores. En Kafka, consumers del mismo grupo compiten como en una cola, y grupos distintos reciben todos los mensajes como en pub/sub. [T14, p. 10] [T14, p. 42]
+121. Notification lleva un payload mínimo y genera consultas de vuelta; state transfer lleva el estado completo y duplica datos; un comando no es un evento, sino una instrucción que espera resultado. Claim check aplica cuando el payload es pesado o tiene PII: el evento lleva un puntero al store. [T14, p. 17] [T14, p. 18]
+122. Separa el modelo de escritura de read models alimentados por eventos; no convierte al historial en la única fuente de verdad como Event Sourcing. [T14, p. 19]
+123. Payment publica `PaymentFailed`, Inventory libera y publica `InventoryReleased`, y Orders cancela y publica `OrderCancelled`, sin dueño único. Un motor como Temporal vuelve explícito el flujo y la compensación, y persiste cada paso para retomar tras una caída sin cobrar dos veces. [T14, p. 23] [T14, p. 25] [T14, p. 26]
+124. Porque un paso que no responde deja la Saga colgada en un estado intermedio; al vencer el timeout se toma la rama de compensación, y en Temporal o Cadence los timers sobreviven al reinicio. [T14, p. 27]
+125. Orden dentro de una partición, no entre particiones. La key elige la partición por hash, así que misma key preserva el orden de esa entidad. Errores: omitir la key (round-robin), usar una key inestable como `uuid()` o una key demasiado gruesa como `tenantId`, que crea una partición caliente. [T14, p. 32] [T14, p. 33] [T14, p. 35]
+126. El log no cambia al leer: cada consumer avanza su propio offset, guardado aparte, y puede volverlo a 0 para replay. El lag es la distancia entre el final del log y ese offset. [T14, p. 31] [T14, p. 38] [T14, p. 43]
+127. Cada partición se asigna a un solo consumer del grupo, por lo que el quinto queda ocioso. Si cae uno de dos, el grupo rebalancea y el que queda recibe sus particiones. [T14, p. 40] [T14, p. 41]
+128. Es escribir en la base y publicar al broker sin transacción compartida. El outbox guarda el evento en la misma transacción que el cambio y un relay lo publica después. Si el relay cae entre publicar y marcar la fila, se publica dos veces: la garantía es at-least-once. [T14, p. 46] [T14, p. 47] [T14, p. 48]
+129. El poller es simple, pero su latencia es el intervalo de poll y requiere cuidado con locks y con marcar lo publicado. CDC lee el write-ahead log con herramientas como Debezium, con menos latencia y una pieza operativa más. [T14, p. 49]
+130. Evita aplicar dos veces un mensaje reentregado: inserta `message_id` y el efecto en la misma transacción, y un duplicado es no-op. El broker entrega at-least-once en la práctica, así que el handler debe ser idempotente aunque se active el EOS de Kafka. [T14, p. 50] [T14, p. 51]
+131. Un consumer que no avanza su offset atrasa toda su partición y deja a esa entidad sin procesar. Regla: tope de intentos, luego DLQ u otro topic y alerta humana. [T14, p. 53]
+132. `correlationId` agrupa todos los eventos de un flujo de negocio y `causationId` apunta al evento o request que causó el actual. Para evolucionar el esquema: versionar el `type` o mantener compatibilidad hacia atrás, preferir cambios aditivos y documentar con AsyncAPI y CloudEvents. [T14, p. 54] [T14, p. 55]
 
 </details>
 
@@ -305,3 +336,4 @@ Preguntas recuperables por tema. Mantener las respuestas separadas o plegadas cu
 - Diagnosticá este caso: dos contenedores comparten una red propia, el nombre resuelve, pero el cliente recibe `connection refused` y desde el host tampoco funciona el puerto publicado. Ordená las comprobaciones de red, escucha y DNAT. [T08, p. 22] [T08, p. 32]
 - Un endpoint de reserva de entradas corre en tres instancias y recibe reintentos del gateway. Diseñá la protección contra sobreventa y duplicados: qué estado va en Valkey, qué va en la base, dónde queda la frontera atómica y qué pasa si una instancia pausa más que el TTL. [T12, p. 3] [T12, p. 11] [T12, p. 20]
 - Elegí estrategia de despliegue para el Álbum 2026 y justificá según riesgo, retrocompatibilidad entre versiones y costo de rollback. [T13, p. 43]
+- Para el Álbum 2026, diseñá el flujo desde la apertura de un sobre hasta la actualización de progreso y retos: qué eventos se publican, con qué key, cómo se evitan efectos duplicados, qué pasa con eventos de progreso fuera de orden y cómo detectarías que la actualización se está demorando. [E01, p. 6] [T14, p. 35] [T14, p. 43] [T14, p. 50]

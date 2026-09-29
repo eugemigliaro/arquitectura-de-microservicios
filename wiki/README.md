@@ -21,6 +21,7 @@
 - [Docker CLI, redes y volúmenes](temas/docker-cli-redes-y-volumenes.md): ciclo de vida, diagnóstico, modos de red, publicación de puertos, DNS y persistencia.
 - [Docker Compose](temas/docker-compose.md): servicios, redes, volúmenes, configuración, secretos, builds y orden de arranque.
 - [Comunicación síncrona](temas/comunicacion-sincrona.md): REST, gRPC, GraphQL, ConnectRPC, capacidad, sobrecarga y arquitectura multi-protocolo.
+- [Comunicación asincrónica y Kafka](temas/comunicacion-asincrona-y-kafka.md): brokers, queue y pub/sub, CloudEvents, EDA, CQRS light, Sagas, particiones, offsets, consumer groups, lag, outbox, inbox y DLQ.
 - [Testing de microservicios](temas/testing.md): niveles y dimensiones de prueba, contract testing, dobles, estructura, cobertura y seguridad.
 - [Sistemas distribuidos](temas/sistemas-distribuidos.md): modelos de falla de red, nodos y tiempo, RPC, orquestación, serializabilidad, locking, 2PC y coreografía.
 - [Estado distribuido y patrones con Valkey](temas/estado-distribuido.md): estado entre instancias, locks con fencing, semáforos, colas, cache, idempotencia, inbox, semánticas de entrega y streams.
@@ -46,6 +47,7 @@
 | `T11` | *Sistemas distribuidos* — oficial | 40 | Modelos de falla, RPC, transacciones concurrentes, 2PC, orquestación y coreografía |
 | `T12` | *Estado distribuido: patrones con Valkey* — oficial | 33 | Coordinación entre instancias, locks, cache, idempotencia, entrega de mensajes y streams |
 | `T13` | *DevOps* — oficial | 47 | Ciclo DevOps, CI/CD, repositorios y PR, pipeline, despliegues y shift-left |
+| `T14` | *Comunicación asincrónica y Kafka* — oficial | 63 | Mensajería, EDA, Sagas coreografiadas y orquestadas, internals de Kafka y patrones de confiabilidad |
 | `P01` | *Ejercicio DDD: Pedidos — resolución* — oficial, ciclo 2025 | 16 | Fronteras, EventStorming y detalle por dominio |
 | `P02` | *Ejercicio de DDD: Huella* — oficial | 10 | Taller sin solución, entregables y rúbrica |
 | `E01` | *Requerimientos funcionales: Álbum de Figuritas Mundial 2026* — oficial, v1.1 | 7 | Consigna evaluada, invariantes, escenarios y condiciones de entrega |

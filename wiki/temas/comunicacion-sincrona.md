@@ -43,4 +43,4 @@ Ante fallos, el diseño combina reintentos con backoff y jitter, idempotencia, D
 
 ## Límites de la demostración
 
-La cola de la demo está en memoria, no sobrevive a un crash y puede entregar duplicados. Además, si `λ > μ` de forma sostenida, cualquier backlog finito termina saturándose y reaparece el rechazo. Por eso la demo no prueba durabilidad ni garantías de entrega. [T09, p. 33]
+La cola de la demo está en memoria, no sobrevive a un crash y puede entregar duplicados. Además, si `λ > μ` de forma sostenida, cualquier backlog finito termina saturándose y reaparece el rechazo. Por eso la demo no prueba durabilidad ni garantías de entrega. [T09, p. 33] Esos temas se desarrollan en [Estado distribuido](estado-distribuido.md) y en [Comunicación asincrónica y Kafka](comunicacion-asincrona-y-kafka.md), que presenta el consumer lag como el costo operativo de convertir pérdida en latencia. [T14, p. 43]

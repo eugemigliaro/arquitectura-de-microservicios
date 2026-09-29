@@ -75,4 +75,4 @@ La figura distingue consumidores independientes que leen todo con `XREAD` de un 
 
 Si un consumidor falla antes del ACK, al volver puede leer sus pendientes con `XREADGROUP ... 0`; si su caída es permanente, otro puede reclamarlos con `XAUTOCLAIM` pasado un tiempo mínimo de inactividad. [T12, p. 33]
 
-El log conserva el orden de sus IDs, pero repartirlo entre consumidores paralelos hace que el orden de finalización pueda diferir del de entrega, y productores independientes no establecen un orden causal. Si una entidad requiere orden, sus mensajes deben compartir una ruta serializada. [T12, p. 28]
+El log conserva el orden de sus IDs, pero repartirlo entre consumidores paralelos hace que el orden de finalización pueda diferir del de entrega, y productores independientes no establecen un orden causal. Si una entidad requiere orden, sus mensajes deben compartir una ruta serializada. [T12, p. 28] En Kafka esa ruta es la partición que elige la key del mensaje, y el Inbox de esta unidad reaparece con base de datos en lugar de Valkey; ver [Comunicación asincrónica y Kafka](comunicacion-asincrona-y-kafka.md). [T14, p. 35] [T14, p. 50]

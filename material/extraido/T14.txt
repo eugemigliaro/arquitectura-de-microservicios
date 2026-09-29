@@ -1,0 +1,1072 @@
+FUENTE: T14
+TITULO: Comunicación asincrónica y Kafka
+ORIGINAL: material/catedra/teoria/Comunicación Asincrónica y Kafka - Slidev.pdf
+PAGINAS: 63
+
+===== PAGINA 1 =====
+
+Arquitectura de
+Microservicios con
+Contenedores
+— Ing. Federico Castañeda
+— Ing. Carlos Maceira
+— Ing. Franco Rupnik
+
+===== PAGINA 2 =====
+
+Comunicación Asincrónica
+y Kafka
+
+===== PAGINA 3 =====
+
+ Temario
+ 1. ¿Por qué comunicación asíncrona?
+ 2. Fundamentos de mensajería
+ 3. Event-Driven Architecture (y CQRS light)
+ 4. Saga en la práctica: coreografía vs. orquestación
+ 5. Cómo funciona Kafka
+ 6. Patrones de confiabilidad (Outbox, Inbox, contratos, lag)
+ 7. Cierre, checklist y anti-patterns
+
+
+
+
+Microservicios (73.40)                                          3
+
+===== PAGINA 4 =====
+
+¿Por qué comunicación
+asíncrona?
+
+===== PAGINA 5 =====
+
+ ¿De dónde venimos?
+ En la clase 6 medimos qué pasa cuando llegan más requests de los que se pueden procesar.
+     Sync bajo sobrecarga: perdió 95 de 100 requests.
+     Con una cola en el medio: perdió 0, pero la latencia se fue a 30 s.
+
+ En la clase 7 vieron un flujo de venta coreografiado — reaccionando a eventos, sin broker de por medio
+ todavía.
+ Hoy: cerramos el círculo. Qué hay realmente detrás de esos eventos, y qué se rompe si no lo diseñás con
+ cuidado.
+
+
+
+
+Microservicios (73.40)                                                                                     5
+
+===== PAGINA 6 =====
+
+ Sync vs Async — comparación
+    Aspecto                  Síncrono                                      Asíncrono
+
+    Acoplamiento             Alto: emisor y receptor deben estar up a la
+                                                                           Bajo: el broker media en el tiempo
+    temporal                 vez
+
+    Latencia percibida       La del eslabón más lento del camino           La del primer hop (encolar)
+
+    Falla en cascada         Se propaga directo                            Amortiguada por el broker
+
+    Complejidad operativa    Baja                                          Alta: broker, DLQ, idempotencia, observabilidad
+
+                                                                           Indirecta (hay que reconstruir la cadena de
+    Trazabilidad del flujo   Directa (call stack)
+                                                                           eventos)
+
+
+
+
+Microservicios (73.40)                                                                                                       6
+
+===== PAGINA 7 =====
+
+ Comunicación Asíncrona
+     El emisor no espera respuesta inmediata.      Message Brokers conocidos
+     Brinda desacoplamiento temporal y espacial.     RabbitMQ: broker tradicional, flexible.
+     Necesita un intermediario: Message Broker.      Apache Kafka: log distribuido, alto throughput.
+     Mayor resiliencia, menor acoplamiento.          NATS: ultraliviano y cloud-native.
+     Mayor complejidad operacional.
+
+
+
+
+Microservicios (73.40)                                                                                 7
+
+===== PAGINA 8 =====
+
+ ¿Cuándo NO usar async?
+     Necesitás la respuesta ya, para decidir el siguiente paso.
+     El flujo es simple y un único consumidor alcanza.
+     No podés pagar el costo operativo de un broker (equipo, monitoreo, on-call).
+     La consistencia inmediata importa más que el desacople.
+
+ Async no es progreso automático — es un trade-off. Se paga con complejidad operativa lo que se gana
+ en resiliencia y escala.
+
+
+
+
+Microservicios (73.40)                                                                                 8
+
+===== PAGINA 9 =====
+
+Fundamentos de
+mensajería
+
+===== PAGINA 10 =====
+
+ Queue vs Pub/Sub — dos modelos distintos
+    Característica       Cola (Queue)                       Publish / Subscribe
+
+    Entrega              1 mensaje   → 1 grupo consumidor   1 mensaje   → N suscriptores (muchos grupos)
+    Caso de uso          Distribuir trabajo entre workers   Notificar a múltiples servicios
+
+    Ejemplo              Procesar un pago (un worker)       OrderCreated     → pago, email, analytics
+    Herramienta          RabbitMQ queues, AWS SQS           Kafka topics, RabbitMQ exchanges
+
+
+
+
+Microservicios (73.40)                                                                                     10
+
+===== PAGINA 11 =====
+
+ Anatomía de un mensaje: CloudEvents
+ Especificación de la CNCF para describir eventos.            order-created.json
+
+
+     Atributos comunes: id, source, type,            {
+                                                         "specversion": "1.0",
+     specversion, data.                                  "id": "3f8a1e02-19b0",
+                                                         "source": "/orders-service",
+     Agnóstico de transporte y de lenguaje.
+                                                         "type": "com.itba.order.created",
+     Usable sobre HTTP, Kafka, AMQP, NATS.               "time": "2026-09-25T14:03:00Z",
+                                                         "datacontenttype": "application/json",
+ Convención de cátedra: todos los labs event-            "data": {
+                                                           "orderId": "1234",
+ driven usan CloudEvents, y los que tienen                 "customerId": "cust-88",
+ comunicación asíncrona incluyen un                        "total": 15990.0
+                                                         }
+ asyncapi.yaml.                                      }
+
+
+
+
+Microservicios (73.40)                                                                            11
+
+===== PAGINA 12 =====
+
+ NATS: messaging ultraliviano
+ Problema: Kafka y RabbitMQ son potentes pero
+ pesados para casos simples.
+     Un binario Go, sin dependencias, arranca en ~2 s.
+     Pub/Sub + Request-Reply + Queue Groups.
+                                                         NATS core (sin JetStream)
+     JetStream: persistencia opcional. Sin él, el
+     mensaje se pierde si no hay nadie consumiendo.
+                                                         Publisher   → NATS → Subscriber
+                                                         Nadie escuchando = mensaje perdido.
+     Docker Compose de 4 líneas.
+
+                                                         NATS JetStream
+                                                         Publisher   → Stream (persistente) → Consumer (offset)
+                                                         Sobrevive a un consumidor caído.
+
+
+
+
+Microservicios (73.40)                                                                                            12
+
+===== PAGINA 13 =====
+
+ NATS vs RabbitMQ vs Kafka
+    Aspecto              NATS                        RabbitMQ               Kafka
+
+    Modelo               Pub/Sub + Request-Reply     Broker con exchanges   Log distribuido
+
+    Persistencia         Opcional (JetStream)        Sí (hasta consumir)    Sí (retención configurable)
+
+    Setup                1 binario, 0 config         Erlang, plugins        Cluster de brokers
+
+    Ideal para           Messaging simple y rápido   Routing flexible       Alto throughput, replay, event sourcing
+
+
+
+
+Microservicios (73.40)                                                                                                13
+
+===== PAGINA 14 =====
+
+Event-Driven Architecture
+
+===== PAGINA 15 =====
+
+ Event-Driven Architecture (EDA)
+     Sistemas reactivos: los servicios emiten eventos describiendo hechos ocurridos. Otros servicios
+     reaccionan.
+     Desacoplamiento: el emisor no sabe, ni le interesa, quién está escuchando.
+
+ Distinción importante:
+                                       → pasado, inmutable, sin expectativa.
+     Eventos: "algo pasó" (OrderCreated)
+     Comandos: "hacé algo" (ProcessPayment) → imperativo, espera resultado.
+
+
+
+
+Microservicios (73.40)                                                                                 15
+
+===== PAGINA 16 =====
+
+ La coreografía que ya vieron, es EDA
+ En la clase 7, se mostró este flujo — sin broker, sin pub/sub, pero con la noción de evento ya instalada:
+
+
+                         Sale
+                         Service
+                                   — SALE_REQUESTED   →   Inventory
+                                                          Service
+                                                                      — STOCK_RESERVED   →   Payment
+                                                                                             Service
+
+
+
+ Eso es EDA aplicada a un flujo de negocio: cada servicio reacciona a lo que pasó, nadie orquesta desde
+ afuera.
+ Lo que faltaba en esa clase: un broker real transportando esos eventos. Eso viene ahora.
+
+
+
+
+Microservicios (73.40)                                                                                       16
+
+===== PAGINA 17 =====
+
+ Tres formas de llevar información en un evento
+     Event notification: "algo pasó", payload mínimo (OrderCreated { orderId }). El que escucha, si
+     necesita más, pregunta.
+     Event-carried state transfer: el evento lleva el estado completo (OrderCreated { orderId, items,
+     total, customer }). Nadie necesita volver a preguntar.
+     Comando: no es un evento — es una instrucción dirigida con expectativa de resultado (ChargePayment).
+
+ Trade-off: notification es liviano pero genera llamadas de vuelta; state transfer es autosuficiente pero duplica
+ datos entre servicios.
+
+
+
+
+Microservicios (73.40)                                                                                              17
+
+===== PAGINA 18 =====
+
+ Claim check: cuando el payload no cabe en el bus
+ State transfer sin límites termina en eventos gigantes (imágenes, PDFs, PII pesada).
+     El evento lleva un puntero (uri, blobId) al payload completo en un store (S3, DB, object storage).
+     Quien necesita el detalle lo descarga; el resto solo reacciona al hecho.
+     El bus transporta el hecho, no el archivo.
+
+ Complementa notification vs state transfer: no es todo-o-nada — podés llevar metadata rica y dejar el blob
+ afuera.
+
+
+
+
+Microservicios (73.40)                                                                                        18
+
+===== PAGINA 19 =====
+
+ CQRS light: un write, muchos reads
+     Command Query Responsibility Segregation: el modelo que escribe no tiene por qué ser el que se
+     consulta.
+     El servicio de escritura emite eventos; uno o más read models (projections) los consumen y materializan
+     vistas optimizadas para lectura.
+     Kafka encaja natural: el mismo log alimenta facturación, analytics y una proyección de "mis órdenes" sin
+     acoplar al writer.
+
+ No es Event Sourcing completo (el historial como única fuente de verdad). Es separar write path de read path
+ — y el bus es el puente.
+
+
+
+
+Microservicios (73.40)                                                                                          19
+
+===== PAGINA 20 =====
+
+Saga en la práctica
+
+===== PAGINA 21 =====
+
+ El flujo que ya conocen
+ Mismo dominio de la clase 7: venta   → reserva de stock → cobro, con compensación si algo falla.
+    Estado                       Evento disparador                          Compensación si falla
+
+    SALE_REQUESTED               Cliente confirma la compra                 —
+
+    Reserva de stock             STOCK_RESERVED                             —
+
+    Cobro                        PAYMENT_FAILED                             ROLLBACK_INVENTORY
+
+    Cierre                       —                                          CANCELED
+
+ Esto ya lo vieron como diagrama de estados. Ahora: ¿qué es esto en la práctica, cruzando la red?
+
+
+
+
+Microservicios (73.40)                                                                              21
+
+===== PAGINA 22 =====
+
+ Lo mismo, con mensajes reales
+ Cada flecha del diagrama de clase 7 es, en la                  stock-reserved.json
+
+ práctica, un evento CloudEvents publicado en un       {
+ topic de NATS.                                            "specversion": "1.0",
+                                                           "id": "8b21f0",
+     orders.inventory.reserve-requested                    "source": "/inventory-service",
+                                                           "type": "com.itba.inventory.reserved",
+     orders.inventory.reserved                             "data": {
+                                                             "orderId": "1234",
+     orders.payment.failed                                   "sku": "FIG-045",
+                                                             "qty": 1
+ Nadie llama a nadie directamente — cada servicio se       }
+ suscribe al topic que le importa.                     }
+
+
+
+
+Microservicios (73.40)                                                                              22
+
+===== PAGINA 23 =====
+
+ Compensación como cadena de eventos
+ Coreografía pura: no hay nadie "arriba" decidiendo.            payment-failed.json
+
+ Cada servicio reacciona al evento de falla.           {
+                                                           "specversion": "1.0",
+ 1. Payment publica PaymentFailed.                         "id": "c4a190",
+ 2. Inventory está suscripto a PaymentFailed   →           "source": "/payment-service",
+                                                           "type": "com.itba.payment.failed",
+    publica InventoryReleased.                             "data": {
+
+ 3. Orders está suscripto a InventoryReleased      →         "orderId": "1234",
+                                                             "reason": "insufficient_funds"
+     publica OrderCancelled.                               }
+                                                       }
+ Tres saltos, tres servicios, ningún dueño único del
+ flujo de compensación.
+
+
+
+
+Microservicios (73.40)                                                                          23
+
+===== PAGINA 24 =====
+
+ Un caso real: el pedido en Uber
+     Uber construyó Cadence (~2016), un motor de orquestación de workflows durable, para flujos como el
+     ciclo de vida de un pedido: reservar, cobrar, asignar repartidor, entregar.
+     Los mismos autores de Cadence luego fundaron Temporal, su sucesor open source — hoy usado por
+     Netflix, Snap, Stripe, Datadog.
+     La razón de fondo: la coreografía pura, a medida que un flujo de negocio crece en pasos, se vuelve difícil
+     de trazar y de debuggear. Exactamente lo que anotamos en la slide anterior.
+
+
+
+
+                                                                                                      Fuente: temporal.io
+
+Microservicios (73.40)                                                                                                24
+
+===== PAGINA 25 =====
+
+ Orquestación: el mismo flujo, otro código
+ Ya no hay eventos que alguien más escucha. Un                   order-saga.workflow (pseudocódigo)
+
+ workflow llama a activities como funciones               workflow OrderSaga(order):
+ normales — la orquestación es explícita, no implícita.     reserveInventory(order)
+
+ La compensación ya no es "publicar un evento y            try:
+                                                             chargePayment(order)
+ esperar que alguien reaccione": es una rama de            except PaymentFailed:
+ control de flujo, en el mismo lugar donde está el           releaseInventory(order)     # compensación inline
+                                                             cancelOrder(order)
+ resto de la lógica.                                         return
+
+                                                           assignDelivery(order)
+
+
+
+
+Microservicios (73.40)                                                                                           25
+
+===== PAGINA 26 =====
+
+ Durabilidad: lo que un motor de orquestación agrega
+     El estado del workflow se persiste en cada paso, no solo vive en memoria.
+     Si el worker que ejecuta OrderSaga se cae justo después de reserveInventory, al reiniciar retoma
+     exactamente ahí — no se pierde la compensación, no se cobra dos veces.
+     Esta durabilidad es la razón de ser de Cadence/Temporal: no es "un scheduler más", es lo que hace
+     confiable ejecutar una Saga larga sin reinventar checkpoints a mano.
+
+ Conecta con la sección 6: esto es la misma preocupación que resuelve el outbox pattern, pero aplicada al
+ orquestador en vez de a un único servicio.
+
+
+
+
+Microservicios (73.40)                                                                                      26
+
+===== PAGINA 27 =====
+
+ Timeouts y deadlines en la Saga
+ Una Saga sin deadline puede quedar colgada para siempre: pago que no responde, repartidor que nunca
+ acepta.
+     Cada paso (y la Saga entera) tiene un timeout explícito.
+     Al vencer: rama de compensación (liberar stock, cancelar orden) — igual que un PaymentFailed.
+     En Temporal/Cadence: timers durables; sobreviven al restart del worker.
+
+ Sin timeout, "compensación" es teoría: en la práctica el flujo se pudre en un estado intermedio.
+
+
+
+
+Microservicios (73.40)                                                                                 27
+
+===== PAGINA 28 =====
+
+ Coreografía vs Orquestación — la misma decisión, dos
+ vistas
+    Aspecto                        Coreografía (clase 7)                  Orquestación (Temporal)
+
+    Dueño del flujo                Implícito, repartido entre servicios   Explícito: un workflow
+
+    Debugging                      Difícil, sin owner único               Directo: un trace por Saga
+
+                                   Bajo — cada servicio conoce solo
+    Acoplamiento                                                          El orquestador conoce a todos los pasos
+                                   su parte
+
+    Escalabilidad / autonomía de
+                                   Alta                                   Media — depende del orquestador
+    equipos
+
+                                                                          Sagas largas, muchos pasos, necesitás visibilidad
+    Conviene cuando…               Pocos pasos, equipos autónomos
+                                                                          end-to-end
+
+
+
+
+Microservicios (73.40)                                                                                                        28
+
+===== PAGINA 29 =====
+
+Cómo funciona Kafka
+
+===== PAGINA 30 =====
+
+ ¿Por qué existe Kafka?
+     Los sistemas modernos necesitan intercambiar datos continuamente.
+     Las integraciones punto a punto generan alto acoplamiento.
+     Productores y consumidores no siempre trabajan al mismo ritmo.
+     Muchas aplicaciones necesitan reaccionar en tiempo real y conservar el historial para reprocesar.
+
+
+  Kafka aparece cuando integrar sistemas a gran escala empieza a ser un problema en sí mismo.
+
+
+
+
+Microservicios (73.40)                                                                                   30
+
+===== PAGINA 31 =====
+
+ La idea central: el log
+     Un log es una secuencia ordenada de registros inmutables.
+     Se escribe solo al final (append-only).
+     Responde dos preguntas: ¿qué pasó? y ¿en qué orden?
+     Leer no elimina el dato — distintos consumidores pueden leer el mismo historial, cada uno a su propio
+     ritmo.
+
+
+                         Consumir no es sacar un mensaje: es avanzar una posición de lectura.
+
+
+
+
+Microservicios (73.40)                                                                                       31
+
+===== PAGINA 32 =====
+
+ Topics y particiones
+     Un topic agrupa eventos del mismo tipo (order-created, payment-approved).
+     Un topic no es una cola: los eventos permanecen según la política de retención, y cada consumidor lleva
+     su propio offset.
+     Un topic se divide en particiones para paralelizar.
+     Kafka garantiza orden dentro de una partición — no entre particiones de un mismo topic.
+
+
+
+
+Microservicios (73.40)                                                                                         32
+
+===== PAGINA 33 =====
+
+ La key decide la partición
+     partición = hash(key) % cantidad_de_particiones
+     Misma key           → misma partición → orden relativo preservado para esa entidad.
+     Ejemplos típicos de key: orderId, customerId, accountId.
+     Sin key (o key distinta cada vez), Kafka reparte round-robin — sin garantía de orden entre esos eventos.
+
+
+
+
+Microservicios (73.40)                                                                                          33
+
+===== PAGINA 34 =====
+
+    PRODUCER
+                                                                                                     Enviar order-101      Enviar order-202     Enviar order-303     Reset
+    Elegí una key y seguí sus eventos dentro de la partición.
+
+                                                   bytes(key)   → Murmur2 → (hash & 0x7fffffff) % 3 → partición
+
+      PARTICIÓN 0                               0 records       PARTICIÓN 1                              0 records      PARTICIÓN 2                                0 records
+
+
+
+
+                          vacía                                                    vacía                                                      vacía
+
+
+
+
+                                    Misma key   → misma partición → orden relativo preservado. No existe orden global entre particiones.
+
+
+
+
+Microservicios (73.40)                                                                                                                                                         34
+
+===== PAGINA 35 =====
+
+ Anti-pattern: key ausente o mal elegida
+ Después de la demo: el bug de ordenamiento casi nunca es "Kafka se rompió".
+     Sin key: round-robin   → eventos de la misma orden en particiones distintas → el consumer puede ver Paid
+     antes que Created.
+     Key inestable (uuid() por mensaje, o un campo que cambia): misma entidad salta de partición.
+     Key demasiado gruesa (todo con tenantId): una partición caliente, el resto ocioso.
+
+ Regla: la key es parte del contrato de orden. Elegila por la entidad cuyo orden relativo importa (orderId,
+ no "lo que haya a mano").
+
+
+
+
+Microservicios (73.40)                                                                                        35
+
+===== PAGINA 36 =====
+
+ Brokers y replicación
+     Un cluster Kafka está formado por varios brokers.
+                                                         Broker 1 — P0 (líder), P1 (réplica)
+     Las particiones se distribuyen entre brokers — el
+     topic es lógico, el broker es físico.
+                                                         Broker 2 — P1 (líder), P2 (réplica)
+     Cada partición puede tener varias réplicas: una
+     líder, el resto sigue.                              Broker 3 — P2 (líder), P0 (réplica)
+     Si un broker cae, otra réplica asume como líder —
+     así Kafka tolera fallos sin perder datos.
+
+
+
+
+Microservicios (73.40)                                                                         36
+
+===== PAGINA 37 =====
+
+ Producers y Consumers
+     El producer escribe records en un topic; con o sin key.
+     El consumer lee con modelo pull — decide hasta dónde avanzó, y puede reiniciarse y continuar donde
+     dejó.
+     Los consumers se agrupan en consumer groups para repartirse el trabajo.
+     Ninguno de los dos necesita conocer al otro — solo el topic.
+
+
+
+
+Microservicios (73.40)                                                                                    37
+
+===== PAGINA 38 =====
+
+ Offsets: leer no es sacar
+     Cada consumer lleva su propio offset (próxima posición a leer), guardado aparte del log.
+     El log no cambia cuando se lee — dos consumers pueden estar en offsets distintos del mismo topic.
+     Por eso Kafka permite replay: volver el offset a 0 sin perder ni duplicar el historial.
+
+
+
+
+Microservicios (73.40)                                                                                   38
+
+===== PAGINA 39 =====
+
+    PA R T I C I Ó N 0 · A P P E N D O N LY
+                                                                                                                                    + Producir evento     Reset
+    Dos consumers leen el mismo historial a ritmos distintos.
+
+      LOG
+
+        0                 1                2              3                4                 5
+       OrderCreated      PaymentAp…       StockReserv…   OrderPacked      OrderShipped   DeliverySta…        next
+
+
+      pasado                                                                                                                                             append   →
+
+       Facturación                                            Leer siguiente    ↶ Replay 0         Analytics                        Leer siguiente   ↶ Replay 0
+                                      ▼                                                                           ▼
+       próximo offset 4 · lag 2                                                                    próximo offset 2 · lag 4
+
+
+                                      4                                                                             2
+
+
+
+
+                                                              Leer o volver atrás mueve el cursor del consumer. El log no cambia.
+
+
+
+
+Microservicios (73.40)                                                                                                                                                39
+
+===== PAGINA 40 =====
+
+ Consumer Groups: paralelismo real
+     Dentro de un mismo consumer group, una partición se asigna a un solo consumer a la vez.
+     Paralelismo máximo = cantidad de particiones. Un quinto consumer con 4 particiones queda ocioso.
+     Si un consumer cae, el grupo rebalancea: sus particiones se redistribuyen entre los que quedan.
+
+
+
+
+Microservicios (73.40)                                                                                  40
+
+===== PAGINA 41 =====
+
+    CONSUMER GROUP · ORDERS
+                                                                                                                                     + Consumer   Simular caída   Reset
+    Dos consumers se reparten cuatro particiones. Seleccioná uno para simular su caída.
+
+
+                                                                 TOPIC       P0        P1     P2       P3
+
+
+                                                                   ↓ una partición, un consumer activo ↓
+
+       C    Consumer 1                                      C    Consumer 2                           seleccionado
+            activo                                               activo
+
+
+       P0    P2                                             P1    P3
+
+
+
+
+                                           4 particiones         2 consumers activos          0 ociosos               0 rebalances
+
+                                     Paralelismo máximo = cantidad de particiones. Si un consumer cae, el grupo redistribuye su trabajo.
+
+
+
+
+Microservicios (73.40)                                                                                                                                                    41
+
+===== PAGINA 42 =====
+
+ Competing consumers vs fan-out
+ Mismo consumer group = cola de trabajo                   Distintos consumer groups = fan-out (pub/sub):
+ (competing):                                               Cada grupo recibe todos los mensajes.
+     Un mensaje lo procesa un miembro del grupo.            Facturación, email y analytics leen el mismo
+     Escala horizontal de workers sobre el mismo topic.     historial a su ritmo.
+     Equivale al modelo "Queue" de la sección 2.            Equivale al modelo "Pub/Sub" — y es lo que
+                                                            habilita CQRS.
+
+
+
+
+Microservicios (73.40)                                                                                     42
+
+===== PAGINA 43 =====
+
+ Consumer lag: el termómetro del async
+ La demo de clase 6 ya lo midió: la cola no pierde requests, pero la latencia se fue a 30 s. Eso es lag.
+     Lag = diferencia entre el final del log y el offset del consumer.
+     Es la métrica operativa #1: no "¿el broker está up?", sino "¿estamos al día?".
+     Respuestas típicas: más consumers (hasta #particiones), más particiones, optimizar el handler, o aceptar
+     latencia bajo pico.
+
+ Kafka no es un buffer infinito e invisible: el lag es la factura del desacoplamiento temporal.
+
+
+
+
+Microservicios (73.40)                                                                                          43
+
+===== PAGINA 44 =====
+
+ ¿Cuándo usar Kafka?
+    Usar Kafka cuando…                          No usar Kafka cuando…
+
+    Varios sistemas deben reaccionar al mismo
+                                                Una llamada síncrona simple alcanza
+    evento
+
+    Necesitás desacople temporal y absorber
+                                                Necesitás request/response inmediato
+    picos
+
+    Necesitás historial, auditoría o replay     No necesitás múltiples consumidores ni historial
+
+                                                El problema no justifica la complejidad operativa — NATS o una cola simple
+    El volumen de eventos es alto
+                                                resuelven mejor
+
+
+
+
+Microservicios (73.40)                                                                                                       44
+
+===== PAGINA 45 =====
+
+Patrones de confiabilidad
+
+===== PAGINA 46 =====
+
+ El problema: escribir en la DB y publicar el evento
+ Un servicio típico hace dos cosas al procesar una orden:
+ 1. Actualiza su base de datos.
+ 2. Publica un evento contándolo.
+
+ ¿Qué pasa si el proceso se cae entre el paso 1 y el paso 2? La orden quedó guardada, pero nadie se
+ enteró. O al revés: el evento salió, pero el commit falló.
+ Esto se conoce como el problema del dual write — dos sistemas distintos (DB y broker) que no comparten
+ transacción.
+ Anti-pattern: publicar "a mano" después del commit (o antes) y esperar que no falle nunca. El patrón
+ correcto es Outbox (o CDC).
+
+
+
+
+Microservicios (73.40)                                                                                    46
+
+===== PAGINA 47 =====
+
+ Transactional Outbox
+ La idea: no publicar el evento, guardarlo. El evento pasa a ser una fila más en la misma DB que el cambio
+ de negocio.
+                                           DB del servicio
+
+      Order Service      BEGIN … COMMIT
+      request path         (una sola TX)       orders
+
+                                                             lee pendientes
+
+
+                                                                                   Relay                   Kafka
+                                                                                              publish
+                                               outbox                          poller o CDC             order-events
+                                                             marca publicado
+
+
+
+
+ 1. El request escribe dos filas en una transacción: la orden en orders y el evento OrderCreated en
+                             →
+    outbox. Commit existen las dos. Rollback ninguna.              →
+ 2. Un proceso aparte (el relay) lee las filas pendientes de outbox y las publica al broker.
+ 3. Recién cuando el broker confirma, el relay marca la fila como publicada.
+
+                            La atomicidad se resuelve con la transacción de la DB, no con el broker.
+Microservicios (73.40)                                                                                                 47
+
+===== PAGINA 48 =====
+
+ Outbox en concreto
+ En el request path (código de la app):                     ¿Qué pasa si algo se cae?
+
+  BEGIN;                                                      Falla                        Resultado
+  INSERT INTO orders (id, customer_id, total, status)
+    VALUES ('o-42', 'c-7', 1500, 'CREATED');                  Crash antes del
+                                                                                           Ni orden ni evento.
+                                                              COMMIT
+  INSERT INTO outbox (id, aggregate_id, type, payload)
+    VALUES ('evt-9f1…',          -- CloudEvents id
+                                                                                           La orden entra; el evento
+            'o-42',              -- key de Kafka              Kafka caído
+            'order.created.v1',                                                            espera en outbox.
+            '{"orderId":"o-42","total":1500}');
+  COMMIT;
+                                                              Relay cae antes del
+                                                              publish
+                                                                                           Sigue pendiente   → se publica.
+ En el relay (loop aparte):
+                                                              Relay cae entre publish
+                                                                                           Se publica dos veces.
+  SELECT * FROM outbox                                        y UPDATE
+   WHERE published_at IS NULL
+   ORDER BY created_at LIMIT 100                            Garantía: at-least-once — nunca se pierde, pero puede duplicarse.
+   FOR UPDATE SKIP LOCKED;                                  El consumidor deduplica por id (Inbox).
+  -- publish a Kafka (key = aggregate_id), esperar ack
+  UPDATE outbox SET published_at = now() WHERE id IN (…);
+
+
+Microservicios (73.40)                                                                                                          48
+
+===== PAGINA 49 =====
+
+ Dos formas de vaciar el Outbox
+ Poller                                               CDC (Change Data Capture)
+     Un worker hace SELECT periódico de filas           Herramientas como Debezium leen el write-
+     pendientes y publica.                              ahead log de la DB y publican a Kafka.
+     Simple de implementar; latencia = intervalo de     Sin código de aplicación publicando a mano.
+     poll.                                              Menos latencia artificial; más pieza operativa
+     Cuidado con locks y con marcar "publicado" de      (connector).
+     forma idempotente.
+
+
+
+
+Microservicios (73.40)                                                                                   49
+
+===== PAGINA 50 =====
+
+ Transactional Inbox (lado consumidor)
+ El espejo del Outbox, del lado que consume:
+                                                                            Lado                     Patrón       Evita
+ 1. Llega el mensaje (puede ser un reintento).
+                                                                            Productor                Outbox       "guardé y no avisé"
+ 2. En la misma transacción: INSERT en
+     inbox(message_id) + efecto de negocio.                                 Consumidor               Inbox        "avisé y apliqué dos veces"
+ 3. Si message_id ya existe              → no-op (idempotente).                 At-least-once en el bus + Outbox/Inbox en los bordes ≈ efecto
+ Ya lo vieron con Valkey en clase 7. Acá el contrato es                                    exactamente una vez a nivel de negocio.
+ el mismo, con DB.
+
+
+                                                                                                         efecto de negocio
+                                                                                         nuevo
+                                                                                                              COMMIT
+
+                        evt-9f1                                 BEGIN
+       Kafka                             Consumer                                                                                 commit offset
+                  (1ª vez o reintento)                  INSERT inbox(evt-9f1)
+
+                                                                                                              ROLLBACK
+                                                                                     duplicate key
+                                                                                                                no-op
+
+
+
+
+Microservicios (73.40)                                                                                                                            50
+
+===== PAGINA 51 =====
+
+ Consumidor idempotente: el contrato
+ Kafka (y casi todo broker) entrega at-least-once en la práctica. Los reintentos van a pasar.
+     Usá el id de CloudEvents (o una business key estable) como clave de dedupe.
+     El efecto de negocio debe ser seguro ante repetición: Inbox, upsert, o "ya procesado   → ACK".
+     Anti-pattern: "Kafka me da exactly-once, no necesito idempotencia." Falso consuelo — EOS de Kafka no
+     reemplaza el diseño del handler.
+
+ La clase 7 cubre la mecánica con Valkey; esta slide fija la regla para el TP.
+
+
+
+
+Microservicios (73.40)                                                                                      51
+
+===== PAGINA 52 =====
+
+ Retries, DLQ y poison messages
+     Reintentos con backoff: un fallo transitorio (timeout, servicio caído un segundo) se reintenta, espaciando
+     los intentos.
+     Dead-letter queue (DLQ): mensajes que fallaron N veces se mueven aparte — así no bloquean al resto.
+     Poison message: payload corrupto o bug de deserialización. Reintentarlo para siempre no lo arregla — a
+     la DLQ para revisión manual.
+
+
+
+
+Microservicios (73.40)                                                                                        52
+
+===== PAGINA 53 =====
+
+ Anti-pattern: reintentar para siempre
+ En una cola clásica, un poison message + retry infinito bloquea a los que vienen detrás.
+ En Kafka es peor de lo que parece: un consumer que no avanza el offset en una partición deja toda esa
+ partición atrasada (lag crece solo ahí). Los demás consumers del grupo siguen, pero esa key/entidad se
+ pudre.
+ Regla: tope de intentos   → DLQ (u otro topic) → alerta humana. Sin DLQ no hay resiliencia, hay denegación de
+ servicio accidental.
+
+
+
+
+Microservicios (73.40)                                                                                           53
+
+===== PAGINA 54 =====
+
+ Correlación: trazar la cadena async
+ Anti-pattern "async sin observabilidad" se arregla en el contrato del evento, no solo con un APM:
+     correlationId: identifica el flujo de negocio entero (ej. orderId / id de Saga). Todos los eventos del
+     mismo pedido lo comparten.
+                                                                                 →
+     causationId: id del evento (o request) que causó este. Arma el árbol padre hijo.
+     Viajan como extensiones CloudEvents; OpenTelemetry los retoma en la clase de Observabilidad.
+
+ Sin esto, debuggear la compensación de 3 saltos de la sección 4 es arqueología en 3 logs distintos.
+
+
+
+
+Microservicios (73.40)                                                                                        54
+
+===== PAGINA 55 =====
+
+ Evolución de esquema en eventos
+ Los consumidores no se despliegan al mismo tiempo que el productor. El contrato tiene que tolerarlo.
+     Versioná el type (com.itba.order.created.v2) o usá compatibilidad hacia atrás en el payload.
+     Additive changes (campos nuevos opcionales) ≫ renombrar/borrar campos.
+     Un breaking change mal anunciado se convierte en poison message en cascada.
+
+ AsyncAPI + CloudEvents en el lab no son burocracia: son el contrato que evita ese silent break.
+
+
+
+
+Microservicios (73.40)                                                                                  55
+
+===== PAGINA 56 =====
+
+ Lo que esta clase no repite
+ Ya lo vieron en la clase 7, con Valkey, en profundidad:
+     Semánticas de entrega: at-most-once, at-least-once, exactly-once.
+     Idempotencia: mecánica de claves y ventanas de falla (acá solo fijamos el contrato).
+     Ordenamiento bajo concurrencia entre múltiples instancias.
+     Inbox con Valkey — el patrón es el mismo que la slide de Inbox con DB.
+
+ Ese material sigue vivo en el deck estado-distribuido-patterns — vale la pena volver a repasarlo con la
+ mecánica de Kafka fresca.
+
+
+
+
+Microservicios (73.40)                                                                                     56
+
+===== PAGINA 57 =====
+
+Cierre
+
+===== PAGINA 58 =====
+
+ Checklist de decisión
+     ¿Necesitás la respuesta ya, para seguir?  → síncrono.
+     ¿Un evento, múltiples reacciones independientes? → pub/sub / EDA / fan-out (distintos consumer groups).
+     ¿Necesitás replay o que varios consumidores lean el mismo historial? → Kafka.
+     ¿Mensajería simple y liviana, sin gran volumen? → NATS.
+     ¿Separar write path de lecturas optimizadas? → CQRS light sobre el mismo log.
+     ¿Payload pesado o PII? → claim check, no fat event.
+     ¿Una transacción de negocio cruza varios servicios? → Saga + timeouts.
+       Pocos pasos, equipos autónomos → coreografía.
+       Muchos pasos, necesitás visibilidad end-to-end → orquestación (Temporal, Camunda, Step Functions).
+
+     ¿Dual write DB↔broker? → Outbox (+ CDC o poller) / Inbox en el consumidor.
+
+
+
+
+Microservicios (73.40)                                                                                         58
+
+===== PAGINA 59 =====
+
+ Anti-patterns (1/2)
+     Monolito distribuido vía eventos: todos escuchan todo, nadie entiende el flujo — coreografía sin
+     límites.
+     God topic: un solo topic events para todo el sistema   → acoplamiento + consumidores ruidosos. Preferí
+     topics/tipos acotados (type CloudEvents claro).
+     Chatty / ping-pong events: A emite    → B emite → A reacciona… RPC disfrazado de EDA.
+     Sync-over-async: pedir respuesta inmediata sobre el canal async (o polling infernal / request-reply para
+     todo).
+     Acoplamiento temporal disfrazado: "es async" pero el flujo no avanza si el otro servicio no responde ya
+     — faltaba un timeout o un modelo sync honesto.
+     Async sin observabilidad: sin correlationId / causationId / traces, la cadena de 5 servicios es
+     opaca.
+
+
+
+
+Microservicios (73.40)                                                                                          59
+
+===== PAGINA 60 =====
+
+ Anti-patterns (2/2)
+     Dual write sin Outbox: commit + publish "a mano" — el proceso se cae en el medio y el mundo queda
+     inconsistente.
+     Asumir exactly-once: saltarse Inbox/idempotencia porque "Kafka lo garantiza".
+     Key ausente o inestable: orden roto entre eventos de la misma entidad; o partición caliente.
+     Retry forever / sin DLQ: poison message frena la partición (o la cola) para todos.
+     Fat events / PII en el bus: payloads enormes o datos sensibles viajando a N consumidores — usá claim
+     check y minimizá el payload.
+     Ignorar consumer lag: el broker "está verde" mientras el SLA de frescura ya explotó (o el disco se llena).
+     Orquestador-monolito: un workflow que conoce 20 internos de cada servicio — acoplamiento central
+     peor que la coreografía que reemplazó.
+     Happy-path async + compensación sync sin deadline: liberar stock con un DELETE síncrono "cuando
+     se pueda", sin timeout de Saga.
+
+
+
+
+Microservicios (73.40)                                                                                            60
+
+===== PAGINA 61 =====
+
+ Recap
+     Async cambia acoplamiento temporal por complejidad operativa — no es gratis; el lag es la factura.
+     Queue vs pub/sub (en Kafka: mismo group vs distintos groups), CloudEvents y contratos que evolucionan
+     son la base.
+     CQRS light y claim check ordenan cómo se lee y qué viaja en el bus.
+     La coreografía de clase 7 es EDA; hoy le pusimos broker, timeouts de Saga y el contraste con orquestación
+     (Temporal).
+     Kafka: key      → partición, offsets, consumer groups — y los anti-patterns que nacen de usarlos mal.
+     Outbox/CDC + Inbox + retries/DLQ + correlación cierran confiabilidad en el borde; idempotencia profunda
+     quedó en Valkey (clase 7).
+
+
+
+
+Microservicios (73.40)                                                                                           61
+
+===== PAGINA 62 =====
+
+ Para seguir profundizando
+     Deck kafka: internals completos (segments, tuning de replicación, pipelines de datos, event sourcing).
+     Deck estado-distribuido-patterns (clase 7): semánticas de entrega, idempotencia, Inbox con Valkey,
+     ordenamiento.
+     Temporal: orquestación de Sagas en producción (timers, compensación durable).
+
+
+
+
+                                                                                                    Fuente: temporal.io
+
+Microservicios (73.40)                                                                                              62
+
+===== PAGINA 63 =====
+
+Fin!!
+

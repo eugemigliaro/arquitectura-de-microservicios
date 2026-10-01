@@ -1,12 +1,14 @@
-# Entrega: Álbum de Figuritas Mundial 2026
+# Requerimientos funcionales del Álbum 2026 (v1.1)
 
 ## Estado y alcance
 
 La fuente incorporada es la versión 1.1 de la consigna funcional. Declara obligatorios y demostrables todos los requerimientos listados. La versión aclara especialmente que publicar una oferta no aparta copias, que una copia puede respaldar varias ofertas activas y que el apartado comienza al intentar concretar una aceptación. [E01, p. 1]
 
-Esta síntesis sirve para localizar requisitos; para implementar o verificar la entrega debe consultarse la redacción exacta de cada RF, RNF y escenario en `E01`.
+Esta síntesis sirve para localizar requisitos. Para implementar o verificar la entrega hay que consultar la redacción exacta de cada RF, RNF y escenario en `E01`.
 
-La [primera entrega del TP1](primera-entrega-album-ddd.md) usa esta consigna como fuente de verdad, pero tiene un alcance distinto: pide exclusivamente análisis de dominio DDD y excluye implementación, arquitectura e infraestructura. [E02]
+La [consigna general del trabajo práctico](consigna-general-album-2026.md) (`E03`) relata el mismo producto, pero difiere en puntos centrales: aparta la copia al publicar, deja el login real fuera de alcance y separa lo que se implementa de lo que solo se diseña. [E03, p. 4] [E03, p. 8] Las diferencias están comparadas en esa página y registradas en [Dudas y conflictos](../dudas-y-conflictos.md).
+
+La [primera entrega del TP1](primera-entrega-album-ddd.md) usa esta consigna como fuente de verdad, pero tiene un alcance distinto: pide exclusivamente análisis de dominio DDD y excluye implementación, arquitectura e infraestructura. [E02] La [segunda entrega](segunda-entrega-album-arquitectura.md) documenta la arquitectura. En ella esta consigna queda en segundo lugar de precedencia, detrás de la consigna general, y conserva la autoridad sobre requerimientos funcionales, reglas de negocio y escenarios de aceptación. [E04]
 
 ## Lenguaje e invariantes de colección
 
@@ -30,13 +32,13 @@ disponibles >= 0
 apartadas >= 0
 ```
 
-Una figurita cuenta para el álbum si `poseídas >= 1`. Varias ofertas pueden señalar la misma copia ofrecible sin crear copias ni reservas; recién una aceptación mueve temporalmente la copia de disponible a apartada. [E01, p. 2]
+Una figurita cuenta para el álbum si `poseídas >= 1`. Varias ofertas pueden señalar la misma copia ofrecible sin crear copias ni reservas; recién una aceptación mueve temporalmente la copia de disponible a apartada. [E01, p. 2] La consigna general describe lo contrario: aparta la copia al publicar y la libera al cancelar o vencer la oferta. [E03, p. 4] [E03, p. 5]
 
 ## Actores y autenticación
 
 La consigna distingue Coleccionista, Operador y Sistema automático. Coleccionista y Operador se autentican con Google; el rol de Operador se asigna explícitamente, es de inspección y no posee colección. El Sistema vence ofertas, otorga recompensas y actualiza progresos por tiempo o eventos. [E01, p. 2]
 
-Los requisitos `RF-A01` a `RF-A05` exigen OAuth 2.0/OpenID Connect real, inicialización automática del álbum, autorización por propietario, control explícito del rol de Operador y rechazo sin efectos ante una sesión inválida. [E01, p. 2] [E01, p. 3]
+Los requisitos `RF-A01` a `RF-A05` exigen OAuth 2.0/OpenID Connect real, inicialización automática del álbum, autorización por propietario, control explícito del rol de Operador y rechazo sin efectos ante una sesión inválida. [E01, p. 2] [E01, p. 3] La consigna general, en cambio, deja fuera de alcance el login real y acepta un `userId` en header. [E03, p. 8]
 
 ## Mapa de requerimientos funcionales
 
@@ -72,6 +74,8 @@ Los 16 escenarios cubren: apertura normal y reintentada; intercambio 1:1; oferta
 
 Cada escenario debe poder reproducirse contra el ambiente entregado y demostrar ausencia de pérdidas, duplicados, negativos o reservas indefinidas. [E01, p. 6] [E01, p. 7]
 
+La consigna general tiene 15 escenarios con otra numeración para el 4, deja el 15 como solo diseño y no incluye el escenario sin sesión. La segunda entrega usa esa numeración. [E03, p. 10] [E03, p. 11] [E04] Ver la [tabla de correspondencia](consigna-general-album-2026.md#escenarios-mínimos).
+
 ## Condiciones no funcionales y entrega
 
 Los `RNF-01` a `RNF-06` son un gate: si no se cumplen, la entrega no se evalúa. Exigen un pipeline que compile y pruebe; despliegue a staging; ejecute integración como gate; y promueva a producción únicamente en AKS. El login debe usar credenciales reales de Google y no puede simularse con un `userId`. [E01, p. 6]
@@ -87,6 +91,6 @@ La entrega completa requiere:
 
 La rúbrica pondera autenticación (10 %), requerimientos core (25 %), ampliados (15 %), reglas e invariantes (20 %), escenarios de aceptación (20 %), consistencia inmediata/eventual (5 %) y reproducibilidad (5 %). [E01, p. 7]
 
-La exigencia de implementar todo y el gate no funcional presentan una incompatibilidad aparente con el umbral general del material introductorio; está documentada en [Dudas y conflictos](../dudas-y-conflictos.md). [T01, p. 24] [E01, p. 1] [E01, p. 6] [E01, p. 7]
+La exigencia de implementar todo y el gate no funcional presentan una incompatibilidad aparente con el umbral general del material introductorio; está documentada en [Dudas y conflictos](../dudas-y-conflictos.md). [T01, p. 24] [E01, p. 1] [E01, p. 6] [E01, p. 7] La consigna general agrega otra formulación, con partes solo de diseño y una rúbrica distinta. [E03, p. 8] [E03, p. 13]
 
 > Nota operativa del repositorio: aunque `E01` exige credenciales reales, no se deben guardar client secrets ni otros secretos en este repositorio. Esta es una política del repositorio, no una afirmación del material académico.

@@ -188,6 +188,27 @@ Preguntas recuperables por tema. Mantener las respuestas separadas o plegadas cu
 131. ¿Por qué reintentar para siempre es especialmente dañino en Kafka y qué regla propone la cátedra?
 132. ¿Para qué sirven `correlationId` y `causationId`, y cómo se evoluciona el esquema de un evento sin romper consumidores?
 
+## Consigna general del Álbum
+
+133. Según la consigna general, ¿qué debe implementarse y demostrarse, y qué basta diseñar?
+134. Enunciá el invariante de oro. ¿Qué agrega a las fórmulas de cantidades por usuario y figurita?
+135. ¿En qué momento se aparta la copia ofrecida según la consigna general y según la consigna funcional v1.1? ¿Qué cambia al cancelar o vencer una oferta?
+136. ¿Qué evidencia de observabilidad exige la demostración y qué alcanza para producirla?
+137. ¿Qué condiciones debe cumplir el pipeline para que la entrega sea evaluada?
+138. Elegí cinco preguntas del diseño para un millón de usuarios y, para cada una, nombrá la unidad de la materia que aporta herramientas.
+139. ¿Qué escenarios difieren entre la consigna general y la consigna funcional v1.1?
+
+## Segunda entrega: arquitectura del Álbum
+
+140. ¿Qué decisiones vienen impuestas y por qué "porque corre en Kubernetes" no justifica ninguna otra?
+141. ¿Qué cuatro reglas de trazabilidad ligan la arquitectura con el análisis DDD de la primera entrega?
+142. Diferenciá un atributo de calidad expresado como adjetivo de uno expresado como escenario medible. Escribí uno para la apertura de sobres.
+143. ¿Qué debe especificar cada contrato de evento y qué campos lleva el envelope común?
+144. ¿Qué diagramas de secuencia pide la sección 5 y qué debe incluir la máquina de estados del intercambio?
+145. ¿Por qué una readiness que siempre responde OK es un error de diseño?
+146. ¿Qué garantiza que lo probado en staging sea exactamente lo que llega a producción?
+147. ¿Qué ADRs son obligatorios y qué convierte a un ADR en una decisión y no en una afirmación?
+
 <details>
 <summary>Respuestas orientativas</summary>
 
@@ -324,6 +345,22 @@ Preguntas recuperables por tema. Mantener las respuestas separadas o plegadas cu
 131. Un consumer que no avanza su offset atrasa toda su partición y deja a esa entidad sin procesar. Regla: tope de intentos, luego DLQ u otro topic y alerta humana. [T14, p. 53]
 132. `correlationId` agrupa todos los eventos de un flujo de negocio y `causationId` apunta al evento o request que causó el actual. Para evolucionar el esquema: versionar el `type` o mantener compatibilidad hacia atrás, preferir cambios aditivos y documentar con AsyncAPI y CloudEvents. [T14, p. 54] [T14, p. 55]
 
+133. Implementar: colección, apertura idempotente con contenido congelado, intercambio 1:1 (apartar, confirmar, rechazar, cancelar, vencer y compensar), progreso eventual, escenarios mínimos y observabilidad de extremo a extremo. Solo diseñar: retos, recompensas, códigos promocionales, rankings, matching, ofertas N:M, vista de operador y campañas. [E03, p. 8]
+134. Tras cualquier secuencia con fallos, reintentos, duplicados o desorden: cantidades no negativas, ninguna copia perdida ni acreditada dos veces, contenido de sobre estable, ningún intercambio completado reejecutado y ninguna copia apartada por una oferta u operación terminada. Agrega estabilidad frente a reintentos y ausencia de reservas huérfanas. [E03, p. 2] [E03, p. 5]
+135. En `E03`, al publicar; cancelar o vencer libera la copia. En `E01`, recién cuando una aceptación inicia el intento. Publicar, cancelar o vencer no cambian cantidades y una copia puede respaldar varias ofertas. El conflicto sigue abierto. [E03, p. 4] [E03, p. 5] [E01, p. 2] [E01, p. 3]
+136. Un mismo `correlationId` o `traceId` recorriendo los servicios en una apertura (escenario 1 o 2), un intercambio exitoso (3) y un intercambio con fallo y compensación (4, 5 o 6). Alcanzan logs estructurados o un backend de tracing, sin mesh ni cluster. [E03, p. 11]
+137. Build y pruebas unitarias y funcionales por servicio en cada cambio; despliegue automático a staging; tests de integración allí; gate que deja producción intacta si fallan; producción en AKS solo si pasa. Además, documentar el pipeline y evidenciar una corrida completa y un bloqueo. [E03, p. 11] [E03, p. 12]
+138. *Inferencia:* hot spots → locks con fencing y operaciones atómicas [T12, p. 11]; ráfagas → bulkhead y rechazo temprano [T09, p. 26]; clave de partición → orden solo dentro de la partición [T14, p. 33]; retención de claves de idempotencia → ciclo de vida de la clave [T12, p. 19]; cambios sin corte → rolling, blue/green o canary [T13, p. 40] [T13, p. 41] [T13, p. 42]. Preguntas: [E03, p. 12]
+139. El 4: en `E03` es un intercambio rechazado porque la copia de quien acepta dejó de estar disponible; en `E01`, dos ofertas respaldadas por la misma copia. El 14 difiere en detalle, el 15 es solo diseño en `E03` y el 16 de `E01` (sin sesión) no existe en `E03`. [E03, p. 10] [E03, p. 11] [E01, p. 6]
+140. Producción en Kubernetes sobre AKS y CI/CD con gate de integración en staging. El cluster es el entorno de ejecución, no la arquitectura: el recorte, la persistencia o la comunicación deben responder a drivers propios. [E04]
+141. Cada servicio se rastrea a uno o más bounded contexts, cada agregado tiene un servicio dueño, cada evento que cruza fronteras tiene contrato y cada invariante tiene un mecanismo. Los cambios del modelo se registran con su motivo. [E04]
+142. "Escalable" es un adjetivo. Un escenario fija estímulo, entorno, respuesta, medida y prioridad; por ejemplo, 20.000 aperturas por minuto durante 5 minutos con p99 menor a 500 ms y ninguna apertura duplicada. [E04]
+143. Productor, consumidores, tópico o canal, clave de partición con el orden que garantiza y payload. El envelope lleva identificador único del evento, tipo, versión del esquema, momento de ocurrencia y `correlationId`. Además se piden la estrategia de evolución y el mecanismo contra la divergencia entre estado y publicación. [E04]
+144. Apertura con reintento (1–2), intercambio exitoso (3), rechazado (4), interrupción y compensación (5–6), resultado desconocido (7) y cierre contra aceptación (12); más retos y el escenario 15 como solo diseño. La máquina de estados incluye transiciones, quién dispara cada una, timeouts y compensaciones. [E04]
+145. Readiness debe indicar si la instancia puede aceptar trabajo; si siempre responde OK, no informa nada y la consigna resta puntos por sondas triviales. [E04] [T07, p. 18] *Inferencia:* el tráfico llegaría igual a una instancia que perdió, por ejemplo, su base de datos.
+146. Promover un artefacto inmutable: versionar y etiquetar las imágenes, y desplegar en producción exactamente la imagen probada. Un tag puede moverse, mientras que un digest identifica el contenido de forma inmutable. [E04] [T06, p. 35] [T06, p. 36]
+147. Recorte de servicios, estilo de comunicación, broker y clave de partición, coordinación del intercambio, idempotencia, publicación confiable, persistencia de las cantidades de la colección, ambientes en Kubernetes, despliegue y promoción, y observabilidad. Cada uno necesita al menos dos alternativas reales con el motivo de su descarte. [E04]
+
 </details>
 
 ## Casos para practicar sin respuesta única
@@ -337,3 +374,4 @@ Preguntas recuperables por tema. Mantener las respuestas separadas o plegadas cu
 - Un endpoint de reserva de entradas corre en tres instancias y recibe reintentos del gateway. Diseñá la protección contra sobreventa y duplicados: qué estado va en Valkey, qué va en la base, dónde queda la frontera atómica y qué pasa si una instancia pausa más que el TTL. [T12, p. 3] [T12, p. 11] [T12, p. 20]
 - Elegí estrategia de despliegue para el Álbum 2026 y justificá según riesgo, retrocompatibilidad entre versiones y costo de rollback. [T13, p. 43]
 - Para el Álbum 2026, diseñá el flujo desde la apertura de un sobre hasta la actualización de progreso y retos: qué eventos se publican, con qué key, cómo se evitan efectos duplicados, qué pasa con eventos de progreso fuera de orden y cómo detectarías que la actualización se está demorando. [E01, p. 6] [T14, p. 35] [T14, p. 43] [T14, p. 50]
+- Redactá el ADR del estilo de coordinación del intercambio con dos alternativas reales, saga orquestada y coreografiada, y mostrá cómo cambia la máquina de estados si la copia se aparta al publicar o al aceptar. [E04] [E03, p. 4] [E01, p. 2] [T11, p. 20] [T11, p. 37] [T14, p. 27]

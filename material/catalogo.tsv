@@ -18,3 +18,5 @@ T11	teoria	Sistemas distribuidos	material/catedra/teoria/Sistemas Distribuidos -
 T12	teoria	Estado distribuido: patrones con Valkey	material/catedra/teoria/Estado distribuido_Patterns - Slidev.pdf	33	2026	vigente	Estado distribuido_Patterns - Slidev.pdf
 T13	teoria	DevOps	material/catedra/teoria/devops.pdf	47	2026	vigente	devops.pdf
 T14	teoria	Comunicación asincrónica y Kafka	material/catedra/teoria/Comunicación Asincrónica y Kafka - Slidev.pdf	63	2026	vigente	Comunicación Asincrónica y Kafka - Slidev.pdf
+E03	consigna	Consigna general del trabajo práctico: El álbum que se completa en comunidad	material/catedra/practica/consigna-v1-2.pdf	13	2026	vigente-v1.2	consigna-v1-2.pdf
+E04	consigna	Segunda entrega TP1: documentación de arquitectura del Álbum 2026	material/catedra/practica/consigna-entrega-2.md		2026	vigente	consigna-entrega-2.md

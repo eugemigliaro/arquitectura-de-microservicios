@@ -4,6 +4,8 @@
 
 La primera entrega del trabajo final toma como fuente de verdad la consigna funcional v1.1 (`E01`) y pide producir un modelo de dominio trazable antes de diseñar o implementar el sistema. El objetivo es acordar vocabulario, fronteras, modelo táctico, invariantes y hechos de negocio. [E02]
 
+La consigna remite al trabajo final "en el campus". [E02] **Inferencia:** se trata de la [consigna general](consigna-general-album-2026.md) `E03`, incorporada después de esta entrega. `E03` difiere de `E01` en cuándo se aparta una copia y en la autenticación. [E03, p. 4] [E03, p. 8]
+
 La entrega es grupal y consiste en un único archivo `docs/analisis-ddd.md`, escrito en castellano, con integrantes y versión de la consigna funcional en el encabezado. La extensión sugerida es de 8 a 15 páginas equivalentes, aunque se evalúa precisión y no volumen. [E02]
 
 ## Alcance estricto
@@ -35,7 +37,7 @@ Para cada bounded context se exige:
 
 El mapa debe indicar las relaciones entre contextos con patrones de DDD, la dirección upstream/downstream y la información que cruza cada frontera. También debe incluir un diagrama textual o ASCII. La separación de `E01` entre información correcta inmediatamente y proyecciones que pueden demorarse es una señal que debe analizarse al justificar las fronteras. [E02] [E01, p. 5]
 
-Nombrar contextos acotados no define la futura partición en servicios. Esa decisión pertenece a una etapa posterior y no se evalúa en esta entrega. [E02]
+Nombrar contextos acotados no define la futura partición en servicios. Esa decisión pertenece a una etapa posterior y no se evalúa en esta entrega. [E02] Esa etapa es la [segunda entrega](segunda-entrega-album-arquitectura.md), que exige trazar cada servicio hasta los contextos de este análisis y justificar cualquier desvío de la correspondencia uno a uno. [E04]
 
 ## 3. Diseño táctico
 

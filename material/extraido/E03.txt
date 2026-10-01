@@ -1,0 +1,709 @@
+FUENTE: E03
+TITULO: Consigna general del trabajo práctico: El álbum que se completa en comunidad
+ORIGINAL: material/catedra/practica/consigna-v1-2.pdf
+PAGINAS: 13
+
+===== PAGINA 1 =====
+
+Trabajo Práctico: El álbum que se completa en comunidad
+Contexto de negocio
+La organización del Mundial 2026 está por lanzar una plataforma digital para acompañar su álbum oficial de
+figuritas.
+La aplicación busca recuperar parte de la experiencia social del álbum físico: abrir sobres, descubrir nuevas
+figuritas, comparar colecciones, encontrar repetidas e intercambiarlas con otras personas. Al mismo tiempo,
+quiere aprovechar las posibilidades de una plataforma digital para ofrecer retos, recompensas, promociones y
+eventos especiales durante el torneo.
+Cada persona podrá identificarse, comenzar su álbum y recibir sobres iniciales. A medida que abra nuevos
+sobres, las figuritas obtenidas se incorporarán a su colección. Algunas serán nuevas, otras repetidas y,
+eventualmente, el usuario podrá completar una sección o incluso el álbum entero.
+La plataforma deberá acompañar ese recorrido y hacer que completar el álbum sea una experiencia progresiva,
+social y confiable.
+El relato describe el producto completo. Qué debe implementarse en esta entrega y qué basta diseñar está
+definido en Alcance de la entrega.
+
+
+
+Glosario mínimo de la consigna
+Los equipos deben respetar estos términos y pueden extender el glosario. No se permite usar la misma palabra
+para conceptos distintos.
+
+Término                                                  Significado
+Figurita                                                 Tipo del catálogo de la edición. Se identifica por su
+                                                         número único dentro de la edición (por ejemplo,
+                                                         Argentina 8).
+Copia                                                    Unidad poseída por un usuario de una figurita. Un
+                                                         usuario puede tener cero, una o varias copias de la
+                                                         misma figurita.
+Sobre                                                    Paquete cerrado, propiedad de un usuario, que al
+                                                         abrirse acredita copias en su colección.
+Colección                                                Conjunto de copias de un usuario, con cantidades por
+                                                         figurita.
+Repetida                                                 Copia extra: el usuario tiene más de una copia de esa
+                                                         figurita.
+Disponible                                               Copia que el usuario posee y que no está apartada.
+                                                         Solo las copias disponibles y repetidas pueden
+                                                         ofrecerse en un intercambio. Un sobre está disponible
+                                                         si pertenece al usuario y todavía no fue abierto.
+Apartada                                                 Copia reservada para una oferta o un intercambio en
+                                                         curso. No puede usarse en otra oferta ni acreditarse a
+                                                         otro usuario.
+Oferta                                                   Publicación de un coleccionista que propone entregar
+                                                         copias a cambio de otras.
+Operador                                                 Persona de soporte que inspecciona el estado de
+                                                         operaciones, ofertas y reservas.
+
+
+Invariante de cantidades, para cada usuario y cada figurita:
+
+
+
+                                                     1
+
+===== PAGINA 2 =====
+
+poseídas = disponibles + apartadas
+repetidas = max(poseídas - 1, 0)
+ofrecibles = max(disponibles - 1, 0)
+poseídas >= 0, disponibles >= 0, apartadas >= 0
+La figurita cuenta para el álbum si poseídas >= 1, aunque alguna copia extra esté apartada. ofrecibles
+son las copias que pueden publicarse en una oferta: disponibles y repetidas, nunca la última.
+“Dos personas reciben la misma copia” significa que la misma unidad apartada o transferida se acredita a más
+de un usuario. Varios usuarios pueden poseer la misma figurita del catálogo; no pueden recibir la misma
+copia.
+
+
+
+Una colección que cambia todo el tiempo
+El álbum está compuesto por distintas secciones: selecciones, estadios, ciudades, escudos, jugadores y figuritas
+especiales.
+Cada figurita tiene un número único dentro de la edición. Algunas son comunes, otras son menos frecuentes.
+Las figuritas especiales solamente pueden obtenerse mediante promociones o retos; no forman parte del
+contenido de un sobre ordinario.
+Cuando una persona abre un sobre, el sistema revela su contenido y agrega las copias a su colección. El
+usuario puede ver:
+   • cuáles figuritas ya posee;
+   • cuáles le faltan;
+   • cuáles tiene repetidas;
+   • qué porcentaje del álbum completó;
+   • cuántas copias tiene disponibles para intercambiar.
+Abrir un sobre debe ser una operación confiable. Una mala conexión, un reintento desde el teléfono o una
+respuesta que tarda demasiado no deben provocar que el mismo sobre se abra dos veces ni que sus copias se
+acrediten más de una vez.
+El contenido se determina a más tardar en la primera apertura exitosa y, a partir de ese momento, queda
+congelado. Un reintento debe mostrar las mismas figuritas, no un contenido nuevo.
+La colección (copias poseídas, abiertas y pendientes) debe ser correcta de inmediato después de abrir un sobre
+o completar un intercambio. El porcentaje del álbum, los rankings, el avance de un reto y las notificaciones
+pueden actualizarse después. Las copias obtenidas nunca deben perderse ni duplicarse.
+
+
+
+Abrir sobres
+Los sobres pueden obtenerse de diferentes maneras:
+   • como regalo inicial;
+   • mediante códigos promocionales;
+   • como recompensa por completar retos;
+   • durante campañas especiales;
+   • por participar en eventos de la comunidad.
+Cuando un usuario decide abrir un sobre, la aplicación primero debe verificar que le pertenezca y que todavía
+esté disponible (sin abrir).
+Luego se determina su contenido —si aún no estaba determinado—, se incorporan las copias a la colección y
+el sobre queda registrado como abierto.
+
+
+
+                                                       2
+
+===== PAGINA 3 =====
+
+El usuario debe poder ver el resultado de la apertura aunque se cierre la aplicación, se pierda la conexión o
+vuelva a realizar la misma solicitud.
+
+Flujo conceptual de apertura
+flowchart LR
+    U[Usuario] -->|Solicita abrir un sobre| A[Abrir sobre]
+
+    A -->|Consulta disponibilidad| S[(Sobres)]
+    S -->|Sobre disponible| A
+
+    A -->|Determina o reutiliza contenido| C[Contenido del sobre]
+    C -->|Figuritas obtenidas| A
+
+    A -->|Incorpora copias| G[Actualizar colección]
+    G --> K[(Colección del usuario)]
+
+    A -->|Registra apertura| S
+    A -->|Muestra el contenido| U
+
+    G -->|Informa cambios| P[Actualizar progreso]
+    P --> R[(Progreso del álbum y retos)]
+Este diagrama representa el flujo de negocio. No determina cuántos servicios deben existir ni cómo deben
+comunicarse.
+
+
+
+El intercambio
+El intercambio es una de las funciones centrales de la plataforma.
+Una persona puede publicar una oferta indicando qué figuritas está dispuesta a entregar y cuáles espera recibir
+a cambio.
+El producto completo admite ofertas de varias figuritas. Por ejemplo:
+     Entrego Argentina 8 y Brasil 14 a cambio de Alemania 7.
+La solución ejecutable de esta entrega usa ofertas 1:1: una copia entregada a cambio de una copia recibida.
+El análisis de dominio puede describir el caso N:M; no es obligatorio implementarlo.
+Solo pueden ofrecerse copias disponibles y repetidas. No está permitido ofrecer la última copia de una
+figurita (eso abriría un hueco en el álbum). Mientras la oferta permanezca activa, esa copia no debe poder
+utilizarse en otro intercambio.
+Otros coleccionistas pueden explorar las ofertas publicadas. Destacar ofertas compatibles con la colección de
+quien busca es opcional: no forma parte del alcance ejecutable.
+Cuando una persona acepta una oferta, la plataforma debe comprobar que ambos participantes todavía poseen
+las copias comprometidas y que la oferta sigue activa.
+Si dos personas aceptan la misma oferta al mismo tiempo, solamente una aceptación debe confirmarse. La
+otra debe rechazarse sin acreditar copias.
+Entre la publicación y la aceptación pueden haber pasado minutos, horas o días. Durante ese tiempo, alguna
+de las colecciones podría haber cambiado, una oferta podría haber expirado, el publicador podría haber
+cancelado, o uno de los usuarios podría haber comprometido esa copia en otra oferta.
+Por eso, aceptar una oferta no significa simplemente modificar dos colecciones. Se trata de una operación
+coordinada en la que deben cumplirse varias condiciones antes de confirmar el intercambio.
+
+
+                                                      3
+
+===== PAGINA 4 =====
+
+Una vez confirmado, las copias recibidas quedan en la colección del destinatario. Si ya poseía esa figurita, la
+nueva copia es repetida y queda disponible para un futuro intercambio. Si no la poseía, pasa a contar para el
+álbum y no está disponible para intercambiar hasta tener una extra.
+
+
+
+Un intercambio exitoso
+Carlos publica una oferta: entrega una copia repetida de Argentina y solicita una figurita de Japón.
+La plataforma verifica que Carlos tiene una copia disponible y la aparta para esa oferta.
+Más tarde, Lucía encuentra la publicación. Ella tiene repetida la figurita de Japón y todavía no posee la de
+Argentina. Decide aceptar.
+La aplicación verifica nuevamente las colecciones de ambos participantes y aparta la copia de Lucía.
+Una vez aseguradas las dos partes del acuerdo, se realiza el intercambio:
+  • Carlos deja de tener la copia entregada y recibe la de Japón.
+  • Lucía deja de tener la copia entregada y recibe la de Argentina.
+  • La oferta queda completada.
+  • Ambos usuarios son informados.
+  • El avance de sus álbumes y retos se actualiza (puede ser posterior).
+Desde el punto de vista del usuario, el intercambio es una sola operación. Internamente, puede requerir varias
+acciones que no necesariamente se completan al mismo tiempo.
+
+Flujo conceptual de intercambio
+flowchart LR
+    A[Coleccionista A] -->|Publica una oferta| O[Gestionar oferta]
+
+    O -->|Verifica y aparta copias| CA[(Colección A)]
+    O -->|Publica oferta| M[(Ofertas)]
+
+    A -->|Cancela| O
+    O -->|Vence| O
+    O -->|Libera copias| CA
+
+    B[Coleccionista B] -->|Busca ofertas| O
+    O -->|Muestra ofertas| B
+
+    B -->|Acepta una oferta| I[Procesar intercambio]
+
+    I -->|Verifica copias ofrecidas| CA
+    I -->|Verifica y aparta copias| CB[(Colección B)]
+
+    I -->|Transfiere copias| CA
+    I -->|Transfiere copias| CB
+    I -->|Marca completada| M
+    I -->|Informa resultado| A
+    I -->|Informa resultado| B
+    I -->|Comunica intercambio realizado| P[Actualizar progreso]
+
+    I -->|Fallo o rechazo| Comp[Compensar]
+    Comp -->|Libera reservas| CA
+
+
+
+                                                      4
+
+===== PAGINA 5 =====
+
+    Comp -->|Libera reservas| CB
+    Comp -->|Oferta sigue activa o se cierra según el caso| M
+
+
+
+Cuando algo no sale como estaba previsto
+El sistema debe considerar que las operaciones distribuidas pueden fallar parcialmente.
+Por ejemplo:
+  1. Las copias de Carlos fueron apartadas.
+  2. Lucía intenta aceptar la oferta.
+  3. La aplicación descubre que la copia de Lucía ya no está disponible.
+  4. El intercambio no puede completarse.
+  5. La copia de Carlos debe volver a quedar disponible. La oferta puede seguir activa o cerrarse; el diseño
+     debe justificar esa decisión.
+También podría ocurrir que ambas copias hayan sido apartadas, pero se produzca una interrupción antes
+de confirmar el intercambio. En ese caso ninguna transferencia debe quedar a medias: o se completa el
+intercambio o se liberan ambas reservas.
+O que la transferencia se haya realizado correctamente, pero la respuesta no llegue a quien la solicitó.
+El sistema no debe asumir automáticamente que una demora o un error de comunicación significa que la
+operación no ocurrió.
+Debe ser posible determinar en qué estado se encuentra el intercambio y continuar, reintentar o revertir las
+acciones correspondientes.
+Un operador debe poder inspeccionar ofertas activas, reservas y operaciones incompletas para detectar copias
+apartadas que no deberían seguir bloqueadas.
+Ningún fallo puede provocar que:
+  • una copia desaparezca;
+  • una copia se duplique;
+  • una colección tenga cantidades negativas;
+  • dos personas reciban la misma copia;
+  • una copia quede apartada indefinidamente;
+  • un intercambio completado vuelva a ejecutarse.
+
+Invariante de oro
+Después de cualquier secuencia de aperturas, intercambios exitosos o fallidos, reintentos, vencimientos,
+cancelaciones y eventos duplicados o fuera de orden, debe cumplirse:
+  • las cantidades de cada colección nunca son negativas;
+  • ninguna copia se pierde ni se acredita dos veces;
+  • el contenido de un sobre abierto es estable entre reintentos;
+  • un intercambio completado no se vuelve a ejecutar;
+  • no quedan copias apartadas asociadas a una oferta cancelada, vencida o rechazada de forma terminal.
+
+
+
+Cancelación y vencimiento
+El creador puede cancelar una oferta mientras no haya una aceptación en curso ni una aceptación confirmada.
+Cuando una oferta se cancela, las copias apartadas deben volver a quedar disponibles.
+
+
+
+                                                      5
+
+===== PAGINA 6 =====
+
+Las ofertas pueden tener una fecha de vencimiento. Al vencer, dejan de aparecer entre las ofertas activas y las
+copias comprometidas deben liberarse.
+La expiración puede ocurrir sin que el usuario esté conectado.
+Si una cancelación o un vencimiento ocurre al mismo tiempo que una aceptación, el resultado debe ser uno
+solo: o el intercambio se completa, o la oferta se cierra y las copias se liberan. No ambos.
+
+
+
+Retos y recompensas
+La plataforma incluye retos para acompañar el progreso de los coleccionistas.
+Algunos ejemplos son:
+  • abrir cinco sobres;
+  • conseguir diez figuritas de una misma selección;
+  • completar una sección;
+  • realizar tres intercambios;
+  • intercambiar con cinco personas diferentes;
+  • conseguir una figurita especial;
+  • completar el álbum.
+Las acciones realizadas en otras partes de la plataforma contribuyen al progreso de estos retos.
+Cuando un usuario completa uno, puede recibir una recompensa, como un nuevo sobre, una insignia o acceso
+a una promoción especial.
+El avance de los retos no necesariamente se actualiza en el mismo instante en que ocurre la acción. El usuario
+podría completar un intercambio y ver el progreso actualizado después.
+Sin embargo, una misma acción no debe contabilizarse dos veces aunque el sistema reciba información
+duplicada.
+
+Flujo conceptual de retos
+flowchart LR
+    S[Apertura de sobres] -->|Informa una acción| P[Procesar progreso]
+    I[Intercambios] -->|Informa una acción| P
+    C[Cambios en la colección] -->|Informa una acción| P
+
+    P --> R[(Progreso de retos)]
+
+    P -->|Reto completado| G[Generar recompensa]
+    G --> W[(Recompensas disponibles)]
+
+    G -->|Informa novedad| N[Notificar al usuario]
+
+
+
+Códigos promocionales
+Durante el torneo, marcas, estadios y patrocinadores podrán distribuir códigos promocionales.
+Un código puede otorgar uno o varios sobres, una figurita especial o una recompensa determinada.
+Algunos códigos podrán utilizarse una sola vez en toda la plataforma. Otros podrán ser utilizados por muchas
+personas, pero solamente una vez por usuario.
+Los códigos podrán tener:
+
+
+                                                      6
+
+===== PAGINA 7 =====
+
+  • fecha de inicio;
+  • fecha de vencimiento;
+  • límite global de usos;
+  • restricciones por país o campaña;
+  • diferentes recompensas.
+Si dos solicitudes intentan utilizar simultáneamente el último uso disponible de un código, solamente una
+debe ser aceptada.
+
+
+
+Una experiencia consistente, aunque no todo ocurra al mismo tiempo
+La pantalla principal muestra un resumen de la experiencia del coleccionista:
+  • porcentaje del álbum completado;
+  • cantidad de figuritas;
+  • cantidad de repetidas;
+  • cantidad de faltantes;
+  • retos activos;
+  • ofertas compatibles;
+  • posición en rankings;
+  • actividad reciente.
+Parte de esta información puede ser calculada y actualizada a partir de las acciones que ocurren en la
+plataforma.
+No todos los datos tienen que reflejarse inmediatamente.
+Debe ser correcta de inmediato (consistencia fuerte):
+  • pertenencia y estado de un sobre (disponible u abierto) y su contenido una vez abierto;
+  • cantidades de la colección (poseídas, repetidas, apartadas, disponibles);
+  • resultado de publicar, aceptar, rechazar, cancelar o vencer una oferta;
+  • resultado de un intercambio (completado o no).
+Puede actualizarse después (consistencia eventual):
+  • porcentaje del álbum;
+  • avance y completitud de retos;
+  • rankings;
+  • notificaciones e indicadores de actividad reciente.
+Después de abrir un sobre, el usuario podría ver las nuevas copias en su colección antes de que se actualice el
+porcentaje de avance.
+Después de completar un intercambio, podría recibir las copias antes de que cambie el contador de un reto.
+La plataforma debe distinguir qué información necesita ser correcta inmediatamente y cuál puede actualizarse
+posteriormente sin afectar la integridad del negocio.
+
+
+
+
+Consigna para los estudiantes
+El equipo deberá diseñar una arquitectura de microservicios que permita implementar la plataforma descripta.
+El relato representa las necesidades del negocio, pero no define una solución técnica. Las fronteras entre
+servicios, los modelos de datos, los contratos, los eventos y los mecanismos de coordinación deberán ser
+propuestos y justificados por cada equipo.
+
+
+
+                                                      7
+
+===== PAGINA 8 =====
+
+A partir del relato deberán:
+  1. Identificar actores, conceptos de negocio y lenguaje ubicuo.
+  2. Reconocer subdominios y proponer límites de contexto.
+  3. Identificar entidades, objetos de valor, agregados e invariantes.
+  4. Formular las principales User Stories y sus criterios de aceptación.
+  5. Diseñar los flujos de apertura de sobres e intercambio.
+  6. Determinar qué operaciones requieren consistencia inmediata.
+  7. Determinar qué datos pueden mantenerse con consistencia eventual.
+  8. Diseñar e implementar al menos un proceso distribuido que requiera coordinación, recuperación
+     y compensaciones. El intercambio es el candidato esperado; la apertura de sobres también debe
+     implementarse, con idempotencia, aunque su coordinación interna puede ser más simple.
+  9. Definir los eventos relevantes del dominio.
+ 10. Diseñar mecanismos para tolerar reintentos, duplicados, demoras y mensajes fuera de orden.
+ 11. Proponer e implementar una estrategia de observabilidad que permita seguir una operación de extremo
+     a extremo.
+ 12. Implementar y demostrar la solución ejecutable definida en el alcance.
+
+
+
+
+Alcance de la entrega
+El relato es el producto completo. Esta entrega no pide construir todo el producto.
+
+Debe implementarse y demostrarse
+  • Colección de un usuario: poseídas, faltantes, repetidas y disponibles.
+  • Apertura de sobres, idempotente, con contenido congelado tras la primera apertura exitosa.
+  • Intercambio 1:1 con apartar, confirmar, rechazar, cancelar, vencer y compensar.
+  • Progreso del álbum con consistencia eventual (el porcentaje puede atrasarse respecto de la colección).
+  • Reproducción de los escenarios mínimos.
+  • Observabilidad de extremo a extremo de apertura de sobre e intercambio (éxito y fallo).
+
+Debe diseñarse en el documento (no es obligatorio implementar)
+  • Retos, recompensas e insignias.
+  • Códigos promocionales, incluido el caso de último uso concurrente.
+  • Rankings.
+  • Matching de ofertas compatibles.
+  • Ofertas N:M.
+  • Vista u operación de operador para reservas u ofertas bloqueadas.
+  • Campañas, eventos de la comunidad y figuritas especiales como origen de sobres o recompensas.
+
+Queda fuera de alcance
+  • Proveedor de identidad / login real. Un userId en header, token opaco o parámetro es suficiente.
+  • Aplicación móvil, UI pulida o app nativa. Una API documentada más un cliente mínimo (HTTP, script
+    o UI simple) alcanza.
+  • Pagos, compra de sobres, anti-fraude y fuerza bruta de códigos.
+  • Alta disponibilidad, autoscaling y acuerdos de latencia más allá de “el progreso secundario puede
+    demorar”.
+  • Destacar ofertas compatibles en tiempo real.
+
+
+
+
+                                                     8
+
+===== PAGINA 9 =====
+
+Criterios pedagógicos
+La nota no depende de cantidad de microservicios, ni de latencia, ni de una UI pulida. Se evalúa la calidad de
+las fronteras, la claridad del modelo, el tratamiento de fallos distribuidos, la idempotencia y la capacidad de
+justificar decisiones.
+Una base de datos escribible compartida entre servicios no es aceptable. Cada servicio debe ser dueño
+de sus datos. Las proyecciones de solo lectura (por ejemplo el porcentaje del álbum) pueden materializarse de
+forma eventualmente consistente.
+Lenguaje, broker y motor de persistencia son libres. La demostración debe poder ejecutarse en local a partir
+del repositorio.
+
+
+
+
+Preguntas que deberá responder el diseño
+El equipo deberá justificar explícitamente:
+   • ¿Qué significa que una copia esté disponible?
+   • ¿Cuándo una copia deja de estar disponible para otro intercambio?
+   • ¿Quién es responsable de decidir si un intercambio puede realizarse?
+   • ¿Qué ocurre si solamente una parte del intercambio puede confirmarse?
+   • ¿Cómo se recupera una operación que quedó incompleta?
+   • ¿Cómo se evita abrir dos veces el mismo sobre?
+   • ¿Cómo se evita procesar dos veces el mismo intercambio?
+   • ¿Qué sucede si un mensaje se entrega más de una vez?
+   • ¿Qué sucede si los mensajes llegan en distinto orden?
+   • ¿Qué información necesita consistencia fuerte?
+   • ¿Qué información puede ser eventualmente consistente?
+   • ¿Cómo se reconstruye el estado de una operación ante un incidente?
+   • ¿Cómo puede un operador detectar ofertas o reservas bloqueadas?
+   • ¿Cómo se prueba el invariante de oro (ninguna copia se pierde ni se duplica)?
+
+
+
+
+Escenarios mínimos que la solución debe soportar
+La solución ejecutable debe demostrar cada escenario. El diseño documental debe cubrir también los ítems de
+“solo diseño” cuando el escenario no esté implementado.
+
+Escenario 1: apertura normal
+Un usuario abre un sobre que le pertenece y recibe las copias correspondientes. El sobre queda abierto. La
+colección se actualiza de inmediato.
+
+Escenario 2: reintento del cliente
+La aplicación reenvía la misma solicitud de apertura por una mala conexión, antes de saber si la primera
+llegó. El contenido se muestra nuevamente (el mismo), las copias no se duplican y el sobre no se abre dos
+veces.
+
+Escenario 3: intercambio exitoso
+Dos usuarios poseen las copias acordadas. La oferta es 1:1. El intercambio se completa. Las cantidades de
+ambos quedan consistentes con el invariante de oro.
+
+
+                                                      9
+
+===== PAGINA 10 =====
+
+Escenario 4: intercambio rechazado
+Una de las copias ya no está disponible al momento de aceptar la oferta. El intercambio no se completa. La
+copia apartada del publicador vuelve a quedar disponible. No hay cantidades negativas ni copias perdidas.
+
+Escenario 5: interrupción parcial (un lado)
+La operación se interrumpe luego de apartar las copias de uno de los usuarios, antes de apartar las del otro.
+La reserva no queda indefinida: se completa de forma terminal, se reintenta con el mismo resultado de negocio,
+o se libera.
+
+Escenario 6: ambas partes apartadas, luego interrupción
+Ambas copias fueron apartadas y ocurre un fallo antes de confirmar la transferencia. El resultado es binario:
+intercambio completado o ambas reservas liberadas. No hay transferencia a medias.
+
+Escenario 7: resultado desconocido para el solicitante
+La transferencia sí se realizó, pero quien la invocó no recibe la respuesta (timeout). Un reintento o una
+consulta posterior debe descubrir el resultado real, no ejecutar el intercambio otra vez ni asumir que falló.
+
+Escenario 8: mensajes duplicados
+Un evento de apertura de sobre o de intercambio se entrega más de una vez. No se duplican copias ni se
+vuelve a completar el intercambio. Una notificación o un recálculo de progreso puede repetirse; el estado de
+negocio no.
+
+Escenario 9: mensajes fuera de orden
+Un evento de progreso (álbum o reto) llega antes que la confirmación de la acción que lo originó, o llega un
+evento viejo después de uno más nuevo. El sistema no corrompe cantidades ni aplica un progreso imposible.
+El diseño debe explicar el criterio (idempotencia, versión, ignorar obsoletos, etc.).
+
+Escenario 10: actualización diferida
+Las colecciones se actualizan correctamente de inmediato, mientras que el porcentaje del álbum, los retos o
+las notificaciones se reflejan después.
+
+Escenario 11: dos aceptaciones concurrentes
+Dos usuarios aceptan la misma oferta al mismo tiempo. Solo una aceptación confirma el intercambio. La otra
+se rechaza. No se duplican copias.
+
+Escenario 12: vencimiento o cancelación contra aceptación
+Una oferta vence o es cancelada al mismo tiempo que alguien la acepta. El resultado es uno solo: intercambio
+completado, o oferta cerrada con copias liberadas.
+
+Escenario 13: sobre ajeno o ya abierto
+Un usuario intenta abrir un sobre que no le pertenece o que ya está abierto. La operación se rechaza. No se
+acreditan copias.
+
+Escenario 14: oferta inválida
+Un usuario intenta ofrecer una copia que no tiene, que no es repetida, o que ya está apartada. La oferta no se
+publica.
+
+
+                                                     10
+
+===== PAGINA 11 =====
+
+Escenario 15 (solo diseño): último uso de un código promocional
+Dos solicitudes canjean al mismo tiempo el último uso de un código. Solo una se acepta. No es obligatorio
+implementarlo.
+
+
+
+
+Entregables
+Cada equipo deberá presentar:
+  • Documento de análisis del dominio.
+  • Glosario de lenguaje ubicuo (el mínimo de esta consigna, más las extensiones del equipo).
+  • User Stories y criterios de aceptación.
+  • Context Map.
+  • Diagramas de los principales flujos, incluyendo compensación en el intercambio.
+  • Arquitectura propuesta.
+  • Responsabilidades de cada microservicio.
+  • APIs y contratos de eventos.
+  • Diseño de la coordinación distribuida.
+  • Estrategia de compensación y recuperación.
+  • Estrategia de idempotencia.
+  • Modelo de consistencia.
+  • Pruebas funcionales y de fallos que cubran los escenarios implementables.
+  • Evidencia de observabilidad.
+  • Demostración ejecutable.
+  • Pipeline de CI/CD con despliegue a staging, gate de tests de integración y despliegue a producción
+    sobre un cluster de Kubernetes en AKS.
+
+Forma de la demostración
+  • El repositorio debe permitir levantar la solución en local (por ejemplo docker compose up) y dejar
+    datos de prueba (al menos dos usuarios, sobres e inventario suficiente para los escenarios 1–14).
+  • Un README debe indicar, para cada escenario implementable, cómo reproducirlo (llamadas HTTP,
+    script o pasos de UI).
+  • La evidencia de observabilidad debe mostrar un mismo identificador de correlación / traceId recorriendo
+    los servicios en:
+       – una apertura de sobre (escenario 1 o 2);
+       – un intercambio exitoso (escenario 3);
+       – un intercambio con fallo y compensación (escenario 4, 5 o 6).
+  • Basta con logs estructurados con ese identificador, o un backend de tracing. No se exige una malla de
+    servicios ni un cluster.
+La solución no será evaluada por la cantidad de microservicios creados. Se evaluará la calidad de las fronteras
+elegidas, la claridad del modelo, el tratamiento de fallos distribuidos y la capacidad del equipo para justificar
+sus decisiones.
+
+CI/CD y despliegue (condición de entrega obligatoria)
+Esta sección define una condición de entrega, no un criterio que suma o resta puntos. Si el repositorio no
+cumple con lo siguiente, la entrega no se evalúa.
+Además de poder levantarse en local, la entrega debe hacerse en un repositorio con un proceso de CI/CD
+completo, siguiendo las mejores prácticas mencionadas en la cursada. El pipeline debe, como mínimo:
+  • Construir y ejecutar las pruebas unitarias y funcionales de cada microservicio en cada cambio (build +
+    test automatizados).
+
+
+                                                       11
+
+===== PAGINA 12 =====
+
+  • Empaquetar los servicios (por ejemplo, imágenes de contenedor) y desplegarlos automáticamente a un
+    ambiente de staging.
+  • En staging, ejecutar los tests de integración de los escenarios implementables.
+  • Si los tests de integración fallan en staging, el pipeline no debe promover el despliegue a producción.
+    El pipeline debe detenerse o marcar el gate como fallido, dejando el ambiente de producción intacto.
+  • Solo si los tests de integración en staging son exitosos, el pipeline puede desplegar a producción.
+  • El ambiente de producción debe ser un cluster de Kubernetes en AKS (Azure Kubernetes
+    Service).
+El equipo debe documentar el diseño del pipeline (etapas, gates, estrategia de despliegue a Kubernetes/AKS)
+y dejar evidencia de al menos una ejecución completa, incluyendo un caso en que el gate de integración haya
+bloqueado (o hubiera bloqueado) un despliegue a producción.
+
+
+
+
+Consideraciones adicionales: diseño para un millón de usuarios
+El relato y la consigna anterior se concentran en la corrección de las operaciones distribuidas: que ninguna
+figurita se pierda, se duplique o quede bloqueada. Pero diseñar para escalar a un millón de usuarios agrega
+una dimensión distinta: el sistema debe seguir siendo correcto y responsivo bajo una carga muy superior a la
+de una demo, y con patrones de tráfico que no son uniformes.
+El equipo deberá, además de lo solicitado anteriormente, abordar los siguientes puntos.
+
+Preguntas adicionales que deberá responder el diseño
+  • ¿Qué recursos del sistema pueden convertirse en un punto de contención bajo alta concurrencia (por
+    ejemplo, un código promocional viral, una figurita muy solicitada, una oferta popular) y cómo se evita
+    que ese recurso se transforme en un cuello de botella de escritura?
+  • ¿Cuál es el perfil de tráfico esperado? ¿Cómo se comporta el sistema ante picos correlacionados con
+    eventos del mundo real (un gol, el inicio de un partido) en lugar de un crecimiento gradual?
+  • ¿Cómo se protege la plataforma de ráfagas de solicitudes: mediante limitación de tasa, colas de absorción,
+    degradación controlada (load shedding) u otro mecanismo?
+  • ¿Cómo escala la lectura de información agregada (porcentaje de álbum, rankings, ofertas compatibles,
+    actividad reciente) de forma independiente de la escritura? ¿Qué se cachea, qué se precalcula y qué se
+    consulta en el momento?
+  • ¿Cómo se calculan los rankings globales a gran escala sin que su cómputo se vuelva un cuello de botella
+    o quede desactualizado de forma inaceptable?
+  • ¿Qué clave de partición se utiliza en el backbone de eventos (por usuario, por intercambio, por otro
+    criterio) y qué garantías de orden y paralelismo se derivan de esa elección?
+  • ¿Qué estrategia de retención o purgado existe para las claves de idempotencia y los registros de eventos,
+    de modo que no crezcan sin límite a medida que la plataforma acumula usuarios y actividad?
+  • ¿Qué mecanismos de resiliencia (timeouts, circuit breakers, bulkheads, backpressure) existen entre
+    servicios para evitar que la degradación de uno provoque una falla en cascada bajo carga?
+  • ¿Qué objetivos de nivel de servicio (SLOs) se definen para las operaciones críticas (por ejemplo, latencia
+    p99 al abrir un sobre o aceptar una oferta, disponibilidad mínima) y cómo se validan?
+  • ¿Cómo garantiza el diseño que ninguna instancia de un servicio dependa de estado en memoria (locks,
+    sesiones pegajosas) para que las reservas de figuritas y otras operaciones críticas funcionen correctamente
+    al escalar horizontalmente?
+  • ¿Cómo se despliegan cambios de esquema, contratos de eventos o nuevas funcionalidades (retos, promo-
+    ciones) sin interrumpir el servicio durante el torneo?
+
+
+
+
+                                                     12
+
+===== PAGINA 13 =====
+
+Entregables adicionales
+  • Definición de requisitos no funcionales (NFRs): throughput esperado, latencia objetivo por operación
+    crítica, disponibilidad mínima.
+  • Identificación de puntos calientes (hot spots) del dominio y estrategia para mitigarlos.
+  • Estrategia de escalado del camino de lectura (caching, materialización de vistas, paginación).
+  • Estrategia de particionamiento del backbone de eventos y de las bases de datos por servicio.
+  • Estrategia de retención/purgado de datos de idempotencia y de eventos históricos.
+  • Evidencia de una prueba de carga (aunque sea a escala reducida) que valide el comportamiento del
+    sistema bajo concurrencia alta en al menos uno de los flujos críticos (apertura de sobres o intercambio).
+
+
+
+
+Criterios de evaluación
+      Condición previa: el cumplimiento de CI/CD y despliegue (pipeline con gate de staging y
+      despliegue a producción en AKS) es una condición de entrega, no un ítem de la tabla de pesos. Si
+      no se cumple, la entrega no se evalúa.
+
+Criterio                            Qué se mira                           Peso
+Fronteras y arquitectura            Context map, dueño de cada dato,      20%
+                                    ausencia de base escribible
+                                    compartida, responsabilidades
+                                    claras
+Modelo de dominio                   Glosario consistente, agregados e     15%
+                                    invariantes, distinción figu-
+                                    rita/copia/disponible/apartada
+Coordinación distribuida            Intercambio con reserva,              20%
+                                    confirmación, rechazo,
+                                    compensación y recuperación
+Idempotencia y consistencia         Reintentos, duplicados, fuera de      20%
+                                    orden, fuerte vs eventual según
+                                    esta consigna
+Observabilidad y demo               Escenarios reproducibles, traces de   15%
+                                    éxito y fallo, invariante de oro
+Justificación                       Respuestas a las preguntas de         10%
+                                    diseño, decisiones explícitas y
+                                    coherentes
+
+
+No suma puntos agregar rankings, retos implementados, códigos promocionales o más microservicios si eso
+debilita el tratamiento de fallos, la idempotencia o la claridad de las fronteras.
+
+
+
+
+                                                    13
+

@@ -51,4 +51,4 @@ La justificación debe ser valor para el negocio, no la popularidad de la arquit
 - La falta de coordinación de contratos y velocidades de entrega entre equipos elimina parte de la ventaja del despliegue independiente. [T02, p. 33] [T02, p. 34]
 - Cortar por tabla o entidad traslada el esquema relacional a la red y no descubre límites reales del dominio. [T03, p. 6] [T03, p. 7]
 
-Para profundizar en cómo definir esos límites, seguí con [Diseño de servicios](diseno-de-servicios.md) y [DDD estratégico](ddd-estrategico.md).
+Para profundizar en cómo definir esos límites, seguí con [Diseño de servicios](diseno-de-servicios.md) y [DDD estratégico](ddd-estrategico.md). Cómo decidir y ejecutar la migración de un sistema existente —incluido el monolito modular como destino válido— está en [Del monolito a microservicios](del-monolito-a-microservicios.md).

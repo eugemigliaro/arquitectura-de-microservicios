@@ -24,7 +24,7 @@ La ley de Conway relaciona la estructura del sistema con la estructura de comuni
 
 La cátedra presenta SOLID como apoyo conceptual: responsabilidad única, extensión sin rehacer, sustitución, segregación de interfaces e inversión de dependencias. [T02, p. 23] **Inferencia de estudio:** en este contexto, sus consecuencias prácticas más directas son una responsabilidad clara, contratos específicos y dependencia de abstracciones.
 
-Los contextos pueden seguir subdividiéndose, pero un servicio debería concentrar pocos requerimientos funcionales relacionados. Además de los contextos de dominio, se mencionan descomposición por funcionalidad, madurez y patrones de acceso a datos; funcionalidad y madurez son especialmente comunes al refactorizar monolitos. [T02, p. 26] [T02, p. 27]
+Los contextos pueden seguir subdividiéndose, pero un servicio debería concentrar pocos requerimientos funcionales relacionados. Además de los contextos de dominio, se mencionan descomposición por funcionalidad, madurez y patrones de acceso a datos; funcionalidad y madurez son especialmente comunes al refactorizar monolitos. [T02, p. 26] [T02, p. 27] Cómo encontrar esos cortes en un sistema existente, y el límite inferior de granularidad, se desarrollan en [Del monolito a microservicios](del-monolito-a-microservicios.md). [T15, p. 15] [T15, p. 19]
 
 ## Contratos entre equipos
 

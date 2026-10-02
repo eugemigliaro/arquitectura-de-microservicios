@@ -209,6 +209,29 @@ Preguntas recuperables por tema. Mantener las respuestas separadas o plegadas cu
 146. ¿Qué garantiza que lo probado en staging sea exactamente lo que llega a producción?
 147. ¿Qué ADRs son obligatorios y qué convierte a un ADR en una decisión y no en una afirmación?
 
+## Del monolito a microservicios
+
+148. ¿Qué enseñan juntas las historias de Amazon, Segment y Prime Video sobre la decisión de migrar?
+149. Distinguí razones que alcanzan y razones que no alcanzan para migrar. ¿Por qué "para escalar" no basta por sí sola?
+150. ¿Qué es un monolito modular y qué beneficios da sin pagar los costos de la distribución?
+151. ¿Qué prerrequisitos deben existir antes de extraer el primer servicio?
+152. Nombrá los cuatro tipos de seam y qué revela cada uno que los demás no muestran.
+153. ¿Qué criterios hacen de Notificaciones un buen primer servicio y de Pagos uno malo?
+154. ¿Qué síntomas delatan nano-servicios y por qué conviene empezar más grande?
+155. ¿Cuáles son las tres puertas antes de extraer y qué riesgo cubre el inventario de efectos laterales?
+156. Elegí el patrón para cada situación: ruta HTTP externa, uso interno del monolito, error caro, comportamiento nuevo sin tocar el monolito, pasar tráfico de a poco y convivencia con el modelo viejo.
+157. ¿Cuándo un Strangler Fig se convierte en un segundo monolito y cuándo un ACL en un monolito distribuido?
+158. ¿Por qué el shadowing de una escritura es peligroso y cómo se evita?
+159. ¿Por qué la base compartida es "el acoplamiento más peligroso"? ¿Cuándo conviene separar datos primero?
+160. Describí Split Table y Move FK to Code. ¿Qué se pierde y qué hay que decidir en cada caso?
+161. Reconstruí las tres fases de sincronización con CDC, quién escribe y cómo se vuelve atrás en cada una.
+162. ¿Qué significa que una extracción está terminada y por qué un feature flag no alcanza para revertirla?
+163. ¿Qué tres preguntas hay que hacerle al negocio antes de partir una transacción, y qué indica que una invariante debe ser inmediata?
+164. ¿Qué opciones hay para el reporting que antes hacía joins sobre una sola base, y cuál está prohibida?
+165. ¿Qué es el Inverse Conway Maneuver y qué roles define Team Topologies?
+166. ¿Qué métricas dicen si una migración funciona?
+167. Enumerá los anti-patterns de migración y explicá por qué "extraer sin sacar" duplica el costo.
+
 <details>
 <summary>Respuestas orientativas</summary>
 
@@ -360,6 +383,26 @@ Preguntas recuperables por tema. Mantener las respuestas separadas o plegadas cu
 145. Readiness debe indicar si la instancia puede aceptar trabajo; si siempre responde OK, no informa nada y la consigna resta puntos por sondas triviales. [E04] [T07, p. 18] *Inferencia:* el tráfico llegaría igual a una instancia que perdió, por ejemplo, su base de datos.
 146. Promover un artefacto inmutable: versionar y etiquetar las imágenes, y desplegar en producción exactamente la imagen probada. Un tag puede moverse, mientras que un digest identifica el contenido de forma inmutable. [E04] [T06, p. 35] [T06, p. 36]
 147. Recorte de servicios, estilo de comunicación, broker y clave de partición, coordinación del intercambio, idempotencia, publicación confiable, persistencia de las cantidades de la colección, ambientes en Kubernetes, despliegue y promoción, y observabilidad. Cada uno necesita al menos dos alternativas reales con el motivo de su descarte. [E04]
+148. Que migrar no es progreso: Amazon migró porque el monolito frenaba a cientos de desarrolladores; Segment volvió a un monolito porque mantener ~140 servicios consumía al equipo; Prime Video pasó a un solo proceso y bajó ~90 % el costo. Es una decisión con costos y a veces la correcta es la inversa. [T15, p. 7]
+149. Alcanzan el despliegue independiente, la autonomía de equipos, el escalado selectivo, el aislamiento de fallas y un stack distinto donde hace falta. No alcanzan el hype, el código feo, la performance, "para escalar" y el CV-driven development. Un monolito escala horizontalmente detrás de un load balancer: hay que mostrar que una parte escala distinto que el resto. [T15, p. 8] [T15, p. 9]
+150. Un solo deployable con módulos que son bounded contexts, con API pública, prohibición de llamar internals verificada en CI e idealmente schema propio. Da los beneficios de diseño sin red, deploy distribuido ni consistencia eventual, y puede ser el destino final. [T15, p. 10]
+151. CI/CD que haga trivial desplegar, observabilidad básica con `correlationId`, tests de caracterización y contract tests, y provisioning de un servicio en horas. [T15, p. 11]
+152. Dependencias del código (qué depende de qué, ciclos, god modules); change coupling en git (qué cambia junto aunque no se importe); datos de runtime (carga, disponibilidad, tablas calientes); y organización (dueños, frecuencia y motivo del cambio). [T15, p. 15] [T15, p. 16] [T15, p. 17]
+153. Se busca bajo acoplamiento, valor visible y riesgo bajo. Notificaciones solo depende de `common`; pagos y órdenes son centrales, muy acoplados y caros si fallan. El primer servicio sirve para aprender el camino. [T15, p. 15] [T15, p. 18]
+154. Seis llamadas por red para un caso de uso, servicios que siempre se despliegan juntos y un servicio por entidad. Juntar obliga a migrar datos y reescribir contratos; partir un módulo bien encapsulado no. [T15, p. 19]
+155. Tests de caracterización sobre el borde público, reorganización detrás de una interfaz local e inventario de crons, listeners, mailers, archivos y batch. Sin el inventario, el monolito sigue escribiendo los datos del servicio por atrás. [T15, p. 20]
+156. Strangler Fig; Branch by Abstraction; Parallel Run o dark launching; Decorating Collaborator o CDC; feature toggles y canary; Anti-Corruption Layer. Se combinan. [T15, p. 30]
+157. La fachada se vuelve segundo monolito si acumula reglas de negocio en lugar de solo reenviar, registrar y permitir volver. El ACL encubre un monolito distribuido si el servicio llama sincrónicamente al monolito en cada request. [T15, p. 24] [T15, p. 29]
+158. Porque repite el efecto: manda, cobra o reserva dos veces. Se apaga el efecto en la sombra con stubs o se usa una clave de idempotencia. [T15, p. 26]
+159. Porque la base se vuelve la API real sin haber sido diseñada como tal: nadie cambia el schema sin coordinar, no hay dueño del dato y las reglas se duplican o se saltean. Datos primero conviene cuando hay dudas sobre la frontera por joins o transacciones. [T15, p. 33] [T15, p. 34]
+160. Split Table reparte columnas entre contextos: copiar, mover lecturas, mover escrituras, borrar columnas; si dos contextos escriben la misma columna, primero se decide el dueño. Move FK to Code reemplaza la FK por un ID validado en código o con eventos; se pierde la integridad referencial y hay que decidir qué pasa al borrar la entidad referida. [T15, p. 36] [T15, p. 37]
+161. Fase 1: escribe el monolito y el servicio lee una réplica vía CDC; rollback, dar vuelta la ruta. Fase 2: escribe el servicio y el monolito recibe copia; rollback difícil, requiere reconciliar. Fase 3: escribe el servicio sin sincronización; no hay vuelta barata. [T15, p. 39] [T15, p. 40]
+162. Ruta y módulo viejos borrados, un solo escritor por tabla, grant de escritura revocado al monolito y rollback ensayado. El flag cambia el código activo, pero no revierte datos divergentes. [T15, p. 40]
+163. Cuánto tiempo puede estar inconsistente el dato, qué pasa si se reservó stock y falló el pago, y si la invariante tiene que ser inmediata. Si debe serlo, quizás esos datos van en el mismo servicio. [T15, p. 41]
+164. Composición por API, read models con CQRS y CDC hacia un data warehouse o lake. Está prohibido abrir una conexión SQL de solo lectura a la base de otro servicio. [T15, p. 42]
+165. Diseñar los equipos con la forma que se quiere para la arquitectura. Team Topologies define equipos stream-aligned, platform y enabling. [T15, p. 44]
+166. DORA (deploy frequency, lead time, change failure rate, MTTR) y métricas propias: deploys coordinados, porcentaje de tráfico fuera del monolito, tablas del monolito leídas por otros servicios y, por tajada, error rate, lag del CDC y rollback ensayado. [T15, p. 46]
+167. Monolito distribuido, base compartida "por ahora", librería compartida con lógica de dominio, llamadas sincrónicas encadenadas, big-bang disfrazado y extraer sin sacar. Si el código viejo sigue vivo "por las dudas", hay dos implementaciones que mantener. [T15, p. 47]
 
 </details>
 
@@ -375,3 +418,5 @@ Preguntas recuperables por tema. Mantener las respuestas separadas o plegadas cu
 - Elegí estrategia de despliegue para el Álbum 2026 y justificá según riesgo, retrocompatibilidad entre versiones y costo de rollback. [T13, p. 43]
 - Para el Álbum 2026, diseñá el flujo desde la apertura de un sobre hasta la actualización de progreso y retos: qué eventos se publican, con qué key, cómo se evitan efectos duplicados, qué pasa con eventos de progreso fuera de orden y cómo detectarías que la actualización se está demorando. [E01, p. 6] [T14, p. 35] [T14, p. 43] [T14, p. 50]
 - Redactá el ADR del estilo de coordinación del intercambio con dos alternativas reales, saga orquestada y coreografiada, y mostrá cómo cambia la máquina de estados si la copia se aparta al publicar o al aceptar. [E04] [E03, p. 4] [E01, p. 2] [T11, p. 20] [T11, p. 37] [T14, p. 27]
+- Para MegaShop, armá el plan de migración en una hoja: decidí si migrar y qué responderle al directorio, el primer servicio y su patrón, qué hacer con el cron nocturno, el dueño de `orders`, `inventory` y `users`, los estados intermedios del checkout sin transacción, el destino del SQL de BI y un roadmap de tres fases con riesgo, rollback y métrica. [T15, p. 50] [T15, p. 51] [T15, p. 52] [T15, p. 53]
+- ¿Migrarían? Una startup de 6 devs buscando product–market fit; un e-commerce de 80 devs en 9 equipos con un release mensual y un Black Friday que tira el sitio; una liquidación de sueldos con 3 devs y cambios regulatorios dos veces por año. Justificá con las razones que alcanzan y los prerrequisitos. [T15, p. 12]

@@ -1,0 +1,1096 @@
+FUENTE: T15
+TITULO: Del monolito a microservicios
+ORIGINAL: material/catedra/teoria/Del Monolito a Microservicios.pdf
+PAGINAS: 58
+
+===== PAGINA 1 =====
+
+Arquitectura de
+Microservicios con
+Contenedores
+— Ing. Federico Castañeda
+— Ing. Carlos Maceira
+— Ing. Franco Rupnik
+
+===== PAGINA 2 =====
+
+Del Monolito a
+Microservicios
+
+===== PAGINA 3 =====
+
+ Temario
+ 1. ¿Por qué (y si) migrar?
+ 2. Encontrar los seams
+ 3. Patrones de migración incremental
+ 4. Separar los datos
+ 5. Organización y operación
+ 6. Taller grupal
+ 7. Cierre
+
+
+
+
+Microservicios (73.40)                  3
+
+===== PAGINA 4 =====
+
+ Objetivos de la clase
+ Al terminar, deberían poder:
+ 1. Juzgar si una migración tiene sentido, y reconocer los anti-patterns (monolito distribuido, "microservicios
+    porque Netflix").
+ 2. Encontrar servicios candidatos usando DDD y datos del sistema en producción.
+ 3. Aplicar patrones incrementales (Strangler Fig, Branch by Abstraction, Parallel Run) en vez de un rewrite
+    big-bang.
+ 4. Planificar cómo partir una base de datos compartida — la parte más difícil.
+ 5. Armar un roadmap de migración por fases, con riesgos y métricas de éxito.
+
+
+
+
+Microservicios (73.40)                                                                                            4
+
+===== PAGINA 5 =====
+
+ ¿De dónde venimos?
+ Esta clase no introduce herramientas nuevas: junta las que ya vieron y las ordena en el tiempo.
+
+    Ya lo vieron en…                                              Hoy lo usamos para…
+
+    domain-driven-design                                          Encontrar dónde cortar
+
+    comunicacion, async-patterns-kafka                            Hablar entre el monolito y los servicios nuevos
+
+    api-gateway                                                   Interceptar y redirigir tráfico (Strangler Fig)
+
+    estado-distribuido-patterns, sistemas-distribuidos            Sagas, consistencia eventual, Outbox
+
+    testing, devops                                               Los prerrequisitos para migrar sin romper
+
+    data-plane                                                    Operar lo que queda después
+
+
+
+
+Microservicios (73.40)                                                                                              5
+
+===== PAGINA 6 =====
+
+¿Por qué (y si) migrar?
+
+===== PAGINA 7 =====
+
+ Tres historias reales
+    Empresa              Qué hizo                                            Por qué
+
+    Amazon               Del monolito Obidos a servicios con APIs, equipos   El monolito frenaba a cientos de desarrolladores
+    (~2001–2006)         chicos dueños de cada uno                           que necesitaban desplegar por separado
+
+                                                                             Tres ingenieros pasaban la mayor parte del
+    Segment              Volvió de ~140 microservicios a un monolito para
+                                                                             tiempo manteniendo servicios, no agregando
+    (2018)               sus destinations
+                                                                             valor
+
+                         Pasó su servicio de monitoreo de calidad de video
+    Prime Video                                                              Costo de orquestación y transferencia de datos
+                         de funciones serverless distribuidas a un solo
+    (2023)                                                                   entre pasos; bajó ~90% el costo
+                         proceso
+
+ Moraleja: migrar no es "progreso". Es una decisión con costos, y a veces la decisión correcta es la inversa.
+
+
+
+
+                                                                                                 Fuente: Segment — Goodbye Microservices
+
+Microservicios (73.40)                                                                                                                7
+
+===== PAGINA 8 =====
+
+ ¿Para qué migrar? Razones que sí alcanzan
+     Despliegue independiente: un equipo sale a
+     producción sin coordinar con otros cinco.
+     Autonomía de equipos: cada equipo es dueño
+     de su servicio, de punta a punta (ley de Conway).
+     Escalado selectivo: el catálogo recibe 100× más
+                                                           Microservices are not the goal. They are a means to
+     tráfico que la facturación.
+                                                           an end.
+     Aislamiento de fallas: si se cae el
+                                                           — Sam Newman, Monolith to Microservices
+     recomendador, la gente sigue comprando.
+     Stack distinto donde hace falta: un motor de
+                                                         Pregunta de control: ¿qué problema del negocio
+     búsqueda, un modelo de ML.
+                                                         resuelve esto, y cómo voy a medir que se resolvió?
+
+
+
+
+Microservicios (73.40)                                                                                           8
+
+===== PAGINA 9 =====
+
+ Razones que no alcanzan
+     Hype: "Netflix lo hace". Netflix tiene miles de ingenieros y un problema de escala que casi nadie tiene.
+     "El código es feo": un rewrite no arregla la falta de tests ni de diseño. Distribuirlo lo hace más difícil de
+     arreglar.
+     Performance: una llamada en memoria cuesta nanosegundos; una por red, milisegundos. Microservicios
+     rara vez hacen algo más rápido.
+     "Para escalar": un monolito se escala horizontal detrás de un load balancer. Hace falta mostrar que una
+     parte escala distinto que el resto.
+     CV-driven development: querer usar Kubernetes y Kafka no es un requerimiento del negocio.
+
+
+
+
+Microservicios (73.40)                                                                                               9
+
+===== PAGINA 10 =====
+
+ La alternativa: el monolito modular
+ Un solo deployable, pero con módulos con                            Un solo deployable
+ fronteras explícitas:
+                                                          Catálogo        Órdenes                   Pagos
+     Cada módulo = un bounded context, con su API
+     pública.
+     Prohibido llamar internals de otro módulo (se
+     valida en CI).
+                                                                      DB con schemas
+     Idealmente, cada módulo con su propio schema
+                                                                         separados
+     en la DB.
+
+ Te da gran parte de los beneficios de diseño sin
+ pagar la red, el deploy distribuido ni la consistencia
+ eventual.
+ Es un paso intermedio excelente… y muchas veces,
+ el destino final. Shopify es el ejemplo más
+ conocido.
+                                                                                    Fuente: Martin Fowler — MonolithFirst
+
+Microservicios (73.40)                                                                                                10
+
+===== PAGINA 11 =====
+
+ Prerrequisitos: "you must be this tall"
+ Antes de extraer el primer servicio, tiene que existir:
+     CI/CD: desplegar un servicio tiene que ser trivial y repetible (deck devops).
+     Observabilidad básica: logs centralizados, métricas y un correlationId que cruce servicios.
+     Tests automatizados: sobre todo tests de caracterización del monolito y contract tests (deck testing).
+     Provisioning rápido: levantar un servicio nuevo en horas, no en semanas.
+
+ Sin esto, cada servicio nuevo multiplica el trabajo manual y los incidentes.
+
+
+
+
+                                                                                     Fuente: Martin Fowler — MicroservicePrerequisites
+
+Microservicios (73.40)                                                                                                             11
+
+===== PAGINA 12 =====
+
+ Encuesta rápida: ¿migrarían?
+ Levanten la mano — sí, no, o todavía no.
+ 1. Startup de 6 devs, producto de 8 meses, todavía buscando product–market fit. El código "ya está feo".
+ 2. E-commerce con 80 devs en 9 equipos. Un release por mes porque hay que coordinar a todos. Black
+    Friday tira abajo el sitio entero porque el checkout comparte proceso con el catálogo.
+ 3. Sistema de liquidación de sueldos de una empresa, 3 devs, carga estable, cambia dos veces por año
+    por regulación.
+
+
+
+
+Microservicios (73.40)                                                                                      12
+
+===== PAGINA 13 =====
+
+Encontrar los seams
+
+===== PAGINA 14 =====
+
+ Repaso: DDD como mapa
+ Lo vieron en domain-driven-design. Hoy lo aplicamos a un sistema que ya existe.
+     Bounded context: el mejor candidato a frontera de servicio.
+     Ubiquitous language: si la misma palabra (Cliente, Producto) significa cosas distintas en dos partes
+     del código, ahí hay una frontera.
+     Context mapping: cómo se relacionan los contextos (customer/supplier, conformist, ACL). Nos dice qué
+     integración vamos a necesitar al separar.
+
+ La diferencia con un proyecto nuevo: el código existente tiene fronteras implícitas, casi siempre violadas.
+ Hay que descubrirlas en el código, no solo en la pizarra.
+
+
+
+
+Microservicios (73.40)                                                                                         14
+
+===== PAGINA 15 =====
+
+                                                                             🧵 Hilo: extraer Notificaciones 1/7
+ Seam #1: dependencias en el código
+ Analizar el grafo de dependencias entre paquetes o
+                                                                                  catalog
+ módulos:
+     Alta cohesión adentro, bajo acoplamiento
+                                                                               notifications                      common
+     afuera: eso es un buen candidato.
+     Ciclos entre módulos: hay que romperlos antes de
+     extraer.                                                payments             orders                          inventory
+
+     "God modules" (utils, common, core) de los
+     que depende todo: suelen esconder lógica de        notifications solo depende de common: buen candidato. orders
+                                                        ↔ inventory tienen un ciclo: hay que romperlo primero.
+     dominio mezclada.
+
+ Herramientas: jdeps, dependency-cruiser,
+ Structure101, Sonargraph, o el IDE.
+
+
+
+
+Microservicios (73.40)                                                                                                        15
+
+===== PAGINA 16 =====
+
+ Seam #2: change coupling en git
+ El código dice qué depende de qué. El historial dice          change coupling a mano
+
+ qué cambia junto.                                      # (commit, archivo): base para contar pares
+                                                        git log --since="1 year ago" \
+     Archivos que aparecen juntos en muchos commits         --name-only --format="--" \
+     están acoplados, aunque no se importen entre sí.     | awk '/^--$/ {n++; next} NF {print n, $0}' \
+                                                          | sort -u > commits.txt
+     Si Order.java y InventoryService.java
+     cambian juntos en el 70% de los commits,           # Top de archivos más cambiados (hotspots)
+                                                        git log --since="1 year ago" \
+     separarlos en dos servicios significa deploys          --name-only --format="" \
+     coordinados para siempre.                            | sort | uniq -c | sort -rn | head
+
+ Herramienta: code-maat (Adam Tornhill, Your Code as
+ a Crime Scene), o CodeScene.
+
+
+
+
+Microservicios (73.40)                                                                                    16
+
+===== PAGINA 17 =====
+
+ Seams #3 y #4: producción y personas
+ Datos de runtime
+     ¿Qué módulos tienen carga distinta? (el catálogo en Black Friday vs. la facturación)
+     ¿Cuáles tienen requisitos distintos de disponibilidad o latencia?
+     ¿Qué endpoints comparten tablas "calientes"? (APM, slow query log)
+
+ Organización
+     ¿Qué equipo es dueño de cada área? ¿Dónde se pisan dos equipos?
+     ¿Con qué frecuencia se cambia cada área? Lo que cambia seguido es lo que más se beneficia de un
+     deploy independiente.
+     ¿Qué parte cambia por razones distintas (regulación, marketing, operaciones)?
+
+
+
+
+Microservicios (73.40)                                                                                 17
+
+===== PAGINA 18 =====
+
+                                                                                    🧵 Hilo: extraer Notificaciones 2/7
+ ¿Cuál es el primer servicio?
+ Buscamos: bajo acoplamiento, valor visible,
+ riesgo bajo.                                             Poco acoplado · alto valor               Muy acoplado · alto valor
+                                                          Empezá por acá                           Más adelante, con
+     Buenos primeros candidatos: notificaciones,
+                                                                                                   experiencia
+     catálogo (mucho read), búsqueda, auth (si ya es un
+     módulo aparte).
+                                                          Poco acoplado · bajo valor               Muy acoplado · bajo valor
+     Malos primeros candidatos: pagos, órdenes —          Buen "piloto" de práctica                Dejalo en el monolito
+     centrales, muy acoplados y caros si fallan.
+                                                                Eje horizontal: facilidad de extracción · eje vertical: beneficio
+ El primer servicio no es para ganar mucho: es para
+ aprender el camino (pipeline, observabilidad,
+ rollback) con poco en juego.
+
+
+
+
+Microservicios (73.40)                                                                                                              18
+
+===== PAGINA 19 =====
+
+ Granularidad: cuidado con los nano-servicios
+ Un servicio demasiado chico es tan problemático como uno demasiado grande.
+     Síntoma: para resolver un caso de uso hacen falta 6 llamadas por red.
+     Síntoma: dos servicios siempre se despliegan juntos.
+     Síntoma: un servicio por entidad (UserService, AddressService, PhoneService).
+
+ Heurística: un servicio por bounded context (o por subdominio dentro de uno grande). Empezar más
+ grande y partir después es mucho más barato que juntar.
+ Juntar dos servicios implica migrar datos y reescribir contratos. Partir un módulo bien encapsulado, no.
+
+
+
+
+Microservicios (73.40)                                                                                      19
+
+===== PAGINA 20 =====
+
+                                                                                                  🧵 Hilo: extraer Notificaciones 3/7
+ Antes de extraer: tres puertas (gates)
+ Encontrar el acoplamiento no es lo mismo que tener un seam que se pueda cortar. Antes de sacar la tajada (la
+ funcionalidad a extraer) del proceso:
+ 1. Tests de caracterización sobre el borde público de esa tajada. El corte se permite cuando esos tests
+     siguen verdes (deck testing).
+ 2. Reorganizar adentro del monolito: el código pasa detrás de una interfaz local y el resto del sistema
+    llama a esa interfaz. El deployable no cambió. (Es el primer paso de Branch by Abstraction, que viene
+    enseguida.)
+ 3. Inventario de efectos laterales: lo que el grafo de paquetes no muestra — crons, listeners, mailers,
+    archivos, procesos batch enganchados al módulo.
+
+ Si un job nocturno o un listener se queda en el monolito, el servicio nuevo es media capacidad: el monolito
+ sigue escribiendo "sus" datos por atrás.
+ 🧵 En Notificaciones: tests sobre send() y los templates · todo detrás de una interfaz Notifier · y el inventario encuentra el cron de
+ reintentos y el mail del resumen semanal.
+
+
+
+
+Microservicios (73.40)                                                                                                                   20
+
+===== PAGINA 21 =====
+
+Patrones de migración
+incremental
+
+===== PAGINA 22 =====
+
+ Big-bang rewrite vs. incremental
+ Big-bang rewrite: "lo hacemos de nuevo, bien, y un     Incremental: extraer de a una funcionalidad, en
+ día cambiamos".                                        producción, con posibilidad de volver atrás.
+     El sistema viejo sigue cambiando mientras se         Valor entregado en cada paso.
+     reescribe: target móvil.                             Cada paso es chico, reversible y se puede frenar.
+     Efecto segundo sistema: el rewrite quiere            El monolito y los servicios conviven durante
+     arreglar todo y crece sin límite.                    meses (o años).
+     Cero valor entregado hasta el día del corte, que
+     casi siempre se atrasa.                               Si el paso no se puede revertir, es demasiado
+     El conocimiento escondido en el código viejo                            grande.
+     (bugs que son features) se pierde.
+
+
+
+
+Microservicios (73.40)                                                                                        22
+
+===== PAGINA 23 =====
+
+                                                                                    🧵 Hilo: extraer Notificaciones 4/7
+ Strangler Fig
+ Nombre tomado de una planta que crece alrededor
+                                                                              Clientes
+ de un árbol hasta reemplazarlo.
+ 1. Poner una capa de interceptación delante del
+    monolito (proxy, API Gateway).                                          Proxy / API
+                                                                             Gateway
+ 2. Implementar una funcionalidad en un servicio
+    nuevo.
+                                                           /notifications/*               todo lo demás
+ 3. Redirigir esa ruta al servicio nuevo. El resto sigue
+    yendo al monolito.
+ 4. Repetir. El monolito se achica.                        Servicio nuevo                    Monolito
+
+
+ El cliente no se entera: la URL es la misma.
+
+                                                              DB propia                   DB del monolito
+
+
+
+
+                                                                                              Fuente: Martin Fowler — StranglerFigApplication
+
+Microservicios (73.40)                                                                                                                    23
+
+===== PAGINA 24 =====
+
+                                                                                🧵 Hilo: extraer Notificaciones 5/7
+ Strangler Fig en la práctica
+ La capa de interceptación puede ser tan simple como               nginx.conf
+
+ un location de nginx.                                    upstream monolith      { server monolith:8080; }
+                                                          upstream notifications { server notifications:8000; }
+     Rollback: volver a apuntar la ruta al monolito. Es
+     un cambio de config, no de código.                   server {
+                                                            listen 80;
+     Gradual: con un gateway (Traefik, Kong, Envoy) se
+     puede mandar el 5% del tráfico primero.                  # Ya extraído → servicio nuevo
+                                                              location /api/notifications/ {
+     Lo mismo aplica para la UI: UI composition (micro-         proxy_pass http://notifications;
+     frontends) reemplaza de a una pantalla.                  }
+
+     La fachada es una tabla de rutas temporal:               # Todo lo demás → monolito
+                                                              location / {
+     reenvía, registra, permite volver. Si empieza a
+                                                                proxy_pass http://monolith;
+     acumular reglas de negocio, es un segundo                }
+     monolito.                                            }
+
+
+
+
+Microservicios (73.40)                                                                                               24
+
+===== PAGINA 25 =====
+
+                                                                                     🧵 Hilo: extraer Notificaciones 6/7
+ Branch by Abstraction
+ Para funcionalidad que se usa desde adentro del                        branch-by-abstraction.py
+
+ monolito (no hay ruta que interceptar).                         class Notifier(Protocol):
+                                                                     def send(self, user_id: str, msg: str) -> None: ...
+ 1. Crear una abstracción (interfaz) delante de la
+    funcionalidad actual.                                        class InProcessNotifier:          # código viejo, movido acá
+                                                                     def send(self, user_id, msg):
+ 2. Hacer que todo el monolito use la abstracción.                       smtp.send(lookup_email(user_id), msg)
+ 3. Escribir una segunda implementación que
+                                                                 class NotificationServiceClient: # nuevo
+    llama al servicio nuevo.                                         def send(self, user_id, msg):
+                                                                         http.post(f"{NOTIF_URL}/notifications",
+ 4. Cambiar de implementación (con un toggle).                                     json={"userId": user_id, "msg": msg})
+ 5. Borrar la implementación vieja… y, si no aporta, la
+                                                                 def get_notifier() -> Notifier:
+    abstracción.                                                     if flags.enabled("notifications-service"):
+                                                                         return NotificationServiceClient()
+ Todo en main, sin branches largos: el código nuevo                  return InProcessNotifier()
+ está desplegado pero apagado.
+ 🧵 La ruta HTTP ya la movió el Strangler; esto cubre lo que el
+ checkout y el cron llaman desde adentro.
+
+
+Microservicios (73.40)                                                                                                      25
+
+===== PAGINA 26 =====
+
+ Parallel Run y Dark Launching
+ Cuando equivocarse es caro (precios, impuestos, cálculo de riesgo), no basta con cambiar y rezar.
+     Parallel Run: cada request va a la implementación vieja y nueva. Se devuelve el resultado de la vieja; se
+     comparan y se registran las diferencias.
+     Dark launching: el servicio nuevo recibe tráfico real pero su respuesta no llega al usuario (tráfico
+     espejado).
+     Se cambia de implementación recién cuando las diferencias son cero (o explicadas).
+
+ Cuidado con los efectos secundarios:
+     Shadowing de una lectura (catálogo, una cotización) es seguro.
+     Shadowing de una escritura (mails, pagos, reservas de stock) manda, cobra o reserva dos veces: apagar el
+     efecto en la sombra (stubs) o usar clave de idempotencia (deck estado-distribuido-patterns).
+
+
+
+
+                                                                                                   Fuente: GitHub Scientist
+
+Microservicios (73.40)                                                                                                  26
+
+===== PAGINA 27 =====
+
+ Decorating Collaborator y CDC
+ Para agregar comportamiento nuevo sin tocar el          Decorating Collaborator
+ monolito.
+                                                          Cliente    →    Proxy       →     Monolito
+
+ Decorating Collaborator
+                                                                     ↳ si la respuesta es OK      →    Loyalty
+     Un proxy deja pasar la llamada al monolito y, con
+     la respuesta, dispara algo en un servicio nuevo.    Change Data Capture
+
+     Ej.: después de cada POST /orders exitoso, el        Monolito    →     DB        — WAL   →   Debezium
+
+     servicio de loyalty suma puntos.                                ↳ evento     →       Kafka   →    Servicio nuevo
+
+ Change Data Capture (CDC)
+                                                         En los dos casos, el monolito no se modifica: lo nuevo (en verde) se engancha
+                                                         desde afuera.
+     Se escucha el log de cambios de la DB del
+                         →
+     monolito (Debezium Kafka).
+     Cada INSERT en orders se convierte en un
+     evento que consume el servicio nuevo.
+
+
+
+Microservicios (73.40)                                                                                                                   27
+
+===== PAGINA 28 =====
+
+                                                                                🧵 Hilo: extraer Notificaciones 7/7
+ Feature toggles y canary releases
+ Separar el deploy del release.
+     Feature toggle: el código nuevo se despliega        Día 1 — 1% de los mails por el servicio nuevo, solo usuarios
+     apagado; se prende por config.                      internos
+
+     Canary release: el servicio nuevo recibe primero
+                                                         Día 3 — 10%, se miran errores, p99 y mails rebotados
+     el 1%, después el 10%, el 50%…
+     Si las métricas empeoran (errores, latencia), se    Día 7 — 50%
+     vuelve al 0%. Rollback en segundos, sin
+     deploy.                                             Día 10 — 100%, se borra InProcessNotifier
+
+ Trabajo on the fly: un pedido que empezó en el          En cualquier momento — 0% si algo se rompe
+ monolito termina en el monolito; solo el tráfico
+ nuevo va al servicio. Se drena, no se migran procesos
+ a mitad de camino.
+
+
+
+
+Microservicios (73.40)                                                                                                  28
+
+===== PAGINA 29 =====
+
+ Anti-Corruption Layer
+ Conviviendo con el monolito, el servicio nuevo                acl.py
+
+ hereda su modelo si no se cuida (flags de 2009,        # Monolito: CUST_MSTR con flags heredados
+ tablas de 80 columnas).                                def to_customer(row: dict) -> Customer:
+                                                            return Customer(
+     El ACL traduce, en el borde, el modelo del                 id=CustomerId(row["CUST_ID"]),
+                                                                email=row["EMAIL_ADDR"].strip().lower(),
+     monolito al lenguaje del nuevo contexto.                   tier=Tier.GOLD if row["FLG_VIP"] == "Y"
+     Cuando el monolito desaparece, se borra el ACL y                else Tier.STANDARD,
+                                                                active=row["STATUS_CD"] not in ("D", "X"),
+     el modelo interno queda intacto.                       )
+
+ Ojo: si el servicio llama sincrónicamente al
+ monolito en cada request, el acoplamiento pasó de la
+ DB a HTTP: un monolito distribuido formándose.
+
+
+
+
+Microservicios (73.40)                                                                                       29
+
+===== PAGINA 30 =====
+
+ ¿Qué patrón uso?
+    Situación                                                   Patrón
+
+    La funcionalidad se accede por una ruta HTTP desde afuera   Strangler Fig
+
+    La funcionalidad se usa desde adentro del monolito          Branch by Abstraction
+
+    Equivocarse es caro; necesito comparar resultados           Parallel Run / Dark launching
+
+    Quiero agregar algo sin tocar el monolito                   Decorating Collaborator, CDC
+
+    Quiero pasar tráfico de a poco y poder volver               Feature toggles, canary
+
+    El servicio nuevo tiene que hablar con el modelo viejo      Anti-Corruption Layer
+
+
+ No son excluyentes: una migración real usa varios a la vez.
+
+
+
+
+Microservicios (73.40)                                                                          30
+
+===== PAGINA 31 =====
+
+☕ Break — 10 min
+
+===== PAGINA 32 =====
+
+Separar los datos
+
+===== PAGINA 33 =====
+
+ La DB compartida: el acoplamiento más peligroso
+ Si el servicio nuevo lee y escribe las mismas tablas
+                                                            Monolito                 Servicio A              Servicio B
+ que el monolito:
+     Nadie puede cambiar un schema sin coordinar con
+     todos.
+                                                                                  DB compartida
+     No hay forma de saber quién es dueño de un
+     dato.
+     Las reglas de negocio se duplican (o se saltean) al   La DB es la API real del sistema, y nadie la diseñó como API.
+
+     escribir directo en la tabla.
+     Un deploy independiente no sirve de nada si el
+     schema no es independiente.
+
+ Eso es un monolito distribuido: todos los costos
+ de la red, ninguno de los beneficios.
+
+
+
+
+Microservicios (73.40)                                                                                                     33
+
+===== PAGINA 34 =====
+
+ ¿Qué va primero, el código o los datos?
+ Código primero                                        Datos primero
+     Extraer el servicio, que sigue usando la DB del     Separar el schema dentro del monolito; el código
+     monolito por un tiempo.                             sigue en el monolito.
+     ✅ Valor rápido, se aprende el pipeline.             ✅ Se descubren temprano los joins y
+     ❌ Riesgo de que "por un tiempo" sea para            transacciones que se rompen.
+     siempre.                                            ✅ Todavía es reversible y barato.
+     ❌ No descubrís los problemas de datos hasta el      ❌ Más tiempo sin un beneficio visible.
+     final.
+                                                       ¿Dudás de la frontera (joins, transacciones)? Datos
+                                                       primero. ¿Necesitás aprender el camino? Código
+                                                               primero, con fecha para los datos.
+
+
+
+
+Microservicios (73.40)                                                                                      34
+
+===== PAGINA 35 =====
+
+ Database View y Database Wrapping Service
+ Puentes temporales para dejar de acceder a las
+ tablas directamente.                                     Servicio nuevo                Otro servicio
+
+ Database View
+     Se expone una vista (solo lectura) con lo que el
+                                                             vista                       Wrapping
+     consumidor necesita.                                 v_customers                     Service
+     El monolito puede cambiar las tablas internas
+     mientras mantenga la vista.
+
+ Database Wrapping Service
+     Un servicio delante de las tablas: todos pasan por                    tablas del
+     su API.                                                                monolito
+     Aunque el schema sea horrible, al menos ahora
+     tiene un dueño y una interfaz.
+
+
+
+Microservicios (73.40)                                                                                  35
+
+===== PAGINA 36 =====
+
+ Split Table
+ Una tabla que usan dos contextos distintos (items
+ con precio y stock) se parte en dos: cada contexto se   items (antes)
+ queda con sus columnas.                                 sku · name · price · stock_qty · warehouse
+
+ 1. Identificar qué columnas le pertenecen a quién.
+                                                                                ↓
+ 2. Crear la tabla nueva y copiar los datos.
+ 3. Mover las lecturas, después las escrituras.          catalog.items              inventory.stock
+                                                         sku · name · price         sku · stock_qty ·
+ 4. Borrar las columnas viejas.
+                                                                                    warehouse
+
+ Si dos contextos escriben la misma columna, no hay
+ split posible: primero hay que decidir quién es el
+ dueño.
+ Es un caso de expand/contract: nunca un RENAME
+ in-place, que rompe al lado que todavía no desplegó.
+
+
+
+Microservicios (73.40)                                                                                  36
+
+===== PAGINA 37 =====
+
+ Move Foreign-Key Relationship to Code
+ Si orders.customer_id tiene una FK a customers,                migration.sql
+
+ y customers ahora vive en otro servicio, la FK no       -- Antes: una sola DB
+ puede cruzar bases de datos.                            ALTER TABLE orders
+                                                           ADD CONSTRAINT fk_customer
+     La relación se guarda como un ID sin constraint.      FOREIGN KEY (customer_id)
+                                                           REFERENCES customers(id);
+     La integridad se valida en código: consultando la
+     API del otro servicio, o con eventos                -- Después: orders en su propia DB
+                                                         ALTER TABLE orders
+     (CustomerDeleted).                                    DROP CONSTRAINT fk_customer;
+     Los joins pasan a hacerse en la aplicación, o se    -- customer_id queda como dato,
+     guarda una copia local de lo que se necesita        -- validado por el servicio de órdenes
+     (nombre, email).
+
+ Se pierde integridad referencial garantizada por la
+ DB. Hay que decidir qué pasa cuando el cliente se
+ borra: ¿se prohíbe, se anonimiza, se deja huérfana la
+ orden?
+
+Microservicios (73.40)                                                                            37
+
+===== PAGINA 38 =====
+
+ Sincronizar durante la transición: el problema del dual
+ write
+ Mientras monolito y servicio conviven, los dos           Soluciones:
+ necesitan los datos. Tentación: escribir en las dos        CDC con Debezium + Kafka: la DB que es
+ DBs.                                                       fuente de verdad publica sus cambios; la otra los
+  save_in_monolith_db(order)                                consume.
+  save_in_new_service_db(order)   # ¿y si falla esto?
+                                                            Transactional Outbox: el evento se escribe en la
+     No hay transacción que cubra las dos.                  misma transacción que el cambio.
+     Si se cae en el medio, las DBs divergen y nadie se     Una sola fuente de verdad en cada momento:
+     entera.                                                se decide explícitamente quién es dueño, y el otro
+     Es el mismo problema que vieron con DB + broker        es una réplica de solo lectura.
+     en async-patterns-kafka.
+
+
+
+
+Microservicios (73.40)                                                                                           38
+
+===== PAGINA 39 =====
+
+ Sincronización con CDC: el camino típico
+                                                                     Kafka
+       Monolito          escribe                 WAL   Debezium     topic:     ACL / traductor   Servicio nuevo
+                                   DB monolito                                                                    DB propia
+                                                                  orders.cdc
+
+
+
+ 1. Fase 1: el monolito es dueño; el servicio nuevo tiene una réplica vía CDC y solo lee.
+ 2. Fase 2: el servicio nuevo pasa a ser dueño; el monolito recibe los cambios de vuelta (CDC u Outbox)
+    mientras alguien lo siga usando.
+ 3. Fase 3: nadie lee del monolito; se borra la sincronización y las tablas viejas.
+
+
+
+
+Microservicios (73.40)                                                                                                        39
+
+===== PAGINA 40 =====
+
+ Rollback de datos y cuándo está terminado
+    Fase       Escribe                       Rollback
+
+    1          Monolito                      Dar vuelta la ruta
+                                                                  Terminado quiere decir:
+               Servicio nuevo; el monolito   Difícil: requiere
+    2
+               recibe copia                  reconciliar            La ruta y el módulo viejos están borrados.
+               Servicio nuevo; sin           Ya no hay vuelta       Hay un solo escritor por tabla.
+    3
+               sincronización                barata                 El usuario de DB del monolito ya no tiene grant
+                                                                    de escritura sobre esa tabla.
+     Un feature flag no revierte datos. Si la
+                                                                    El rollback se ensayó, no solo se escribió.
+     sincronización divergió, volver al monolito es leer
+     datos viejos. La reconciliación se define antes de           Una convención de "dejamos de escribir" no es un
+     entrar en la fase 2.                                         corte. El REVOKE sí.
+     No meter 2PC para "salvar" el corte: Sagas y
+     consistencia eventual (siguiente slide).
+
+
+Microservicios (73.40)                                                                                                40
+
+===== PAGINA 41 =====
+
+ Adiós ACID: Sagas y consistencia eventual
+ En el monolito, "crear orden + reservar stock +         Preguntas que hay que hacerle al negocio
+ cobrar" era una transacción. Separado, son tres         antes de separar:
+ DBs.                                                      ¿Cuánto tiempo puede estar inconsistente este
+     Saga: una secuencia de transacciones locales, con     dato?
+     compensaciones si algo falla.                         ¿Qué pasa si el stock se reservó pero el pago
+     Coreografía (eventos) vs. orquestación (un            falló?
+     workflow): lo vieron en sistemas-distribuidos         ¿Esta invariante tiene que ser inmediata? Si sí,
+     y async-patterns-kafka.                               quizás esos datos van en el mismo servicio.
+     El negocio tiene que aceptar estados
+     intermedios ("orden pendiente de pago").
+
+
+
+
+Microservicios (73.40)                                                                                        41
+
+===== PAGINA 42 =====
+
+ Reporting y joins entre servicios
+ El reporte que hacía un JOIN de 6 tablas ahora cruza 4 servicios. Opciones:
+     Composición por API: un servicio consulta a los demás y arma el resultado. Simple, pero lento y frágil
+     para volúmenes grandes.
+     CQRS / read models: cada servicio publica eventos; un servicio de reporting mantiene una vista
+     materializada optimizada para esa consulta.
+     Data warehouse / lake: CDC de todas las DBs hacia un almacén analítico. El reporting deja de ser
+     responsabilidad de los servicios operativos.
+
+ Regla: no se vuelve a abrir una conexión SQL "de solo lectura" a la DB de otro servicio. Es la DB compartida
+ otra vez, por la puerta de atrás.
+
+
+
+
+Microservicios (73.40)                                                                                          42
+
+===== PAGINA 43 =====
+
+Organización y operación
+
+===== PAGINA 44 =====
+
+ Conway inverso: primero los equipos
+ La ley de Conway dice que la arquitectura copia la
+ organización. El Inverse Conway Maneuver la usa
+ a favor: diseñar los equipos con la forma que se
+ quiere para la arquitectura.
+ Team Topologies (Skelton & Pais):
+                                                      Si 9 servicios los mantiene un equipo que coordina
+     Stream-aligned teams: dueños de un flujo de      todos los deploys, la arquitectura dice
+     negocio de punta a punta (catálogo, checkout).   "microservicios" pero la organización dice
+     Platform team: provee CI/CD, observabilidad,     "monolito".
+     infraestructura como un producto interno.
+                                                      Ganó la organización.
+     Enabling teams: ayudan a los demás a adoptar
+     prácticas nuevas.
+
+
+
+
+Microservicios (73.40)                                                                                     44
+
+===== PAGINA 45 =====
+
+ Lo que se complica en operación
+ Un bug que antes era un stack trace ahora cruza 4 servicios y 2 brokers.
+     Tracing distribuido y correlation IDs: sin ellos, cada incidente es arqueología (clase 11,
+     Observabilidad).
+     Contract testing: el monolito y los servicios nuevos cambian a ritmos distintos; los contratos se rompen
+     en silencio (deck testing). El monolito es el primer consumidor del contrato.
+     Service mesh: mTLS, retries, timeouts, mirroring de tráfico sin tocar el código (deck data-plane).
+     Fallas parciales: timeouts, circuit breakers, degradación elegante. En el monolito, "el otro módulo está
+     caído" no existía.
+     On-call: cada equipo es dueño de su servicio también a las 3 de la mañana.
+
+
+
+
+Microservicios (73.40)                                                                                          45
+
+===== PAGINA 46 =====
+
+ ¿Cómo sé que la migración funciona?
+ Métricas DORA — medir antes de empezar, y en       Métricas propias de la migración:
+ cada fase:                                            Deploys que requieren coordinar a más de un
+     Deploy frequency: ¿cada equipo despliega más      equipo: debería tender a cero.
+     seguido?                                          % del tráfico que ya no pasa por el monolito.
+     Lead time for changes: ¿cuánto tarda un           Tablas del monolito que todavía lee otro servicio.
+     commit en llegar a producción?                    Por tajada: delta de error rate vs. el monolito,
+     Change failure rate: ¿qué porcentaje de           lag del CDC, y si el rollback se ensayó.
+     deploys causa un incidente?
+     Time to restore (MTTR): ¿cuánto se tarda en    Si después de 6 meses el lead time es el mismo y los deploys siguen
+                                                    coordinados, la migración no está logrando su objetivo, aunque haya
+     recuperarse?                                   10 servicios nuevos.
+
+
+
+
+                                                                                                           Fuente: dora.dev
+
+Microservicios (73.40)                                                                                                  46
+
+===== PAGINA 47 =====
+
+ Anti-patterns de migración
+     Monolito distribuido: servicios que se despliegan juntos y comparten DB. Lo peor de los dos mundos.
+     DB compartida "por ahora": el "por ahora" más largo de la industria.
+     Librería compartida con lógica de dominio: un common-domain.jar que todos importan. Cambiar
+     una regla obliga a redesplegar a todos.
+     Llamadas sincrónicas encadenadas (chatty): una request del usuario dispara 12 llamadas en serie; la
+     disponibilidad total es el producto de todas.
+     Big-bang disfrazado: "migración incremental" que no pone nada en producción durante 8 meses.
+     Extraer sin sacar: el servicio nuevo existe, pero el código viejo sigue vivo en el monolito "por las dudas".
+     Ahora hay dos que mantener.
+
+
+
+
+Microservicios (73.40)                                                                                              47
+
+===== PAGINA 48 =====
+
+Taller grupal
+
+===== PAGINA 49 =====
+
+ Cómo funciona el taller
+ Grupos de 3–4 personas. Una sola hoja (o pizarrón) por grupo.
+ 1. Leer el caso (3 min): dos slides con la situación de MegaShop.
+ 2. Discutir en grupo (10 min): las preguntas clave, en orden. No hace falta tener todo: vale más una
+    respuesta defendida que cinco a medias.
+ 3. Puesta en común (7 min): cada grupo defiende un bloque de preguntas (lo asignamos ahora), en 90
+    segundos. Los demás intervienen solo si llegaron a algo distinto.
+
+ El producto final es un plan de migración en una hoja: qué se extrae primero, cómo, qué pasa con los
+ datos, y cómo se vuelve atrás.
+
+
+
+
+Microservicios (73.40)                                                                                  49
+
+===== PAGINA 50 =====
+
+ El caso MegaShop (1/2): la situación
+ MegaShop es un e-commerce de 7 años. Todo corre
+                                                        MegaShop — un solo proceso
+ en un solo deployable Java contra una base
+ PostgreSQL. Son 40 devs en 5 equipos, y sale un                Catálogo                     Carrito               Órdenes
+
+ release cada 3 semanas, un sábado a la mañana,                   Pagos                    Inventario              Usuarios
+ con un deploy manual que lleva 4 horas.
+                                                                                 Notificaciones · cron nocturno
+ El último Black Friday, el catálogo recibió 30× el
+ tráfico normal. El proceso se quedó sin memoria y se                                           ↓
+ cayó el checkout junto con todo lo demás: 3 horas
+                                                                           PostgreSQL
+ sin ventas.                                                                                                      Equipo de BI
+                                                        orders · order_items · inventory · users · products ·
+                                                                                                                  ← SQL directo
+ Además:                                                                     payments
+
+
+     El equipo de notificaciones espera 3 semanas
+     para cambiar un template de mail.
+     Un cambio en catálogo rompió pagos dos veces
+     este año.
+
+Microservicios (73.40)                                                                                                            50
+
+===== PAGINA 51 =====
+
+ El caso MegaShop (2/2): el pedido y las restricciones
+ El directorio le pidió al CTO: "pasar todo a
+ microservicios en 6 meses, antes del próximo
+ Black Friday". El CTO les pide a ustedes un plan.
+ Lo que encontraron al mirar el código y la base:       El pedido
+                                                        Todo a microservicios, en 6 meses.
+     Checkout es una transacción: crea la orden,
+     descuenta stock y registra el pago.
+                                                        El dolor real
+     orders tiene FK a users y a inventory.             Black Friday, releases coordinados, cambios que rompen a otro
+                                                        equipo.
+     Un cron nocturno dentro del monolito recalcula
+     el stock y manda los mails de "volvió a entrar".
+     El equipo de BI arma sus reportes con SQL          Lo que no se ve en el diagrama
+                                                        El cron, el SQL de BI, la transacción de checkout, el deploy
+     directo sobre la base de producción.               manual.
+     Hay tests unitarios, pero casi ningún test end-
+     to-end, y los logs quedan en cada servidor.
+
+
+Microservicios (73.40)                                                                                                  51
+
+===== PAGINA 52 =====
+
+ Preguntas clave (1/2): decidir y cortar
+ A. ¿Hay que migrar? ¿Así?
+ 1. ¿Qué problema de negocio resolvería la migración? ¿Es el mismo que pidió el directorio?
+ 2. ¿"Todo en 6 meses" es un plan incremental o un big-bang con otro nombre?
+ 3. ¿Qué prerrequisitos faltan antes de extraer el primer servicio?
+
+ B. ¿Dónde cortar?
+ 4. ¿Qué bounded contexts ven? ¿Coinciden con los módulos actuales?
+ 5. ¿Cuál es el primer servicio a extraer, y por qué (acoplamiento, valor, riesgo)?
+ 6. ¿El Black Friday se resuelve extrayendo un servicio, o alcanza con otra cosa?
+
+
+
+
+Microservicios (73.40)                                                                        52
+
+===== PAGINA 53 =====
+
+ Preguntas clave (2/2): cómo y con qué datos
+ C. ¿Cómo extraer?
+ 7. ¿Qué patrón usan para el primer servicio (Strangler Fig, Branch by Abstraction, …)? ¿Dónde va la capa de
+    interceptación?
+ 8. ¿Qué pasa con el cron nocturno? ¿A qué servicio le pertenece cada parte?
+
+ D. ¿Qué pasa con los datos?
+ 9. ¿Quién es dueño de orders, inventory y users? ¿Cómo se sincronizan mientras conviven?
+10. Sin la transacción de checkout: ¿qué estados intermedios va a ver el usuario, y qué se compensa si falla
+    el pago?
+11. ¿Qué hacen con el SQL directo de BI?
+
+ E. Roadmap: 3 fases, cada una con su riesgo principal, cómo se vuelve atrás y una métrica que diga si
+ funcionó.
+
+
+
+
+Microservicios (73.40)                                                                                         53
+
+===== PAGINA 54 =====
+
+ Puesta en común
+ Cada grupo defiende un bloque de preguntas, en 90 segundos:
+
+    Bloque                Qué tienen que defender
+
+    D. Datos              Dueño de cada tabla, sincronización, qué pasa sin la transacción de checkout
+
+    E. Roadmap            Las 3 fases, con riesgo, rollback y métrica
+
+    B. Dónde cortar       Contextos y primer servicio
+
+    C. Cómo extraer       Patrón y qué hacer con el cron
+
+    A. ¿Migrar?           Qué le responden al directorio
+
+
+ Los demás grupos: solo si llegaron a algo distinto.
+
+
+
+
+Microservicios (73.40)                                                                                   54
+
+===== PAGINA 55 =====
+
+Cierre
+
+===== PAGINA 56 =====
+
+ Ideas clave
+     Migrar es una decisión, no un destino. Primero el problema de negocio, después la arquitectura. El
+     monolito modular es una respuesta válida.
+     Las fronteras se descubren: DDD para el mapa, dependencias, historial de git y datos de producción
+     para contrastarlo.
+     Incremental y reversible: Strangler Fig, Branch by Abstraction, Parallel Run, toggles. Si el paso no se
+     puede revertir, es demasiado grande.
+     Los datos son la parte difícil: un dueño por dato, nada de DB compartida, CDC/Outbox para sincronizar,
+     Sagas donde se pierde ACID.
+     La organización manda: Conway inverso, equipos dueños de punta a punta, y métricas DORA para saber
+     si funciona.
+     Terminado = ruta vieja borrada, un solo escritor, grant revocado, rollback ensayado.
+
+
+
+
+Microservicios (73.40)                                                                                         56
+
+===== PAGINA 57 =====
+
+ Para seguir leyendo
+     Sam Newman, Monolith to Microservices (O’Reilly, 2019). Los capítulos 3 y 4 son la columna de esta
+     clase.
+     Martin Fowler, StranglerFigApplication, MonolithFirst y MicroservicePrerequisites.
+     Chris Richardson, microservices.io — patrones de descomposición y de datos.
+     Matthew Skelton & Manuel Pais, Team Topologies (IT Revolution, 2019).
+     Adam Tornhill, Your Code as a Crime Scene — análisis del historial de git.
+
+
+
+
+Microservicios (73.40)                                                                                    57
+
+===== PAGINA 58 =====
+
+Fin!!
+

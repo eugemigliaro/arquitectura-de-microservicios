@@ -63,6 +63,6 @@ Señales de un buen límite:
 - la consistencia transaccional fuerte cabe dentro de un aggregate y su contexto;
 - la integración exterior admite latencia y fallos parciales. [T03, p. 32]
 
-Antipatrones relacionados son los servicios por tabla, la base compartida, un shared kernel excesivo, un “PedidoService” global y adoptar sin ACL un modelo externo que contamina el core. [T03, p. 33]
+Antipatrones relacionados son los servicios por tabla, la base compartida, un shared kernel excesivo, un “PedidoService” global y adoptar sin ACL un modelo externo que contamina el core. [T03, p. 33] En la migración de un monolito, DDD sirve de mapa para descubrir fronteras implícitas y el ACL aísla al servicio nuevo del modelo heredado; ver [Del monolito a microservicios](del-monolito-a-microservicios.md). [T15, p. 14] [T15, p. 29]
 
 La estructura interna y el descubrimiento colaborativo de estos límites continúan en [DDD táctico y EventStorming](ddd-tactico-y-eventstorming.md). Para aplicar estos criterios, [Práctica de DDD](practica-ddd.md) distingue una resolución 2025 de un ejercicio abierto 2026; la [lectura complementaria](ddd-complementario.md) se mantiene separada por ser una fuente externa.

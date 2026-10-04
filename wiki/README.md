@@ -30,7 +30,7 @@
 - [Consigna general del trabajo práctico: Álbum 2026](temas/consigna-general-album-2026.md): relato del producto, alcance implementable y de solo diseño, invariante de oro, escenarios mínimos, CI/CD, escala y comparación con la consigna funcional.
 - [Requerimientos funcionales del Álbum 2026 (v1.1)](temas/entrega-album-2026.md): invariantes, RF/RNF, escenarios y rúbrica.
 - [Primera entrega TP1: análisis DDD del Álbum](temas/primera-entrega-album-ddd.md): alcance, estructura obligatoria, trazabilidad y rúbrica del primer avance.
-- [Segunda entrega TP1: arquitectura del Álbum](temas/segunda-entrega-album-arquitectura.md): documento de arquitectura en doce secciones, ADRs obligatorios, reglas de calidad, rúbrica y puntos a resolver.
+- [Segunda entrega TP1: arquitectura del Álbum](temas/segunda-entrega-album-arquitectura.md): documento de arquitectura en once secciones según la versión 1.2, despliegue en contenedores, ADRs obligatorios, reglas de calidad, rúbrica, cambios entre versiones y puntos a resolver.
 - [DDD moderno: lectura complementaria](temas/ddd-complementario.md): Event Modeling, arquitectura hexagonal, outbox, idempotencia y Data Mesh desde una fuente externa.
 
 ## Fuentes incorporadas
@@ -57,5 +57,6 @@
 | `E01` | *Requerimientos funcionales: Álbum de Figuritas Mundial 2026* — oficial, v1.1 | 7 | Consigna evaluada, invariantes, escenarios y condiciones de entrega |
 | `E02` | *Primera entrega TP1: análisis de dominio DDD del Álbum 2026* — oficial | — | Primer avance grupal, estructura de `docs/analisis-ddd.md`, alcance y rúbrica |
 | `E03` | *Consigna general del trabajo práctico: El álbum que se completa en comunidad* — oficial, v1.2 según el nombre del archivo | 13 | Relato del producto, alcance, preguntas de diseño, escenarios mínimos, CI/CD, un millón de usuarios y rúbrica |
-| `E04` | *Segunda entrega TP1: documentación de arquitectura del Álbum 2026* — oficial | — | Estructura de `docs/arquitectura.md`, ADRs, reglas de calidad y rúbrica |
+| `E04` | *Segunda entrega TP1: documentación de arquitectura del Álbum 2026* — oficial, sin número de versión; reemplazada por `E05` | — | Versión anterior: doce secciones, Kubernetes en AKS y observabilidad |
+| `E05` | *Segunda entrega TP1: documentación de arquitectura del Álbum 2026* — oficial, v1.2 | — | Estructura vigente de `docs/arquitectura.md`, despliegue en contenedores, ADRs, reglas de calidad, rúbrica y changelog |
 | `B01` | *Modern Domain-Driven Design Guide* — externa | 17 | Extensiones y patrones complementarios de DDD |

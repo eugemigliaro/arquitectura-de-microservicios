@@ -19,5 +19,6 @@ T12	teoria	Estado distribuido: patrones con Valkey	material/catedra/teoria/Estad
 T13	teoria	DevOps	material/catedra/teoria/devops.pdf	47	2026	vigente	devops.pdf
 T14	teoria	Comunicación asincrónica y Kafka	material/catedra/teoria/Comunicación Asincrónica y Kafka - Slidev.pdf	63	2026	vigente	Comunicación Asincrónica y Kafka - Slidev.pdf
 E03	consigna	Consigna general del trabajo práctico: El álbum que se completa en comunidad	material/catedra/practica/consigna-v1-2.pdf	13	2026	vigente-v1.2	consigna-v1-2.pdf
-E04	consigna	Segunda entrega TP1: documentación de arquitectura del Álbum 2026	material/catedra/practica/consigna-entrega-2.md		2026	vigente	consigna-entrega-2.md
+E04	consigna	Segunda entrega TP1: documentación de arquitectura del Álbum 2026	material/catedra/practica/consigna-entrega-2.md		2026	reemplazada-por-E05	consigna-entrega-2.md
 T15	teoria	Del monolito a microservicios	material/catedra/teoria/Del Monolito a Microservicios.pdf	58	2026	vigente	Del Monolito a Microservicios.pdf
+E05	consigna	Segunda entrega TP1: documentación de arquitectura del Álbum 2026, versión 1.2	material/catedra/practica/consigna-entrega-2-v1.2.txt		2026	vigente-v1.2	consigna-entrega-2-v1.2.txt

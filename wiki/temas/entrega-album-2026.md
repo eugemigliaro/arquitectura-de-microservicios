@@ -8,7 +8,7 @@ Esta síntesis sirve para localizar requisitos. Para implementar o verificar la 
 
 La [consigna general del trabajo práctico](consigna-general-album-2026.md) (`E03`) relata el mismo producto, pero difiere en puntos centrales: aparta la copia al publicar, deja el login real fuera de alcance y separa lo que se implementa de lo que solo se diseña. [E03, p. 4] [E03, p. 8] Las diferencias están comparadas en esa página y registradas en [Dudas y conflictos](../dudas-y-conflictos.md).
 
-La [primera entrega del TP1](primera-entrega-album-ddd.md) usa esta consigna como fuente de verdad, pero tiene un alcance distinto: pide exclusivamente análisis de dominio DDD y excluye implementación, arquitectura e infraestructura. [E02] La [segunda entrega](segunda-entrega-album-arquitectura.md) documenta la arquitectura. En ella esta consigna queda en segundo lugar de precedencia, detrás de la consigna general, y conserva la autoridad sobre requerimientos funcionales, reglas de negocio y escenarios de aceptación. [E04]
+La [primera entrega del TP1](primera-entrega-album-ddd.md) usa esta consigna como fuente de verdad, pero tiene un alcance distinto: pide exclusivamente análisis de dominio DDD y excluye implementación, arquitectura e infraestructura. [E02] La [segunda entrega](segunda-entrega-album-arquitectura.md) documenta la arquitectura. Su versión anterior ponía esta consigna en segundo lugar, detrás de la consigna general. [E04] La versión 1.2 la convierte en la fuente de verdad del producto y le exige a la arquitectura un lugar para cada RF-01 a RF-39. [E05]
 
 ## Lenguaje e invariantes de colección
 
@@ -74,11 +74,11 @@ Los 16 escenarios cubren: apertura normal y reintentada; intercambio 1:1; oferta
 
 Cada escenario debe poder reproducirse contra el ambiente entregado y demostrar ausencia de pérdidas, duplicados, negativos o reservas indefinidas. [E01, p. 6] [E01, p. 7]
 
-La consigna general tiene 15 escenarios con otra numeración para el 4, deja el 15 como solo diseño y no incluye el escenario sin sesión. La segunda entrega usa esa numeración. [E03, p. 10] [E03, p. 11] [E04] Ver la [tabla de correspondencia](consigna-general-album-2026.md#escenarios-mínimos).
+La consigna general tiene 15 escenarios con otra numeración para el 4, deja el 15 como solo diseño y no incluye el escenario sin sesión. La versión anterior de la segunda entrega usaba esa numeración. [E03, p. 10] [E03, p. 11] [E04] La versión 1.2 conserva sus títulos, pero toma a esta consigna como fuente. [E05] Ver la [tabla de correspondencia](consigna-general-album-2026.md#escenarios-mínimos).
 
 ## Condiciones no funcionales y entrega
 
-Los `RNF-01` a `RNF-06` son un gate: si no se cumplen, la entrega no se evalúa. Exigen un pipeline que compile y pruebe; despliegue a staging; ejecute integración como gate; y promueva a producción únicamente en AKS. El login debe usar credenciales reales de Google y no puede simularse con un `userId`. [E01, p. 6]
+Los `RNF-01` a `RNF-06` son un gate: si no se cumplen, la entrega no se evalúa. Exigen un pipeline que compile y pruebe; despliegue a staging; ejecute integración como gate; y promueva a producción únicamente en AKS. El login debe usar credenciales reales de Google y no puede simularse con un `userId`. [E01, p. 6] La versión 1.2 de la segunda entrega atribuye a esta consigna RNF de "despliegue en contenedores" con Docker y docker compose, que no coinciden con el AKS de esta versión; el conflicto está en [Dudas y conflictos](../dudas-y-conflictos.md). [E05]
 
 La entrega completa requiere:
 

@@ -6,12 +6,15 @@
 
 La [segunda entrega](segunda-entrega-album-arquitectura.md) nombra un archivo `consigna.md` como fuente de verdad del producto, el alcance, los escenarios mínimos, CI/CD y escala. [E04] **Inferencia:** ese archivo es `E03`, porque la segunda entrega cita secciones que aparecen con ese título en `E03`, como "Consideraciones adicionales: diseño para un millón de usuarios", "Preguntas que deberá responder el diseño" y "Preguntas adicionales". [E03, p. 9] [E03, p. 12] [E04]
 
+La versión 1.2 de la segunda entrega (`E05`) reemplaza a `E04` y ya no menciona `consigna.md`: toma a la consigna funcional como única fuente de verdad del producto. [E05] La consigna general sigue siendo el relato del producto, pero deja de ser insumo de la segunda entrega.
+
 | ID | Documento | Rol |
 |---|---|---|
 | `E03` | Consigna general | Producto, alcance, preguntas de diseño, escenarios mínimos, CI/CD, escala y rúbrica final |
 | `E01` | [Requerimientos funcionales v1.1](entrega-album-2026.md) | RF, reglas de negocio y 16 escenarios de aceptación |
 | `E02` | [Primera entrega](primera-entrega-album-ddd.md) | Análisis de dominio DDD |
-| `E04` | [Segunda entrega](segunda-entrega-album-arquitectura.md) | Documentación de arquitectura y ADRs |
+| `E04` | [Segunda entrega](segunda-entrega-album-arquitectura.md), versión sin número | Documentación de arquitectura y ADRs; reemplazada por `E05` |
+| `E05` | [Segunda entrega](segunda-entrega-album-arquitectura.md), versión 1.2 | Documentación de arquitectura y ADRs; vigente |
 
 `E03` y `E01` coinciden en gran parte, pero difieren en puntos que afectan el diseño: cuándo se aparta una copia, la autenticación, el alcance de implementación y la rúbrica. La [comparación](#comparación-con-la-consigna-funcional-v11) está al final de esta página y cada conflicto quedó registrado en [Dudas y conflictos](../dudas-y-conflictos.md).
 
@@ -107,7 +110,7 @@ Las catorce preguntas cubren:
 - cómo detecta un operador ofertas o reservas bloqueadas;
 - cómo se prueba el invariante de oro. [E03, p. 9]
 
-La sección 12.2 de la segunda entrega exige indicar qué parte del documento responde cada una. [E04]
+La versión anterior de la segunda entrega exigía, en su sección 12.2, indicar qué parte del documento responde cada una. [E04] La versión 1.2 reemplaza esa matriz por una de trazabilidad de los RF, RNF y escenarios de la consigna funcional. [E05]
 
 ## Escenarios mínimos
 
@@ -130,7 +133,7 @@ La sección 12.2 de la segunda entrega exige indicar qué parte del documento re
 | 15 | Último uso de un código, **solo diseño** | En `E01` debe implementarse |
 | — | No existe | `E01` 16: solicitud sin sesión válida |
 
-Fuentes: [E03, p. 9] [E03, p. 10] [E03, p. 11] [E01, p. 6]. La segunda entrega usa la numeración de `E03`. [E04]
+Fuentes: [E03, p. 9] [E03, p. 10] [E03, p. 11] [E01, p. 6]. La versión anterior de la segunda entrega usaba la numeración de `E03`. [E04] La versión 1.2 conserva sus títulos, pero toma a `E01` como fuente. [E05]
 
 ## Entregables y demostración
 
@@ -214,4 +217,4 @@ Fuente: [E03, p. 13]. No suma puntos agregar rankings, retos o códigos implemen
 
 Coinciden en las fórmulas de cantidades, la división entre consistencia fuerte y eventual, la carrera entre aceptación y cierre, el resultado real tras una respuesta perdida y el pipeline con gate de staging hacia AKS. [E03, p. 2] [E03, p. 7] [E03, p. 12] [E01, p. 2] [E01, p. 5] [E01, p. 6]
 
-Para la segunda entrega, `E04` fija la precedencia: `consigna.md` primero y la consigna funcional después. [E04] Ninguna fuente fija qué documento prevalece en la entrega final.
+Para la segunda entrega, `E04` fijaba la precedencia: `consigna.md` primero y la consigna funcional después. [E04] La versión 1.2 retira `consigna.md` y deja a la consigna funcional como fuente de verdad. [E05] Ninguna fuente fija qué documento prevalece en la entrega final.

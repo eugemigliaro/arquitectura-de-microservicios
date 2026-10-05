@@ -38,7 +38,7 @@ Evidencia: [T01, p. 7] [T01, p. 23] [T01, p. 24]. Hasta confirmar cuál es vigen
 
 La consigna específica del Álbum agrega otra diferencia relevante: la versión 1.1 declara obligatorios todos sus requerimientos, establece que los RNF son un gate sin el cual la entrega no se evalúa y exige que toda la funcionalidad sea demostrable. Esto no coincide de manera evidente con el umbral general de 70 % de requerimientos mencionado en `T01`; ambas versiones se conservan y el nuevo conflicto también queda registrado. [T01, p. 24] [E01, p. 1] [E01, p. 6] [E01, p. 7]
 
-La [consigna general del trabajo práctico](consigna-general-album-2026.md) suma una tercera formulación. Separa lo que se implementa de lo que solo se diseña, trata CI/CD con despliegue en AKS como condición previa y usa una rúbrica propia. [E03, p. 8] [E03, p. 13]
+La [consigna general del trabajo práctico](consigna-general-album-2026.md) suma una tercera formulación. Separa lo que se implementa de lo que solo se diseña, trata CI/CD con despliegue en AKS como condición previa y usa una rúbrica propia. [E03, p. 8] [E03, p. 13] Para el Álbum, un anuncio de la cátedra fijó que ante la duda rige la consigna funcional. [N-2026-10-04-criterio-consignas-tp-album] El régimen general de evaluación sigue sin confirmar.
 
 ## Cómo usar este mapa
 

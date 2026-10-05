@@ -6,7 +6,7 @@
 
 La [segunda entrega](segunda-entrega-album-arquitectura.md) nombra un archivo `consigna.md` como fuente de verdad del producto, el alcance, los escenarios mínimos, CI/CD y escala. [E04] **Inferencia:** ese archivo es `E03`, porque la segunda entrega cita secciones que aparecen con ese título en `E03`, como "Consideraciones adicionales: diseño para un millón de usuarios", "Preguntas que deberá responder el diseño" y "Preguntas adicionales". [E03, p. 9] [E03, p. 12] [E04]
 
-La versión 1.2 de la segunda entrega (`E05`) reemplaza a `E04` y ya no menciona `consigna.md`: toma a la consigna funcional como única fuente de verdad del producto. [E05] La consigna general sigue siendo el relato del producto, pero deja de ser insumo de la segunda entrega.
+La versión 1.2 de la segunda entrega (`E05`) reemplaza a `E04` y ya no menciona `consigna.md`: toma a la consigna funcional como única fuente de verdad del producto. [E05] La consigna general sigue siendo el relato del producto, pero deja de ser insumo de la segunda entrega. Un anuncio de la cátedra en el Campus fijó además que, ante la duda entre consignas, rige la consigna funcional. [N-2026-10-04-criterio-consignas-tp-album]
 
 | ID | Documento | Rol |
 |---|---|---|
@@ -217,4 +217,4 @@ Fuente: [E03, p. 13]. No suma puntos agregar rankings, retos o códigos implemen
 
 Coinciden en las fórmulas de cantidades, la división entre consistencia fuerte y eventual, la carrera entre aceptación y cierre, el resultado real tras una respuesta perdida y el pipeline con gate de staging hacia AKS. [E03, p. 2] [E03, p. 7] [E03, p. 12] [E01, p. 2] [E01, p. 5] [E01, p. 6]
 
-Para la segunda entrega, `E04` fijaba la precedencia: `consigna.md` primero y la consigna funcional después. [E04] La versión 1.2 retira `consigna.md` y deja a la consigna funcional como fuente de verdad. [E05] Ninguna fuente fija qué documento prevalece en la entrega final.
+Para la segunda entrega, `E04` fijaba la precedencia: `consigna.md` primero y la consigna funcional después. [E04] La versión 1.2 retira `consigna.md` y deja a la consigna funcional como fuente de verdad. [E05] El anuncio de la cátedra resuelve las diferencias de la tabla a favor de `E01`, también para la entrega final. [N-2026-10-04-criterio-consignas-tp-album]

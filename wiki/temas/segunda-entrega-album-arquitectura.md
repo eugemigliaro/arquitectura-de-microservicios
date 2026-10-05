@@ -13,7 +13,9 @@ Los insumos se aplican en este orden de precedencia: [E05]
 
 `E05` ya no menciona la [consigna general](consigna-general-album-2026.md) `consigna.md` (`E03`), que `E04` ponía primera. [E04] [E05] Así, la segunda entrega vuelve a la jerarquía de la primera, donde `E01` era la fuente de verdad del dominio. [E02]
 
-**Conflicto abierto.** `E05` atribuye a `E01` requerimientos no funcionales de "despliegue en contenedores", pero la `E01` v1.1 incorporada exige producción en un cluster de Kubernetes en AKS y no acepta la ejecución local con docker compose como entrega. [E05] [E01, p. 6] [E01, p. 7] Ver [Dudas y conflictos](../dudas-y-conflictos.md).
+**Despliegue.** `E05` atribuye a `E01` requerimientos no funcionales de "despliegue en contenedores", pero la `E01` v1.1 incorporada exige producción en un cluster de Kubernetes en AKS y no acepta la ejecución local con docker compose como entrega. [E05] [E01, p. 6] [E01, p. 7] Para esta entrega rige `E05`: contenedores con Docker y docker compose, según confirmó el usuario. *Inferencia:* la entrega final vuelve al AKS de `E01`. Ver [Dudas y conflictos](../dudas-y-conflictos.md).
+
+**Criterio de la cátedra.** Un anuncio del Campus fijó que, ante la duda entre consignas, rige la consigna funcional. Con eso, el alcance de implementación es completo y ninguna funcionalidad queda como "solo diseño". [N-2026-10-04-criterio-consignas-tp-album] El anuncio es contexto para el equipo: el documento de arquitectura se apoya en `E01` y `E05`, sin citarlo.
 
 La arquitectura **se deriva** del diseño entregado:
 
@@ -160,11 +162,11 @@ La entrega es grupal y se versiona en el repositorio del equipo; se espera que t
 
 Fuentes: [E04] [E05].
 
-## Puntos a resolver antes de redactar
+## Puntos aclarados y abiertos
 
-- **Contenedores o AKS.** `E05` impone contenedores con Docker y docker compose y los atribuye a la consigna funcional, pero `E01` v1.1 exige AKS como única forma de entrega. [E05] [E01, p. 6] [E01, p. 7] Puede existir una versión de la consigna funcional no incorporada. Hay que confirmarlo en el Campus o con la cátedra.
-- **Cuándo se aparta una copia.** Con `E01` como fuente de verdad rige su semántica: publicar no aparta, y el apartado empieza con la aceptación. [E01, p. 1] [E01, p. 2] [E05] La diferencia con `E03` deja de afectar a esta entrega, pero sigue abierta para la entrega final.
-- **Autenticación.** La §2 sigue pidiendo explicar cómo se reemplazan los sistemas externos simulados, pero `E01` exige Google real (RF-A01 a RF-A05, RNF-06). [E05] [E01, p. 2] [E01, p. 6]
-- **Numeración de escenarios.** `E05` nombra los escenarios con los títulos de `E03`, como "intercambio rechazado (escenario 4)" y "último uso concurrente de un código promocional (escenario 15)", pero toma a `E01` como fuente. Los números 1 a 15 coinciden en tema, salvo el 4: en `E01` son dos ofertas respaldadas por la misma copia, y una aceptación concurrente no la obtiene. `E01` agrega el 16, sin sesión válida. [E05] [E01, p. 6] [E03, p. 10] [E03, p. 11]
-- **"Solo diseño" sin lista.** `E05` sigue hablando de funcionalidades de solo diseño en la §5 y en los criterios, pero ya no dice cuáles son, porque esa lista venía de `consigna.md`. [E05] [E03, p. 8]
-- **"Una sola" decisión impuesta.** `E05` conserva esa frase y enumera dos: contenedores y CI/CD. La referencia a la sección 11.1 para los cambios del modelo ya está corregida. [E05] Ambos casos están en [Dudas y conflictos](../dudas-y-conflictos.md).
+- **Contenedores o AKS.** Resuelto para esta entrega: contenedores con Docker y docker compose, como impone `E05`. [E05] *Inferencia:* la entrega final exige AKS, por el criterio de la cátedra. [N-2026-10-04-criterio-consignas-tp-album]
+- **Cuándo se aparta una copia.** Rige `E01` en ambas entregas: publicar no aparta, y el apartado empieza con la aceptación. [E01, p. 1] [E01, p. 2] [N-2026-10-04-criterio-consignas-tp-album]
+- **Autenticación.** Rige Google real (RF-A01 a RF-A05, RNF-06). [E01, p. 2] [E01, p. 6] La §2 sigue pidiendo explicar cómo se reemplazan los sistemas externos simulados; el proveedor de identidad no es uno de ellos. [E05]
+- **Numeración de escenarios.** `E05` nombra los escenarios con los títulos de `E03`, como "intercambio rechazado (escenario 4)" y "último uso concurrente de un código promocional (escenario 15)", pero toma a `E01` como fuente. Los números 1 a 15 coinciden en tema, salvo el 4: en `E01` son dos ofertas respaldadas por la misma copia, y una aceptación concurrente no la obtiene. `E01` agrega el 16, sin sesión válida. [E05] [E01, p. 6] [E03, p. 10] [E03, p. 11] Con el criterio de la cátedra, rige la versión de `E01`. [N-2026-10-04-criterio-consignas-tp-album]
+- **"Solo diseño".** `E05` sigue hablando de funcionalidades de solo diseño en la §5 y en los criterios, sin decir cuáles son. [E05] [E03, p. 8] Con alcance completo ninguna queda fuera de la implementación; el flujo de retos y el escenario 15 se documentan porque `E05` los pide. [N-2026-10-04-criterio-consignas-tp-album]
+- **"Una sola" decisión impuesta.** Sigue abierto: `E05` conserva esa frase y enumera dos, contenedores y CI/CD. La referencia a la sección 11.1 para los cambios del modelo ya está corregida. [E05] Ver [Dudas y conflictos](../dudas-y-conflictos.md).

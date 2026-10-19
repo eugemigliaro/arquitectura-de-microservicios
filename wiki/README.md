@@ -27,6 +27,7 @@
 - [Estado distribuido y patrones con Valkey](temas/estado-distribuido.md): estado entre instancias, locks con fencing, semáforos, colas, cache, idempotencia, inbox, semánticas de entrega y streams.
 - [DevOps y CI/CD](temas/devops-y-ci-cd.md): ciclo DevOps, CI y CD, pull requests, pipelines en GitLab, estrategias de despliegue y shift-left.
 - [Del monolito a microservicios](temas/del-monolito-a-microservicios.md): cuándo migrar, monolito modular, seams, Strangler Fig, Branch by Abstraction, Parallel Run, separación de datos, CDC, Conway inverso, métricas DORA y taller MegaShop.
+- [Kubernetes — Parte 1](temas/kubernetes-parte-1.md): arquitectura del clúster, Pods, recursos y probes, controladores de workloads, reconciliación, API, ServiceAccounts y Namespaces.
 - [Consigna general del trabajo práctico: Álbum 2026](temas/consigna-general-album-2026.md): relato del producto, alcance implementable y de solo diseño, invariante de oro, escenarios mínimos, CI/CD, escala y comparación con la consigna funcional.
 - [Requerimientos funcionales del Álbum 2026 (v1.1)](temas/entrega-album-2026.md): invariantes, RF/RNF, escenarios y rúbrica.
 - [Primera entrega TP1: análisis DDD del Álbum](temas/primera-entrega-album-ddd.md): alcance, estructura obligatoria, trazabilidad y rúbrica del primer avance.
@@ -52,6 +53,7 @@
 | `T13` | *DevOps* — oficial | 47 | Ciclo DevOps, CI/CD, repositorios y PR, pipeline, despliegues y shift-left |
 | `T14` | *Comunicación asincrónica y Kafka* — oficial | 63 | Mensajería, EDA, Sagas coreografiadas y orquestadas, internals de Kafka y patrones de confiabilidad |
 | `T15` | *Del monolito a microservicios* — oficial | 58 | Decisión de migrar, seams, patrones incrementales, partición de la base, organización, métricas y taller MegaShop |
+| `T16` | *Kubernetes — Parte 1* — oficial | 57 | Plano de control y nodos, Pods, workloads, reconciliación, identidad, admisión y ámbito de recursos |
 | `P01` | *Ejercicio DDD: Pedidos — resolución* — oficial, ciclo 2025 | 16 | Fronteras, EventStorming y detalle por dominio |
 | `P02` | *Ejercicio de DDD: Huella* — oficial | 10 | Taller sin solución, entregables y rúbrica |
 | `E01` | *Requerimientos funcionales: Álbum de Figuritas Mundial 2026* — oficial, v1.1 | 7 | Consigna evaluada, invariantes, escenarios y condiciones de entrega |

@@ -132,3 +132,27 @@ Definiciones breves y enlaces al apunte donde se desarrolla cada término. Toda 
 | Value Object | Objeto sin identidad propia, definido por sus atributos y normalmente inmutable. [T03, p. 36] |
 | Volumen nombrado | Almacenamiento gestionado por Docker fuera de la unión OverlayFS y desacoplado del ciclo de vida del contenedor. [T08, p. 35] [T08, p. 37] |
 | Whiteout | Marca en la capa superior de OverlayFS que oculta un archivo de una capa inferior sin modificar esa capa. [T04, p. 21] [T05, p. 50] |
+
+## Kubernetes
+
+Ver [Kubernetes — Parte 1](temas/kubernetes-parte-1.md) para el desarrollo y las comparaciones.
+
+| Término | Definición |
+|---|---|
+| Pod | Unidad mínima administrada por Kubernetes: uno o más contenedores que se ejecutan en un mismo nodo; su reemplazo tiene otro UID. [T16, p. 10] |
+| Plano de control | Componentes que coordinan el estado deseado del clúster mediante la API. [T16, p. 6] [T16, p. 7] |
+| kubelet | Agente del nodo que observa los Pods asignados y mantiene sus contenedores en ejecución. [T16, p. 9] |
+| etcd | Almacén que persiste los datos de la API de Kubernetes. [T16, p. 8] |
+| Requests / limits | Demanda de recursos considerada al elegir nodo / restricciones durante la ejecución del contenedor. [T16, p. 16] |
+| Startup / readiness / liveness probe | Pruebas de arranque, preparación para tráfico y necesidad de reinicio, respectivamente. [T16, p. 20] |
+| Init container | Contenedor de preparación; los init comunes se ejecutan en orden y deben terminar con éxito antes de las aplicaciones. [T16, p. 17] |
+| Sidecar nativo | Auxiliar que permanece activo, declarado en `initContainers` con `restartPolicy: Always`. [T16, p. 17] |
+| Deployment | Recurso que gestiona ReplicaSets y actualizaciones declarativas; cambiar su template inicia un rollout. [T16, p. 26] [T16, p. 29] |
+| ReplicaSet | Mantiene una cantidad de Pods; cambiar su template no actualiza los existentes. [T16, p. 28] [T16, p. 29] |
+| StatefulSet | Mantiene identidad estable por Pod, con ordinal y nombre; puede crear PVCs propios mediante `volumeClaimTemplates`. [T16, p. 33] |
+| DaemonSet | Mantiene un Pod por nodo elegible según selector, afinidad y tolerations. [T16, p. 31] |
+| Job / CronJob | Tarea hasta completar éxitos previstos / creación programada de Jobs; CronJob exige tareas idempotentes ante posibles duplicados. [T16, p. 37] [T16, p. 38] |
+| Reconciliación | Bucle que compara estado observado y deseado y actúa para acercarlos; la convergencia no es instantánea ni incondicional. [T16, p. 40] [T16, p. 41] |
+| ServiceAccount | Identidad de una aplicación ante la API, separada de la autorización de sus permisos. [T16, p. 53] |
+| Admisión | Etapa posterior a autenticación y autorización que puede modificar o rechazar solicitudes antes de persistir el objeto. [T16, p. 54] |
+| Namespace de Kubernetes | Ámbito de nombres y organización de recursos; por sí solo no aísla seguridad ni red, y es distinto de un namespace de Linux. [T16, p. 13] [T16, p. 56] |

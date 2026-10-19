@@ -1,0 +1,1199 @@
+FUENTE: T16
+TITULO: Kubernetes — Parte 1
+ORIGINAL: material/catedra/teoria/Kubernetes - Parte 1 - Slidev.pdf
+PAGINAS: 57
+
+===== PAGINA 1 =====
+
+Arquitectura de Microservicios
+con Contenedores
+Docentes:
+
+- Ing. Federico Castañeda
+- Ing. Carlos Maceira
+- Ing. Franco Rupnik
+
+
+
+
+                            Microservicios (73.40) · ITBA
+
+===== PAGINA 2 =====
+
+Kubernetes (K8S)
+
+===== PAGINA 3 =====
+
+ Historia
+ Desarrollado inicialmente por Google, inspirado en
+ Borg, su sistema interno de administración de
+ contenedores.
+ Fue el primer proyecto alojado por la Cloud Native
+ Computing Foundation (CNCF), parte de la Linux
+ Foundation.
+ Kubernetes es la palabra griega para piloto o timonel
+ del barco.
+
+
+
+
+                                                         Arquitectura de Borg · Google, 2015
+
+ Fuente: CNCF · primer proyecto                                          Fuente: Google Research · Borg (2015), figura 1
+
+Microservicios (73.40)                                                                                                3
+
+===== PAGINA 4 =====
+
+ Software en CNCF (panorama histórico)
+
+
+
+
+ Captura histórica: consultá el panorama actualizado en CNCF Landscape.
+
+
+                                                                          Fuente: CNCF Landscape · panorama actual
+
+Microservicios (73.40)                                                                                          4
+
+===== PAGINA 5 =====
+
+ ¿Qué hace Kubernetes?
+ Kubernetes automatiza las tareas operativas de la administración de contenedores: despliega aplicaciones,
+ coordina sus actualizaciones y mantiene la cantidad deseada de réplicas.
+ También permite configurar escalado automático y comprobar el estado de las aplicaciones. Las métricas, el
+ almacenamiento de logs y otras funciones requieren componentes adicionales.
+
+
+                OPERACIONES                  ABSTRACCIÓN DE LA                        ESTADO DE LAS
+               AUTOMATIZADAS                 INFRAESTRUCTURA                          APLICACIONES
+
+
+
+
+Microservicios (73.40)                                                                                        5
+
+===== PAGINA 6 =====
+
+ Arquitectura de K8S
+ Un clúster tiene un plano de control que coordina el estado deseado y nodos de trabajo que ejecutan los Pods.
+                                                                                                      API Server
+                                                                                              api
+
+
+
+                                                                                                      Cloud Controller Manager (optional)
+                                                                                            c-c-m
+
+                                      Kubernetes cluster
+                                                                                                      Controller Manager
+                                                                                             c-m
+
+
+                                       Control Plane
+                                                                                                      etcd (persistence store)
+                                                                                             etcd
+                                                           c-m
+                                                                 Node
+
+
+                     Cloud provider         c-c-m                       kubelet   k-proxy             kubelet
+                          API                                                               kubelet
+
+
+
+                                                           api                                        kube-proxy
+                                                                                            k-proxy
+
+                                             etcd                Node
+
+                                                                                                      Scheduler
+                                                                        kubelet   k-proxy   sched
+
+                                                       sched
+
+                                                                                                      Node
+
+
+
+                                                                                                      Control Plane
+
+
+
+
+                                                                                                                          Fuente: Kubernetes · componentes
+
+Microservicios (73.40)                                                                                                                                  6
+
+===== PAGINA 7 =====
+
+ Plano de control
+ API server: expone la API de Kubernetes. Clientes y
+                                                         Control Plane
+ componentes coordinan el estado del clúster mediante
+ esta API.                                                               c-m
+
+
+ Scheduler: elige un nodo para cada Pod sin asignación        c-c-m
+
+ y registra la decisión en la API.
+ Controller manager: ejecuta controladores que                            api
+
+ reconcilian el estado observado con el deseado.
+                                                               etcd
+
+
+
+
+                                                                         sched
+
+
+
+
+                                                                         Fuente: Kubernetes · plano de control
+
+Microservicios (73.40)                                                                                      7
+
+===== PAGINA 8 =====
+
+ Estado y herramientas
+ etcd: persiste los datos de la API. Su disponibilidad y
+                                                           Control Plane
+ respaldo son críticos.
+                                                                           c-m
+ kubectl: cliente de línea de comandos para consultar y
+ modificar recursos mediante la API.                            c-c-m
+
+
+ kubeadm: inicializa clústeres, incorpora nodos y asiste
+ en su actualización.                                                       api
+
+
+ kubectl y kubeadm son herramientas, no componentes              etcd
+ permanentes del plano de control.
+                                                                           sched
+
+
+
+
+                                                                                   Fuente: Kubernetes · kubeadm
+
+Microservicios (73.40)                                                                                       8
+
+===== PAGINA 9 =====
+
+ Nodo de trabajo
+ kubelet: observa los Pods asignados mediante la API y
+                                                         Node
+ mantiene sus contenedores en ejecución.
+ Runtime CRI: ejecuta contenedores; por ejemplo,                kubelet   k-proxy
+ containerd o CRI-O.
+ Plugin CNI: configura la conectividad de los Pods.
+ kube-proxy: implementa reglas para Services; algunas
+ soluciones de red lo reemplazan.
+                                                         Node
+
+                                                                kubelet   k-proxy
+
+
+
+
+                                                                           Fuente: Kubernetes · runtimes CRI
+
+Microservicios (73.40)                                                                                    9
+
+===== PAGINA 10 =====
+
+ Pods en un nodo
+ El Pod es la unidad mínima que Kubernetes crea y
+                                                           Node
+ administra. Agrupa uno o más contenedores que se
+ ejecutan juntos en un mismo nodo.
+                                                                  kubelet   k-proxy
+ El scheduler asigna el Pod a un nodo; el kubelet de ese
+ nodo lo ejecuta.
+ Un Pod no migra entre nodos. Si hace falta
+ reemplazarlo, un controlador crea otro Pod, con una
+ nueva identidad (UID).                                    Node
+
+                                                                  kubelet   k-proxy
+
+
+
+
+                                                                            Fuente: Kubernetes · vida de un Pod
+
+Microservicios (73.40)                                                                                      10
+
+===== PAGINA 11 =====
+
+Workloads
+
+===== PAGINA 12 =====
+
+ Pods
+ Un Pod reúne contenedores de una misma aplicación
+ que necesitan trabajar estrechamente juntos.               Pod: mismo nodo
+ Comparten recursos de red y pueden montar             Red · IPC · hostname compartidos
+ volúmenes comunes. La especificación describe cómo
+ ejecutar cada contenedor.                            Contenedor A           Contenedor B
+                                                       PID propio             PID propio
+ El caso más habitual es un contenedor por Pod.
+                                                       raíz propia            raíz propia
+ Agregar más contenedores tiene sentido cuando
+ necesitan ese contexto compartido.
+                                                             Volumen compartido
+
+                                                          Compartir PID requiere opt-in
+
+
+
+
+                                                                                      Fuente: Kubernetes · Pods
+
+Microservicios (73.40)                                                                                      12
+
+===== PAGINA 13 =====
+
+ Contenedores en Linux
+ Un contenedor ejecuta procesos sobre el kernel del nodo.
+     Los namespaces de Linux aíslan vistas del sistema: procesos, red y montajes, entre otras.
+     Los cgroups controlan el uso de recursos, como CPU y memoria.
+     El filesystem raíz proviene de la imagen, con una capa escribible propia.
+
+ Estos mecanismos son complementarios: aislamiento y control de recursos.
+ Los namespaces del kernel no son los objetos Namespace de la API de Kubernetes.
+
+
+
+
+                                                                                                 Fuente: Kubernetes · contenedores
+
+Microservicios (73.40)                                                                                                         13
+
+===== PAGINA 14 =====
+
+ Pod en Kubernetes
+ Los contenedores comparten parte del contexto del Pod y conservan aislamiento propio.
+
+
+                                            Pod: mismo nodo
+                                       Red · IPC · hostname compartidos
+
+
+                                     Contenedor A            Contenedor B
+                                      PID propio              PID propio
+                                      raíz propia             raíz propia
+
+
+
+                                             Volumen compartido
+
+                                          Compartir PID requiere opt-in
+
+
+
+
+                                                                                         Fuente: Kubernetes · contexto del Pod
+
+Microservicios (73.40)                                                                                                     14
+
+===== PAGINA 15 =====
+
+ ¿Qué comparte un Pod?
+     Red: IP y puertos; comunicación por localhost.
+                                                              Pod: mismo nodo
+     IPC y hostname (UTS): normalmente compartidos.
+                                                         Red · IPC · hostname compartidos
+     Procesos (PID): separados por defecto; compartir
+     requiere shareProcessNamespace: true.
+                                                        Contenedor A           Contenedor B
+     Filesystem: raíz propia; volúmenes compartibles.
+                                                         PID propio             PID propio
+ Los UID/GID de los procesos se configuran con           raíz propia            raíz propia
+ securityContext.
+
+                                                               Volumen compartido
+
+                                                            Compartir PID requiere opt-in
+
+
+
+
+                                                                                Fuente: Kubernetes · compartir procesos
+
+Microservicios (73.40)                                                                                              15
+
+===== PAGINA 16 =====
+
+ Recursos del Pod
+ Por contenedor, se declaran CPU y memoria:
+     requests: demanda que el scheduler considera al          requests → elección del nodo
+     elegir un nodo.
+     limits: restricciones de ejecución; CPU puede sufrir
+     throttling y memoria, OOM.                                limits → control en ejecución
+
+ Linux aplica el control mediante cgroups; cgroup v2 es
+ la generación actual.
+                                                              CPU                    Memoria
+ El almacenamiento efímero se mide en bytes, no en          throttling             posible OOM
+ throughput. Disco y red no tienen campos estándar de
+ requests/limits para su velocidad.
+                                                                   Linux: cgroups (v2)
+
+
+
+
+                                                                                     Fuente: Kubernetes · requests y limits
+
+Microservicios (73.40)                                                                                                  16
+
+===== PAGINA 17 =====
+
+ Contenedores de un Pod
+ Aplicación: ejecutan la lógica principal; pueden iniciar              Inicio del Pod
+ en paralelo.
+ Init: preparan el entorno. Los init comunes se ejecutan      init 1                          init 2
+ en orden y deben terminar con éxito.
+ Sidecar nativo: auxiliar que permanece activo; se             Cada init debe terminar con éxito
+ declara en initContainers con restartPolicy:
+ Always.
+                                                            Aplicación A              Aplicación B
+ Efímero: se agrega a un Pod existente para depurar; no
+ se reinicia automáticamente.
+                                                            Aplicaciones: pueden iniciar en paralelo
+                                                                Sin orden de inicio garantizado
+
+
+
+
+                                                                                        Fuente: Kubernetes · init containers
+
+Microservicios (73.40)                                                                                                   17
+
+===== PAGINA 18 =====
+
+ Ciclo de vida del Pod
+                                       Pending                      Running
+
+
+
+
+                                                                  Succeeded
+
+
+                                        Failed                     Unknown
+
+                                           Unknown: estado no disponible
+
+                                                 Running ≠ Ready
+ Running no implica Ready: la aplicación puede no estar preparada para recibir tráfico.
+
+
+
+                                                                                          Fuente: Kubernetes · ciclo de vida
+
+Microservicios (73.40)                                                                                                   18
+
+===== PAGINA 19 =====
+
+ Fases del Pod
+     Pending: aceptado; espera asignación o preparación de contenedores, incluida la descarga de imágenes.
+     Running: asignado a un nodo; contenedores creados y al menos uno ejecutándose, iniciándose o reiniciándose.
+     Succeeded: todos finalizaron con éxito y no se reiniciarán.
+     Failed: todos terminaron; alguno falló y no se reiniciará.
+     Unknown: no se pudo obtener el estado, normalmente por un problema de comunicación con el nodo.
+
+ kubectl get pods muestra una columna STATUS: CrashLoopBackOff y Terminating no son fases del
+ Pod.
+
+
+
+
+                                                                                           Fuente: Kubernetes · fases y estados
+
+Microservicios (73.40)                                                                                                      19
+
+===== PAGINA 20 =====
+
+ Ciclo de vida de los contenedores
+ Los estados de un contenedor son Waiting, Running y                       Inicio del Pod
+ Terminated, distintos de la fase del Pod.
+ Las probes comprueban su salud:                                  init 1                        init 2
+     startup: comprueba el arranque; demora las otras
+     probes hasta que tenga éxito.                                 Cada init debe terminar con éxito
+     readiness: determina si está listo para recibir tráfico.
+     liveness: detecta cuándo reiniciarlo.
+                                                                Aplicación A              Aplicación B
+ Los init comunes completan la preparación antes de
+ iniciar las aplicaciones.                                      Aplicaciones: pueden iniciar en paralelo
+                                                                    Sin orden de inicio garantizado
+
+
+
+
+                                                                                                 Fuente: Kubernetes · probes
+
+Microservicios (73.40)                                                                                                   20
+
+===== PAGINA 21 =====
+
+ Lifecycle handlers
+ postStart puede ejecutarse junto con el ENTRYPOINT. El período de gracia comienza antes de preStop e
+ incluye el hook y el apagado del proceso.
+
+   apiVersion: v1
+   kind: Pod
+   metadata:
+     name: lifecycle-demo
+   spec:
+     terminationGracePeriodSeconds: 30
+     containers:
+     - name: web
+       image: nginx:1.30.5
+       lifecycle:
+         postStart:
+           exec:
+             command: ["/bin/sh", "-c", "echo iniciado > /tmp/post-start"]
+         preStop:
+           exec:
+             command: ["/bin/sh", "-c", "sleep 5"]
+
+
+
+                                                                                           Fuente: Kubernetes · hooks
+
+Microservicios (73.40)                                                                                            21
+
+===== PAGINA 22 =====
+
+ Init Container
+   apiVersion: v1
+   kind: Pod
+   metadata:
+     name: myapp-pod
+   spec:
+     containers:
+     - name: myapp-container
+       image: busybox:1.37.0
+       command: ["sh", "-c", "echo 'La app está en ejecución'; sleep 3600"]
+     initContainers:
+     - name: init-myservice
+       image: busybox:1.37.0
+       command:
+       - sh
+       - -c
+       - >-
+         until nslookup myservice;
+         do echo 'Esperando myservice'; sleep 2; done
+
+ El init espera que DNS resuelva myservice en el mismo namespace.
+
+                                                                              Fuente: Kubernetes · init containers
+
+Microservicios (73.40)                                                                                         22
+
+===== PAGINA 23 =====
+
+ Init Container · continuación
+   # Continúa la lista spec.initContainers del Pod anterior:
+     - name: init-mydb
+       image: busybox:1.37.0
+       command:
+       - sh
+       - -c
+       - >-
+         until nslookup mydb;
+         do echo 'Esperando mydb'; sleep 2; done
+
+ init-mydb comienza cuando init-myservice termina con éxito. La aplicación comienza después de ambos.
+ Resolver DNS demuestra que el nombre existe; no garantiza que el servicio o la base de datos estén listos.
+
+
+
+
+                                                                                       Fuente: Kubernetes · orden de inicialización
+
+Microservicios (73.40)                                                                                                          23
+
+===== PAGINA 24 =====
+
+ Pod Managers
+ En general, no creamos Pods aislados: declaramos recursos cuyos controladores gestionan su creación y
+ reemplazo.
+     Deployment / ReplicaSet: mantienen una cantidad de réplicas.
+     DaemonSet: ejecuta un Pod por nodo elegible.
+     StatefulSet: mantiene una identidad estable por Pod.
+
+
+
+
+                                                                                  Fuente: Kubernetes · controladores de workloads
+
+Microservicios (73.40)                                                                                                        24
+
+===== PAGINA 25 =====
+
+Pod Managers
+
+===== PAGINA 26 =====
+
+ Deployment
+ Un Deployment proporciona actualizaciones declarativas para Pods y ReplicaSets. Su controlador acerca el
+ estado observado al deseado.
+ Permite reemplazar progresivamente una versión de la aplicación por otra.
+ Un rollout se dispara cuando cambia .spec.template, por ejemplo, la imagen del contenedor. Cambiar sólo
+ .spec.replicas escala la aplicación sin iniciar un rollout.
+
+
+
+
+                                                                                       Fuente: Kubernetes · Deployment y rollout
+
+Microservicios (73.40)                                                                                                       26
+
+===== PAGINA 27 =====
+
+ Deployment · manifiesto
+   apiVersion: apps/v1
+   kind: Deployment
+   metadata:
+     name: nginx-deployment
+     labels:
+       app: nginx
+   spec:
+     replicas: 3
+     selector:
+       matchLabels:
+         app: nginx
+     template:
+       metadata:
+         labels:
+           app: nginx
+       spec:
+         containers:
+         - name: nginx
+           image: nginx:1.30.5
+           ports:
+           - containerPort: 80
+
+
+
+Microservicios (73.40)           27
+
+===== PAGINA 28 =====
+
+ ReplicaSet
+ Mantiene la cantidad deseada de Pods: crea los que
+ faltan y elimina los que sobran.
+ Identifica sus Pods mediante un selector de etiquetas y
+ las referencias de ownership.
+ Puede adoptar un Pod ajeno al template si coincide
+ con el selector y no tiene otro controlador propietario.
+
+
+
+
+                                                            Fuente: Kubernetes · ReplicaSet
+
+Microservicios (73.40)                                                                  28
+
+===== PAGINA 29 =====
+
+ Deployment vs ReplicaSet
+    Deployment                                    ReplicaSet
+
+    Gestiona los ReplicaSets de una aplicación.   Mantiene una cantidad de Pods.
+
+    Cambiar el template inicia un rollout.        El template se usa al crear nuevos Pods.
+
+    Coordina la sustitución entre versiones.      No actualiza los Pods existentes al cambiar su template.
+
+    Permite volver a una revisión anterior.       Crea o elimina Pods para alcanzar .spec.replicas.
+
+
+ Para desplegar una aplicación, normalmente usamos un Deployment.
+
+
+
+
+                                                                                             Fuente: Kubernetes · cuándo usar ReplicaSet
+
+Microservicios (73.40)                                                                                                               29
+
+===== PAGINA 30 =====
+
+ Plano de control y kubelet
+                                                                                 CLUSTER
+                                           CONTROL PLANE
+
+
+
+
+                                       cloud-controller-manager                                                                             CLOUD PROVIDER API
+
+
+
+
+                                                                                       Node 1                         Node 2
+                                   etcd             kube-api-server
+
+
+
+                                                                             kubelet       kube-proxy       kubelet            kube-proxy
+
+
+
+
+                                  scheduler        controller manager
+
+                                                                                pod             pod
+                                  kube-scheduler   kube-controller-manager
+                                                                                                                      pod
+
+                                                                                         pod
+
+                                                                                                      CRI                           CRI
+
+
+
+
+ Los objetos se gestionan mediante la API; el kubelet ejecuta sus contenedores, no los controladores.
+                                                                                                                                                 Fuente: Kubernetes · arquitectura del clúster
+
+Microservicios (73.40)                                                                                                                                                                     30
+
+===== PAGINA 31 =====
+
+ DaemonSet
+ Mantiene un Pod por nodo elegible para prestar un
+ servicio local al nodo.                                               DaemonSet
+ Al incorporarse un nodo elegible, crea un Pod; si uno
+ se elimina, lo repone.
+ La elegibilidad depende del selector, la afinidad y las    Nodo A                  Nodo B
+ tolerations. Puede incluir nodos de control plane si la    elegible                 elegible
+ configuración lo permite.
+                                                           Pod agente             Pod agente
+
+
+
+                                                               Nodo C no elegible: sin Pod
+
+
+
+
+                                                                                     Fuente: Kubernetes · DaemonSet
+
+Microservicios (73.40)                                                                                          31
+
+===== PAGINA 32 =====
+
+ DaemonSet
+ Ejemplos de servicios que necesitamos en cada nodo elegible:
+     Recolección de logs.
+     Monitoreo del nodo.
+     Agentes de red o seguridad.
+     Servicios de almacenamiento local.
+
+ Su cantidad de Pods depende de los nodos elegibles, no de un campo replicas.
+
+
+
+
+                                                                                Fuente: Kubernetes · usos de DaemonSet
+
+Microservicios (73.40)                                                                                             32
+
+===== PAGINA 33 =====
+
+ StatefulSet
+     Mantiene una identidad estable por Pod, incluso al reemplazarlo.
+     Cada Pod tiene un ordinal y un nombre: web-0, web-1, web-2.
+     Un Service headless proporciona la identidad de red estable.
+     Si configuramos volumeClaimTemplates, cada Pod obtiene sus propios PVCs para conservar su
+     almacenamiento.
+     La identidad pertenece al Pod; puede ejecutarse en otro nodo.
+
+
+
+
+                                                                                Fuente: Kubernetes · identidad en StatefulSet
+
+Microservicios (73.40)                                                                                                    33
+
+===== PAGINA 34 =====
+
+ Deployment vs StatefulSet vs DaemonSet
+                                        Deployment: cantidad de réplicas
+                                                        Deployment
+
+
+                                                  ReplicaSet · replicas: 3
+
+
+
+                         Pod intercambiable          Pod intercambiable            Pod intercambiable
+
+
+                              El scheduler elige los nodos; no hay una identidad ordinal estable.
+
+
+
+
+                                                                                                    Fuente: Kubernetes · Deployment
+
+Microservicios (73.40)                                                                                                          34
+
+===== PAGINA 35 =====
+
+ Deployment vs StatefulSet vs DaemonSet
+                                       StatefulSet: identidad estable por Pod
+                                                    StatefulSet · web
+
+
+
+                             web-0                        web-1                         web-2
+
+                           web-0.web                    web-1.web                    web-2.web
+
+
+                         PVC datos-web-0             PVC datos-web-1               PVC datos-web-2
+
+                               Almacenamiento ilustrado con volumeClaimTemplates (opcional).
+
+
+
+
+                                                                                                 Fuente: Kubernetes · StatefulSet
+
+Microservicios (73.40)                                                                                                        35
+
+===== PAGINA 36 =====
+
+ Deployment vs StatefulSet vs DaemonSet
+                                       DaemonSet: un Pod por nodo elegible
+                                                     DaemonSet · agente
+
+
+
+
+                         Nodo elegible A                 Nodo elegible B                   Nodo no elegible
+
+                          Pod agente                       Pod agente                    Sin Pod del DaemonSet
+
+
+
+
+                                    Elegibilidad: selector / afinidad y tolerations de los Pods.
+
+
+
+
+                                                                                                         Fuente: Kubernetes · DaemonSet
+
+Microservicios (73.40)                                                                                                              36
+
+===== PAGINA 37 =====
+
+ Job
+ Un Job ejecuta una tarea hasta alcanzar la cantidad prevista de finalizaciones exitosas.
+     .spec.completions: cantidad de Pods que deben terminar con éxito.
+     .spec.parallelism: cantidad de Pods que se solicita ejecutar en paralelo.
+
+ Por ejemplo: completions: 6 y parallelism: 2 solicitan seis finalizaciones, normalmente con hasta dos
+ Pods activos a la vez.
+ Los reintentos están limitados por .spec.backoffLimit; .spec.activeDeadlineSeconds permite limitar
+ el tiempo total.
+
+
+
+
+                                                                                            Fuente: Kubernetes · Jobs
+
+Microservicios (73.40)                                                                                            37
+
+===== PAGINA 38 =====
+
+ CronJob
+ Un CronJob crea Jobs según una programación con sintaxis cron.
+     .spec.schedule: cuándo ejecutar; .spec.timeZone: zona horaria, por ejemplo Etc/UTC.
+     .spec.concurrencyPolicy: permite ejecuciones simultáneas (Allow), evita solaparlas (Forbid) o
+     reemplaza la anterior (Replace) para ese CronJob.
+
+ La programación es aproximada: puede haber ejecuciones duplicadas u omitidas. La tarea debe ser idempotente:
+ repetirla no debe duplicar sus efectos.
+
+
+
+
+                                                                                            Fuente: Kubernetes · CronJobs
+
+Microservicios (73.40)                                                                                                38
+
+===== PAGINA 39 =====
+
+Reconciliation
+
+===== PAGINA 40 =====
+
+ Reconciliación
+ Los controladores comparan el estado observado con       El formato no determina
+ el deseado y actúan para acercarlos.                       si hay reconciliación
+ La convergencia necesita tiempo y puede verse
+ impedida por falta de recursos o errores.                        Deployment
+                                                              spec: estado deseado
+ Tener o no campos spec y status no determina si un         status: estado observado
+ recurso puede ser observado o gestionado por
+ controladores.
+                                                             ConfigMap / Secret
+                                                              data: configuración
+                                                      Pueden ser observados o gestionados
+                                                               por controladores
+                                                       Los controladores actúan sobre objetos.
+
+
+
+
+                                                                                   Fuente: Kubernetes · controladores
+
+Microservicios (73.40)                                                                                            40
+
+===== PAGINA 41 =====
+
+ Reconciliación
+                              Reconciliación: acercar lo observado a lo deseado
+
+
+
+                         Observar                        Comparar                             Actuar
+
+
+
+
+                               Deseado: 3 Pods · Observado: 2 → crear un reemplazo
+
+                            El ciclo continúa; la convergencia depende de que la acción sea posible.
+
+
+
+
+                                                                                                       Fuente: Kubernetes · bucle de control
+
+Microservicios (73.40)                                                                                                                   41
+
+===== PAGINA 42 =====
+
+ Proceso de reconciliación
+ 1. El controlador observa recursos a través de la API.
+ 2. Compara lo observado con el estado deseado.
+ 3. Solicita acciones mediante la API: crear, actualizar o eliminar recursos.
+ 4. Otros componentes realizan su parte y reportan lo observado.
+ 5. El ciclo se repite; los resultados no son instantáneos.
+
+ Cambiar un ConfigMap no inicia por sí solo un rollout del Deployment: para ello debe cambiar el template del
+ Pod.
+
+
+
+
+                                                                                    Fuente: Kubernetes · actualización de ConfigMaps
+
+Microservicios (73.40)                                                                                                           42
+
+===== PAGINA 43 =====
+
+ Proceso de reconciliación
+ Queremos tres Pods de nginx. Declaramos un Deployment con replicas: 3 y el template del Pod.
+ El Deployment controller gestiona un ReplicaSet, cuyo controlador crea los Pods necesarios. No tenemos que
+ crear el ReplicaSet manualmente.
+
+
+
+
+                                                                                            Fuente: Kubernetes · Deployment
+
+Microservicios (73.40)                                                                                                  43
+
+===== PAGINA 44 =====
+
+ Proceso de reconciliación · manifiesto
+   apiVersion: apps/v1
+   kind: Deployment
+   metadata:
+     name: nginx-deployment
+     labels:
+       app: nginx
+   spec:
+     replicas: 3
+     selector:
+       matchLabels:
+         app: nginx
+     template:
+       metadata:
+         labels:
+           app: nginx
+       spec:
+         containers:
+         - name: nginx
+           image: nginx:1.30.5
+           ports:
+           - containerPort: 80
+
+
+
+Microservicios (73.40)                    44
+
+===== PAGINA 45 =====
+
+ Proceso de reconciliación
+ Aplicamos el manifiesto y esperamos el despliegue:
+
+   kubectl apply -f nginx-deployment.yaml
+   kubectl rollout status deployment/nginx-deployment
+   kubectl get pods -l app=nginx
+
+ El primer comando guarda la intención. Los controladores crean los recursos y el kubelet pone en marcha sus
+ contenedores.
+
+
+
+
+                                                                                     Fuente: Kubernetes · desplegar una aplicación
+
+Microservicios (73.40)                                                                                                         45
+
+===== PAGINA 46 =====
+
+ Proceso de reconciliación · Pod → ReplicaSet
+ Seleccionamos un Pod del ejemplo y consultamos su controlador:
+
+   pod=$(kubectl get pods -l app=nginx \
+     -o jsonpath='{.items[0].metadata.name}')
+   kubectl get pod "$pod" -o json | \
+     jq '.metadata.ownerReferences[] | select(.controller == true)'
+
+ Extracto ilustrativo; los nombres y UID dependen del clúster:
+
+   {
+       "kind": "ReplicaSet",
+       "name": "nginx-deployment-<hash>",
+       "uid": "<uid-del-replicaset>",
+       "controller": true
+   }
+
+
+
+
+                                                                      Fuente: Kubernetes · owners y dependents
+
+Microservicios (73.40)                                                                                     46
+
+===== PAGINA 47 =====
+
+ Proceso de reconciliación · ReplicaSet → Deployment
+ Seguimos la referencia al ReplicaSet real:
+
+   rs=$(kubectl get pod "$pod" -o json | \
+     jq -r '.metadata.ownerReferences[] | select(.controller == true) | .name')
+   kubectl get rs "$rs" -o json | \
+     jq '.metadata.ownerReferences[] | select(.controller == true)'
+
+ Extracto ilustrativo:
+
+   {
+       "kind": "Deployment",
+       "name": "nginx-deployment",
+       "uid": "<uid-del-deployment>",
+       "controller": true
+   }
+
+
+
+
+                                                                                  Fuente: Kubernetes · cadena de ownership
+
+Microservicios (73.40)                                                                                                 47
+
+===== PAGINA 48 =====
+
+ Consistencia eventual
+ Al crear un Namespace, el plano de control también asegura que exista un ServiceAccount llamado default.
+ Estas acciones no forman una única operación instantánea: el ServiceAccount puede aparecer después de que la
+ creación del Namespace haya terminado.
+
+   kubectl create namespace fede-ns
+   kubectl get serviceaccounts -n fede-ns --watch
+   # Luego aparece el ServiceAccount default.
+   # Ctrl+C para dejar de observar.
+
+
+
+
+                                                                                   Fuente: Kubernetes · ServiceAccount controller
+
+Microservicios (73.40)                                                                                                        48
+
+===== PAGINA 49 =====
+
+ Consistencia eventual
+ 1. kubectl solicita crear el Namespace al API server, que lo persiste en etcd.
+ 2. El serviceaccount-controller observa el Namespace activo.
+ 3. Si falta default, solicita crear ese ServiceAccount mediante la API.
+ 4. La API lo persiste y las consultas posteriores pueden observarlo.
+
+ El estado del clúster converge mediante acciones asíncronas. Este intervalo no significa que etcd sea una base de
+ datos inconsistente.
+
+
+
+
+                                                                                          Fuente: Kubernetes · creación de default
+
+Microservicios (73.40)                                                                                                         49
+
+===== PAGINA 50 =====
+
+ Consistencia eventual
+ Consultamos los dos objetos después de la convergencia:
+
+   kubectl get namespace fede-ns -o json | \
+     jq '{kind, name: .metadata.name, phase: .status.phase}'
+   kubectl get serviceaccount default -n fede-ns -o json | \
+     jq '{kind, name: .metadata.name, namespace: .metadata.namespace}'
+
+ Salida ilustrativa:
+
+   {"kind":"Namespace","name":"fede-ns","phase":"Active"}
+   {"kind":"ServiceAccount","name":"default","namespace":"fede-ns"}
+
+ El ServiceAccount no necesita campos spec y status para ser gestionado por un controlador.
+
+
+
+
+                                                                           Fuente: Kubernetes · objetos gestionados por controladores
+
+Microservicios (73.40)                                                                                                            50
+
+===== PAGINA 51 =====
+
+Acceso a la API
+
+===== PAGINA 52 =====
+
+ De la API hasta el etcd
+                                        Creación o actualización aceptada
+
+
+             HTTPS       Autenticación       Autorización          Admisión           Validación /              Objeto
+                                                                    mutante            admisión                persistido
+             Solicitud    ¿Quién sos?       ¿Podés hacerlo?
+                                                                    Modifica           validante                  etcd
+
+                         Vista simplificada: se omiten conversión y valores por defecto (defaulting).
+                                 get / list / watch: sin admisión y sin persistencia de objetos.
+
+
+
+
+                                                                                                     Fuente: Kubernetes · acceso y admisión
+
+Microservicios (73.40)                                                                                                                  52
+
+===== PAGINA 53 =====
+
+ Service Accounts
+     Un ServiceAccount identifica a una aplicación para autenticarse ante la API; los permisos se autorizan por
+     separado.
+     Con RBAC, Role y RoleBinding conceden los permisos mínimos necesarios.
+     Un Pod sin cuenta explícita usa default de su namespace, creada por un controlador.
+     Por defecto, los Pods reciben tokens de corta duración, proyectados en un volumen y renovados
+     automáticamente.
+
+   kubectl get serviceaccounts -o wide
+   # NAME      SECRETS   AGE
+   # default   0         27h
+
+ SECRETS 0 es normal: desde 1.24 no se crean automáticamente Secrets con tokens permanentes.
+
+
+
+
+                                                                                      Fuente: Kubernetes · ServiceAccounts y tokens
+
+Microservicios (73.40)                                                                                                          53
+
+===== PAGINA 54 =====
+
+ Admission Controllers
+ Después de autenticar y autorizar una solicitud, la admisión puede modificarla o rechazarla antes de persistir el
+ objeto.
+     Mutante: modifica el objeto; por ejemplo, un webhook puede inyectar un sidecar.
+     Validante: comprueba reglas y puede rechazar el objeto, sin modificarlo.
+     Hay controladores integrados en el API server y extensiones mediante webhooks; también se pueden definir
+     políticas declarativas.
+
+ Se aplican a creación, modificación, eliminación y ciertas conexiones; get, list y watch no pasan por admisión.
+
+
+
+
+                                                                                            Fuente: Kubernetes · control de admisión
+
+Microservicios (73.40)                                                                                                           54
+
+===== PAGINA 55 =====
+
+ Manifiestos
+ Un manifiesto YAML o JSON describe un recurso. apiVersion indica la versión de su API y kind, el tipo de
+ objeto; no son la versión del clúster.
+
+   apiVersion: v1
+   kind: Pod
+   metadata:
+     name: nginx
+   spec:
+     containers:
+     - name: nginx
+       image: nginx:1.30.5
+       ports:
+       - containerPort: 80
+
+ v1 para Pods y apps/v1 para Deployments siguen vigentes.
+
+
+
+
+                                                                                      Fuente: Kubernetes · objetos y manifiestos
+
+Microservicios (73.40)                                                                                                       55
+
+===== PAGINA 56 =====
+
+ Namespaces
+ Un namespace organiza recursos y define un ámbito para sus nombres. No impone aislamiento de seguridad ni
+ de red por sí solo.
+     Pods, Services y PersistentVolumeClaims (PVC) pertenecen a un namespace.
+     Nodes y PersistentVolumes (PV) tienen alcance de clúster.
+
+   kubectl get namespaces
+   # NAME              STATUS   AGE
+   # default           Active   30m
+   # kube-node-lease   Active   30m
+   # kube-public       Active   30m
+   # kube-system       Active   30m
+
+ Estos son los cuatro namespaces iniciales; otros dependen de las aplicaciones y componentes instalados.
+
+
+
+
+                                                                                             Fuente: Kubernetes · Namespaces
+
+Microservicios (73.40)                                                                                                   56
+
+===== PAGINA 57 =====
+
+Fin!!
+

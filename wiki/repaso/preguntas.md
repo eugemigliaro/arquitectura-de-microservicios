@@ -232,6 +232,20 @@ Preguntas recuperables por tema. Mantener las respuestas separadas o plegadas cu
 166. ¿Qué métricas dicen si una migración funciona?
 167. Enumerá los anti-patterns de migración y explicá por qué "extraer sin sacar" duplica el costo.
 
+## Kubernetes — Parte 1
+
+168. ¿Qué hacen API server, scheduler, controller manager, etcd y kubelet? ¿Dónde intervienen CRI y CNI?
+169. ¿Qué comparten los contenedores de un Pod y qué conservan separado? ¿Un Pod migra entre nodos?
+170. Diferenciá requests y limits. ¿Qué ocurre al limitar CPU o memoria?
+171. Compará init común, sidecar nativo y contenedor efímero. ¿Resolver DNS prueba readiness?
+172. ¿Por qué Running no implica Ready? Diferenciá fases del Pod, estados de contenedor y probes.
+173. ¿Cuándo elegir Deployment, StatefulSet, DaemonSet, Job o CronJob?
+174. ¿Qué cambia al modificar replicas y qué al modificar el template de un Deployment? ¿Y un ConfigMap?
+175. Explicá la cadena Deployment → ReplicaSet → Pod y cómo verificarla con ownerReferences.
+176. ¿Por qué la aparición posterior del ServiceAccount default no prueba inconsistencia de etcd?
+177. Separá autenticación, autorización y admisión. ¿Qué sucede con get, list y watch?
+178. ¿Qué representa apiVersion y qué aislamiento aporta por sí solo un Namespace? Compará el alcance de PVC y PV.
+
 <details>
 <summary>Respuestas orientativas</summary>
 
@@ -403,6 +417,18 @@ Preguntas recuperables por tema. Mantener las respuestas separadas o plegadas cu
 165. Diseñar los equipos con la forma que se quiere para la arquitectura. Team Topologies define equipos stream-aligned, platform y enabling. [T15, p. 44]
 166. DORA (deploy frequency, lead time, change failure rate, MTTR) y métricas propias: deploys coordinados, porcentaje de tráfico fuera del monolito, tablas del monolito leídas por otros servicios y, por tajada, error rate, lag del CDC y rollback ensayado. [T15, p. 46]
 167. Monolito distribuido, base compartida "por ahora", librería compartida con lógica de dominio, llamadas sincrónicas encadenadas, big-bang disfrazado y extraer sin sacar. Si el código viejo sigue vivo "por las dudas", hay dos implementaciones que mantener. [T15, p. 47]
+
+168. La API coordina clientes y componentes; scheduler asigna nodo; controller manager reconcilia; etcd persiste; kubelet mantiene los contenedores asignados. El runtime CRI los ejecuta y CNI configura conectividad. [T16, p. 7] [T16, p. 8] [T16, p. 9]
+169. Comparten red/IP/puertos, normalmente IPC y hostname; PID está separado por defecto y cada raíz es propia, con volúmenes compartibles. No migra: se reemplaza por otro UID. [T16, p. 10] [T16, p. 15]
+170. Requests orientan al scheduler; limits restringen ejecución. CPU puede sufrir throttling y memoria, OOM; almacenamiento efímero mide bytes, no throughput. [T16, p. 16]
+171. Los init comunes preparan en secuencia y terminan con éxito; el sidecar nativo queda activo con restartPolicy Always dentro de initContainers; el efímero depura un Pod existente y no se reinicia automáticamente. DNS solo prueba que el nombre existe. [T16, p. 17] [T16, p. 23]
+172. Running describe ejecución, no preparación para tráfico. Las fases son Pending, Running, Succeeded, Failed y Unknown; los estados del contenedor, Waiting, Running y Terminated. Startup demora las otras probes, readiness decide preparación y liveness detecta necesidad de reinicio. [T16, p. 18] [T16, p. 19] [T16, p. 20]
+173. Deployment para réplicas y actualización declarativa; StatefulSet para identidad estable; DaemonSet para un Pod por nodo elegible; Job para finalizaciones exitosas; CronJob para programación, con tareas idempotentes por posibles duplicados. [T16, p. 26] [T16, p. 31] [T16, p. 33] [T16, p. 37] [T16, p. 38]
+174. Replicas escala; el template inicia rollout. Cambiar un ConfigMap por sí solo no cambia el template ni inicia rollout. [T16, p. 26] [T16, p. 42]
+175. El Deployment gestiona ReplicaSets y el ReplicaSet crea/elimina Pods; el kubelet ejecuta contenedores. ownerReferences con controller true permite seguir Pod → ReplicaSet → Deployment. [T16, p. 30] [T16, p. 43] [T16, p. 46] [T16, p. 47]
+176. Son operaciones asíncronas distintas: persistir Namespace, observarlo, solicitar crear la cuenta y persistirla. Convergencia del clúster no equivale a inconsistencia de etcd. [T16, p. 48] [T16, p. 49]
+177. Autenticación identifica, autorización permite la acción y admisión puede mutar o rechazar el objeto. get/list/watch no pasan por admisión ni persisten objetos. ServiceAccount es identidad; RBAC concede permisos aparte. [T16, p. 52] [T16, p. 53] [T16, p. 54]
+178. apiVersion es la versión de la API del recurso, no del clúster. Namespace delimita nombres y organiza, sin aislamiento de seguridad o red por sí solo; PVC es namespaced y PV tiene alcance de clúster. [T16, p. 55] [T16, p. 56]
 
 </details>
 

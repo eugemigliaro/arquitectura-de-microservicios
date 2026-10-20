@@ -43,3 +43,19 @@ Si la prueba es intrínseca a la imagen se define con `HEALTHCHECK` en el Docker
 El stack ilustrado conecta un proxy Nginx, un backend y MariaDB: el cliente entra por el puerto publicado del proxy; proxy y backend se comunican por HTTP; el backend espera la salud de la base y accede por SQL; un volumen conserva los datos y un secreto externo monta la contraseña en backend y base. [T07, p. 21]
 
 La configuración de MariaDB combina healthcheck, secreto, volumen y variables; el backend usa `depends_on: db: condition: service_healthy`, mientras el proxy depende del backend y monta su configuración como bind read-only. [T07, p. 22] [T07, p. 23]
+
+## Laboratorio: tres servicios con Compose
+
+`G02` arma el Compose de un gateway y dos backends FastAPI (`trips` y `airports`), cada uno con su Redis. Ver [Laboratorios de la cátedra](laboratorios-de-la-catedra.md). [G02]
+
+- **Configuración al crear el contenedor.** Las URLs y datos de conexión van en archivos `env_file` por servicio, no en el código ni en `ENV` del Dockerfile, que fijarían la configuración en la imagen y dificultarían usarla en otros ambientes. Los archivos con valores quedan fuera de git; la solución trae `*.env.example`. [G02] [G02-SOLUCION]
+- **Descubrimiento por nombre.** `TRIPS_URL=http://trips:8001` usa el nombre del servicio, que Compose resuelve por DNS en su red. [G02]
+- **Exposición mínima.** Solo el gateway publica un puerto en el host (`8000:8000`); los backends no. [G02]
+- **Arranque ordenado.** `depends_on` con `condition: service_healthy` exige healthchecks en `trips` y `airports` (un `urllib` de Python contra `/ping`) y en Redis (`redis-cli ping`). [G02]
+- **Redes segregadas.** Tres redes `internal`: `backend` para gateway y backends, y una por backend para hablar con su Redis. El gateway suma la red `default` para recibir tráfico. Así cada Redis solo es visible para su servicio; el gateway además está en `default`, la única red no interna. [G02]
+- **Watch.** `develop.watch` admite `sync`, `sync+restart` y `rebuild`. Se usa `sync+restart` para el código porque uvicorn, sin `--reload`, no recarga, y `rebuild` para `requirements.txt`. El desafío extra pide explicar por qué `--reload` con `sync` sirve en desarrollo y no en producción. [G02] [G02-SOLUCION]
+
+La [demo de capacidad](comunicacion-sincrona.md) agrega dos recursos del archivo Compose: [G10]
+
+- **`profiles`:** un servicio con perfil no arranca con un `docker compose up` sin más. Se pide con `--profile`; `docker compose run` activa el perfil del servicio y las dependencias de `depends_on` se activan solas. En la demo evita que dos experimentos compitan por CPU y puertos, y el perfil `tools` agrupa servicios que solo corren a demanda.
+- **YAML:** las claves `x-` son *extension fields* que Compose ignora; `&nombre` define un anchor, `*nombre` lo referencia y `<<:` copia sus claves, que lo declarado localmente pisa. La fusión es de un solo nivel: redeclarar `environment` reemplaza el heredado entero. `extends:`, en cambio, es un mecanismo propio de Compose y funciona entre archivos.

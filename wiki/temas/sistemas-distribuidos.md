@@ -74,3 +74,11 @@ El ejemplo visual, verificado sobre las láminas, recorre una venta con Kafka:
 3. `microservice-payment` registra `PAID` y publica `VALIDATED_PAYMENT`, que lleva la venta a `FINALIZED`. [T11, p. 38]
 
 Ante un fallo, el pago publica `PAYMENT_FAILED`; inventario hace `ROLLBACK` y publica `ROLLBACK_INVENTORY`; y la venta queda `CANCELED`. [T11, p. 39] Es una saga coreografiada con acciones compensatorias; *inferencia:* la alternativa a 2PC cuando se aceptan estados intermedios. Esta unidad no usa todavía la palabra saga, pero la unidad de comunicación asincrónica retoma el mismo flujo como Saga y lo contrasta con orquestación durable. [T14, p. 21] [T14, p. 28] Ver [Comunicación asincrónica y Kafka](comunicacion-asincrona-y-kafka.md).
+
+## Laboratorio: 2PC orquestado sobre Kafka
+
+`G07` implementa un 2PC: `checkout` es el coordinador y `payment`, `sale` e `inventory` son los participantes. El protocolo usa dos topics: en `checkout-events` el orquestador difunde los `prepare` y el commit o rollback; en `checkout-notifications` los participantes publican votos y ACKs. Se corre con `docker compose up` y una transacción se inicia con `POST /checkout`; Kafka UI, en `localhost:8090`, muestra los mensajes. [G07]
+
+Según el código del clon (`checkout/internal/service/checkout.go`), el coordinador persiste el checkout, inicia la fase de preparación y vigila un timeout. Con todos los votos registrados, commitea si todos votaron SÍ y aborta si alguno votó NO. Es la secuencia `Prepare` → votos → `Decision` → `Ack` de la teoría. [T11, p. 29] [T11, p. 34]
+
+*Inferencia de estudio:* pese al nombre de la carpeta, no es una saga orquestada con compensaciones como la de [Comunicación asincrónica y Kafka](comunicacion-asincrona-y-kafka.md), sino commit atómico con votos. El laboratorio coreografiado `G06` corre el flujo de la sección anterior, así que ambos permiten comparar las dos estrategias sobre el mismo dominio de venta, inventario y pago. [G06] [G07]

@@ -99,6 +99,17 @@ Un manifiesto YAML/JSON describe un recurso: `apiVersion` indica la versión de 
 
 Un Namespace organiza recursos y delimita sus nombres; por sí solo no impone aislamiento de seguridad ni de red. Pods, Services y PVC son namespaced; Nodes y PV tienen alcance de clúster. Los cuatro namespaces iniciales mostrados son `default`, `kube-node-lease`, `kube-public` y `kube-system`. [T16, p. 56]
 
+## Laboratorio: Minikube
+
+`G08` despliega una app Flask en un cluster local de Minikube y observa self-healing, réplicas y descubrimiento por DNS. Ver [Laboratorios de la cátedra](laboratorios-de-la-catedra.md). [G08]
+
+- **Un nodo, dos roles.** Con `--driver=docker`, el nodo es un contenedor de Docker, pero adentro los Pods corren con containerd: Kubernetes necesita imágenes OCI, no Docker. El único nodo es control plane y worker, y el control plane se ve como Pods en `kube-system`. [G08]
+- **Imágenes.** El cluster tiene su propio almacén de imágenes, así que la imagen se construye adentro con `minikube image build` o se copia con `minikube image load`. Si falta, el Pod queda en `ErrImagePull` o `ImagePullBackOff`; el Deployment usa `imagePullPolicy: IfNotPresent`. [G08]
+- **Deployment y Service.** El Deployment crea un ReplicaSet, que mantiene los Pods. Un Service `NodePort` publica el puerto 80 hacia el `targetPort` 5000; en macOS o WSL2, `minikube service --url` abre un túnel que queda corriendo. [G08] [T16, p. 43]
+- **DNS.** Desde un Pod de depuración, el Service responde por nombre corto porque el `search` del `resolv.conf` completa `<service>.<namespace>.svc.cluster.local`; desde otro namespace hay que usar el nombre completo. Es como se hablarán los microservicios en Kubernetes. [G08] [T17, p. 16]
+- **Self-healing.** Al borrar el Pod de la app, el ReplicaSet crea otro con otro nombre y el Service lo encuentra por label; el Pod de depuración, creado suelto, no vuelve. **El self-healing no es del Pod, es del controlador que lo administra.** [G08] [T16, p. 24]
+- **Desafíos.** Agregar una liveness probe y provocar reinicios, y hacer un rolling update con un tag nuevo sin downtime, con `kubectl rollout undo` después. [G08] [T16, p. 20] [T16, p. 26]
+
 ## Alcance pendiente
 
 Esta parte menciona Services, CNI y almacenamiento para explicar otras piezas, pero no desarrolla su configuración completa ni una instalación de clúster. Ese detalle no se deduce de los diagramas ni se agrega como contenido oficial. [T16, p. 9] [T16, p. 33] [T16, p. 56] Services, red y almacenamiento se desarrollan en [Kubernetes — Parte 2](kubernetes-parte-2.md). [T17]

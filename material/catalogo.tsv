@@ -24,3 +24,41 @@ T15	teoria	Del monolito a microservicios	material/catedra/teoria/Del Monolito a 
 E05	consigna	Segunda entrega TP1: documentación de arquitectura del Álbum 2026, versión 1.2	material/catedra/practica/consigna-entrega-2-v1.2.txt		2026	vigente-v1.2	consigna-entrega-2-v1.2.txt
 T16	teoria	Kubernetes — Parte 1	material/catedra/teoria/Kubernetes - Parte 1 - Slidev.pdf	57	2026	vigente	Kubernetes - Parte 1 - Slidev.pdf
 T17	teoria	Kubernetes — Parte 2	material/catedra/teoria/Kubernetes - Parte 2 - Slidev.pdf	54	2026	vigente	Kubernetes - Parte 2 - Slidev.pdf
+G00	indice	Repositorio de guías prácticas 2026 S2: índice	material/catedra/practica/guias-2026s2/README.md		2026	vigente	README.md
+G01	guia	Guía: construir contenedores paso a paso con Linux (clase 3)	material/catedra/practica/guias-2026s2/guias/linux-containers/README.md		2026	vigente	README.md
+G01-S01	guia	Guía Linux y contenedores — paso 1.1 chroot	material/catedra/practica/guias-2026s2/guias/linux-containers/step_01.md		2026	vigente	step_01.md
+G01-S02	guia	Guía Linux y contenedores — paso 1.2 mount namespace	material/catedra/practica/guias-2026s2/guias/linux-containers/step_02.md		2026	vigente	step_02.md
+G01-S03	guia	Guía Linux y contenedores — paso 1.3 pivot_root	material/catedra/practica/guias-2026s2/guias/linux-containers/step_03.md		2026	vigente	step_03.md
+G01-S04	guia	Guía Linux y contenedores — paso 2.1 PID namespace	material/catedra/practica/guias-2026s2/guias/linux-containers/step_04.md		2026	vigente	step_04.md
+G01-S05	guia	Guía Linux y contenedores — paso 2.2 PID y mount namespaces	material/catedra/practica/guias-2026s2/guias/linux-containers/step_05.md		2026	vigente	step_05.md
+G01-S06	guia	Guía Linux y contenedores — paso 3.1 network namespace	material/catedra/practica/guias-2026s2/guias/linux-containers/step_06.md		2026	vigente	step_06.md
+G01-S07	guia	Guía Linux y contenedores — paso 3.2 bridge y NAT	material/catedra/practica/guias-2026s2/guias/linux-containers/step_07.md		2026	vigente	step_07.md
+G01-S08	guia	Guía Linux y contenedores — paso 4.1 UTS namespace	material/catedra/practica/guias-2026s2/guias/linux-containers/step_08.md		2026	vigente	step_08.md
+G01-S09	guia	Guía Linux y contenedores — paso 4.2 IPC namespace	material/catedra/practica/guias-2026s2/guias/linux-containers/step_09.md		2026	vigente	step_09.md
+G01-S10	guia	Guía Linux y contenedores — paso 5.1 user namespace	material/catedra/practica/guias-2026s2/guias/linux-containers/step_10.md		2026	vigente	step_10.md
+G01-S11	guia	Guía Linux y contenedores — paso 5.2 user namespace con filesystem	material/catedra/practica/guias-2026s2/guias/linux-containers/step_11.md		2026	vigente	step_11.md
+G01-S12	guia	Guía Linux y contenedores — paso 6.1 cgroup v2	material/catedra/practica/guias-2026s2/guias/linux-containers/step_12.md		2026	vigente	step_12.md
+G01-S13	guia	Guía Linux y contenedores — paso 6.2 límites de memoria	material/catedra/practica/guias-2026s2/guias/linux-containers/step_13.md		2026	vigente	step_13.md
+G01-S14	guia	Guía Linux y contenedores — paso 6.3 límites de CPU	material/catedra/practica/guias-2026s2/guias/linux-containers/step_14.md		2026	vigente	step_14.md
+G01-S15	guia	Guía Linux y contenedores — paso 6.4 límites de I/O	material/catedra/practica/guias-2026s2/guias/linux-containers/step_15.md		2026	vigente	step_15.md
+G01-S16	guia	Guía Linux y contenedores — paso 7.1 capabilities	material/catedra/practica/guias-2026s2/guias/linux-containers/step_16.md		2026	vigente	step_16.md
+G01-S17	guia	Guía Linux y contenedores — paso 7.2 seccomp	material/catedra/practica/guias-2026s2/guias/linux-containers/step_17.md		2026	vigente	step_17.md
+G01-S18	guia	Guía Linux y contenedores — paso 8.1 OverlayFS	material/catedra/practica/guias-2026s2/guias/linux-containers/step_18.md		2026	vigente	step_18.md
+G01-S19	guia	Guía Linux y contenedores — paso 8.2 OCI y runc	material/catedra/practica/guias-2026s2/guias/linux-containers/step_19.md		2026	vigente	step_19.md
+G01-S20	guia	Guía Linux y contenedores — paso 9.1 script de contenedor completo	material/catedra/practica/guias-2026s2/guias/linux-containers/step_20.md		2026	vigente	step_20.md
+G01-S21	guia	Guía Linux y contenedores — paso 9.2 ciclo de vida	material/catedra/practica/guias-2026s2/guias/linux-containers/step_21.md		2026	vigente	step_21.md
+G02	guia	Guía: Dockerfile y Docker Compose (clase 4)	material/catedra/practica/guias-2026s2/guias/dockerfile-compose/README.md		2026	vigente	README.md
+G02-TEORIA	demo	Demo de teoría: imagen mínima FROM scratch	material/catedra/practica/guias-2026s2/guias/dockerfile-compose/demo-teoria/README.md		2026	vigente	README.md
+G02-SOLUCION	solucion	Guía Dockerfile y Docker Compose — solución	material/catedra/practica/guias-2026s2/guias/dockerfile-compose/solucion/README.md		2026	vigente	README.md
+G03	guia	Guía: pipelines de CI/CD con GitLab (clase 6)	material/catedra/practica/guias-2026s2/guias/cicd-pipelines/README.md		2026	vigente	README.md
+G04	guia	Guía: microservicio GraphQL con Apollo Server (clase 6)	material/catedra/practica/guias-2026s2/guias/graphql/README.md		2026	vigente	README.md
+G05-MONOREPO	guia	Laboratorio Redis patterns: prácticas de monorepo y CI	material/catedra/practica/guias-2026s2/guias/laboratorio-redis-patterns/docs/monorepo-practices.md		2026	vigente	monorepo-practices.md
+G05-LOCK	guia	Laboratorio Redis patterns: lock distribuido con Redlock (clase 7)	material/catedra/practica/guias-2026s2/guias/laboratorio-redis-patterns/services/distributed-lock/README.md		2026	vigente	README.md
+G05-CACHE	guia	Laboratorio Redis patterns: cache-aside con Valkey y GraphQL (clase 7)	material/catedra/practica/guias-2026s2/guias/laboratorio-redis-patterns/services/redis-cache-aside/README.md		2026	vigente	README.md
+G05-EVAL	guia	Laboratorio Redis patterns: evaluación de cache-aside	material/catedra/practica/guias-2026s2/guias/laboratorio-redis-patterns/services/redis-cache-aside/EVALUATE.md		2026	vigente	EVALUATE.md
+G06	guia	Laboratorio: saga coreografiada con Kafka (clase 7)	material/catedra/practica/guias-2026s2/guias/laboratorio-coreografia/README.md		2026	vigente-redactada	README.md
+G06-CONTEXTO	guia	Laboratorio saga coreografiada: contexto técnico	material/catedra/practica/guias-2026s2/guias/laboratorio-coreografia/CONTEXT.md		2026	vigente	CONTEXT.md
+G07	guia	Laboratorio: orquestación con 2PC sobre Kafka (clase 7)	material/catedra/practica/guias-2026s2/guias/laboratorio-orquestacion/README.md		2026	vigente	README.md
+G08	guia	Guía: fundamentos de Kubernetes con Minikube (clase 10)	material/catedra/practica/guias-2026s2/guias/k8s-fundamentos/README.md		2026	vigente	README.md
+G09	guia	Guía: Kubernetes en la nube, cluster AKS (clase 11)	material/catedra/practica/guias-2026s2/guias/k8s-aks/README.md		2026	vigente	README.md
+G10	demo	Demo: capacidad sincrónica vs. cola (clase 6)	material/catedra/practica/guias-2026s2/demos/capacidad-sync-async/README.md		2026	vigente	README.md

@@ -29,6 +29,8 @@
 - [Del monolito a microservicios](temas/del-monolito-a-microservicios.md): cuándo migrar, monolito modular, seams, Strangler Fig, Branch by Abstraction, Parallel Run, separación de datos, CDC, Conway inverso, métricas DORA y taller MegaShop.
 - [Kubernetes — Parte 1](temas/kubernetes-parte-1.md): arquitectura del clúster, Pods, recursos y probes, controladores de workloads, reconciliación, API, ServiceAccounts y Namespaces.
 - [Kubernetes — Parte 2](temas/kubernetes-parte-2.md): red del clúster, Services, kube-proxy, DNS, Ingress, Gateway API, NetworkPolicy, PV/PVC/StorageClass, Operators, ConfigMaps y Secrets.
+- [Kubernetes en AKS: el cluster del TP](temas/kubernetes-en-aks.md): costo, creación del cluster, control plane gestionado, LoadBalancer, Secret, PVC con Azure Disk, NetworkPolicy, Envoy Gateway y scripts `up.sh`/`down.sh`.
+- [Laboratorios de la cátedra](temas/laboratorios-de-la-catedra.md): mapa de guías y demos del repositorio de GitLab, herramientas, advertencias y diferencias entre documentos y código.
 - [Consigna general del trabajo práctico: Álbum 2026](temas/consigna-general-album-2026.md): relato del producto, alcance implementable y de solo diseño, invariante de oro, escenarios mínimos, CI/CD, escala y comparación con la consigna funcional.
 - [Requerimientos funcionales del Álbum 2026 (v1.1)](temas/entrega-album-2026.md): invariantes, RF/RNF, escenarios y rúbrica.
 - [Primera entrega TP1: análisis DDD del Álbum](temas/primera-entrega-album-ddd.md): alcance, estructura obligatoria, trazabilidad y rúbrica del primer avance.
@@ -64,3 +66,14 @@
 | `E04` | *Segunda entrega TP1: documentación de arquitectura del Álbum 2026* — oficial, sin número de versión; reemplazada por `E05` | — | Versión anterior: doce secciones, Kubernetes en AKS y observabilidad |
 | `E05` | *Segunda entrega TP1: documentación de arquitectura del Álbum 2026* — oficial, v1.2 | — | Estructura vigente de `docs/arquitectura.md`, despliegue en contenedores, ADRs, reglas de calidad, rúbrica y changelog |
 | `B01` | *Modern Domain-Driven Design Guide* — externa | 17 | Extensiones y patrones complementarios de DDD |
+| `G00` | *Repositorio de guías prácticas 2026 S2: índice* — oficial | — | Organización por tema, mapa clase → guía y prerrequisitos |
+| `G01`, `G01-S01`…`G01-S21` | *Construir contenedores paso a paso con Linux* — oficial, guía de la clase 3 | — | Índice y 21 pasos: namespaces, cgroups v2, capabilities, seccomp, OverlayFS, OCI y ciclo de vida |
+| `G02`, `G02-TEORIA`, `G02-SOLUCION` | *Dockerfile y Docker Compose* — oficial, guía de la clase 4 | — | Dockerfile endurecido, Compose con healthchecks, redes segregadas y watch; demo `FROM scratch`; solución |
+| `G03` | *Pipelines de CI/CD con GitLab* — oficial, clase 6 | — | Stages, plantillas, reglas por rama y tag, SAST; release y deploy simulados |
+| `G04` | *Microservicio GraphQL con Apollo Server* — oficial, clase 6 | — | Queries, mutations y subscriptions sobre datos mock |
+| `G05-LOCK`, `G05-CACHE`, `G05-EVAL`, `G05-MONOREPO` | *Laboratorio Redis patterns* — oficial, clase 7 | — | Redlock, cache-aside con negative caching, evaluación y monorepo con child pipelines |
+| `G06`, `G06-CONTEXTO` | *Saga coreografiada con Kafka* — oficial, clase 7; `G06` con una línea redactada | — | Flujo de venta, inventario y pago con compensaciones |
+| `G07` | *Orquestación con 2PC sobre Kafka* — oficial, clase 7 | — | Coordinador `checkout`, topics de prepare/decisión y de votos |
+| `G08` | *Fundamentos de Kubernetes con Minikube* — oficial, clase 10 | — | Imágenes en el cluster, Deployment, NodePort, DNS y self-healing |
+| `G09` | *Kubernetes en la nube: cluster AKS* — oficial, clase 11 | — | Cluster del TP: costo, control plane gestionado, LoadBalancer, PVC, NetworkPolicy, Gateway API y scripts |
+| `G10` | *Demo de capacidad: sincrónico vs. cola* — oficial, clase 6 | — | Código, calibración y resultados del experimento de sobrecarga |

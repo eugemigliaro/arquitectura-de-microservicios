@@ -81,3 +81,32 @@ La estrategia depende del riesgo aceptable y del impacto de negocio de un error 
 La seguridad es tan crítica como la disponibilidad: sus controles pueden integrarse al pipeline y bloquear el despliegue de módulos, imágenes, configuraciones o código inseguro. [T13, p. 44] Las técnicas concretas —linter, SAST, SCA y DAST— están en [Testing](testing.md). [T10, p. 20]
 
 **Shift-left** significa devolverle el error al desarrollador cuanto antes: un commit o merge dispara el pipeline con pruebas funcionales, de performance y de seguridad, y cualquier falla se avisa de inmediato. Hace responsable al desarrollador de resolver apenas surge el problema y reduce costos de operación al atacarlo antes de producción. [T13, p. 45]
+
+## Laboratorios de CI/CD
+
+### Pipeline de GitLab para tres servicios
+
+`G03` presenta un `.gitlab-ci.yml` para `microservice-sale`, `microservice-inventory` y `microservice-payment`, en Java 17 con Maven. Incluye las plantillas de GitLab de SAST y Dependency Scanning, y organiza el trabajo en las stages `test`, `build`, `package`, `release` y `deploy`. [G03]
+
+| Plantilla | Qué hace | Cuándo corre |
+|---|---|---|
+| `.maven-job` | Cache del repositorio local de Maven. [G03] | Base de otras plantillas. |
+| `.unit-test` | `./mvnw test` con reportes JUnit como artefacto. [G03] | Todos los commits salvo tags de versión. [G03] |
+| `.build` | `./mvnw package -DskipTests`; guarda los `.jar` 30 días. [G03] | Todos los commits. [G03] |
+| `.package` | Con `docker:dind`, construye la imagen, la etiqueta con `CI_COMMIT_SHA` y la sube al registry de GitLab. [G03] | Solo en la rama principal, sin merge requests ni tags. [G03] |
+| `.release` y `.deploy` | **Simulados:** imprimen el etiquetado (`latest` o el tag) y el `kubectl set image` que harían. [G03] | Rama principal o tag `vX.Y.Z`. [G03] |
+
+Cada servicio tiene sus jobs, que heredan de las plantillas con `extends` y se parametrizan con `SERVICE_NAME`; `release` y `deploy` declaran `needs` sobre el `package` de su servicio. Un commit en `main` corre el ciclo completo; en otra rama, solo test y build; un tag `vX.Y.Z`, build, release con ese tag y deploy. [G03]
+
+*Inferencia:* `E05` pide despliegue automático a staging, tests de integración allí como gate y promoción a producción solo si pasan. [E05] El pipeline del laboratorio no tiene ambiente de staging ni gate, y su release y deploy son simulados: sirve como modelo de estructura (plantillas, `rules`, `needs`), no como pipeline completo del TP.
+
+### Monorepo con CI por servicio
+
+`G05-MONOREPO` documenta el monorepo del laboratorio de Valkey. Cada servicio vive en `services/<nombre>/`, con su `pyproject.toml` (única ubicación de la configuración de pytest), su Dockerfile y un `docker-compose.yaml` con los servicios `builder` y `test`, que se corren igual en local y en CI. Cada servicio se construye de forma independiente. [G05-MONOREPO]
+
+| Job | Función |
+|---|---|
+| `compliance` | Corre una suite estructural rápida que valida la organización del repo; no construye imágenes. [G05-MONOREPO] |
+| `prepare-child-pipeline` | Compara el commit con la rama por defecto y genera un `child-pipeline.yml` solo con los servicios afectados. [G05-MONOREPO] |
+| `trigger-service-pipelines` | Dispara el child pipeline con `strategy: depend`, que propaga su resultado al padre. [G05-MONOREPO] |
+| `build:<servicio>` / `test:<servicio>` | Construye y guarda las imágenes como artefacto; el test las carga y corre `docker compose run --rm test`, con `needs` sobre su build. [G05-MONOREPO] |

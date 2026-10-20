@@ -189,6 +189,19 @@ El antecedente en Compose es el secreto montado en `/run/secrets/<nombre>`. Ver 
 | `environment` / `env_file` [T07, p. 10] | ConfigMap [T17, p. 41] | Las variables de entorno no se actualizan sin recrear el Pod. [T17, p. 48] |
 | `secrets` montados en `/run/secrets` [T07, p. 11] | Secret [T17, p. 49] | Sin cifrado *at rest* ni RBAC, quedan expuestos en etcd o a quien cree workloads. [T17, p. 50] [T17, p. 51] |
 
+## Laboratorio en AKS
+
+La guía de la clase 11 pone en práctica esta unidad en un cluster AKS y es la base del despliegue del TP. Ver [Kubernetes en AKS](kubernetes-en-aks.md). [G09]
+
+| Concepto | En el laboratorio |
+|---|---|
+| CNI overlay y reemplazo de kube-proxy [T17, p. 6] [T17, p. 15] | Azure CNI en modo overlay con dataplane Cilium. [G09] |
+| Service `LoadBalancer` [T17, p. 19] | El cloud controller crea una IP pública y una regla en el balanceador de Azure. [G09] |
+| Secret y Base64 [T17, p. 51] | La contraseña de Postgres se crea por CLI y se decodifica para mostrar que no está cifrada. [G09] |
+| StorageClass y `WaitForFirstConsumer` [T17, p. 35] | Un PVC sin clase crea un Azure Disk `ReadWriteOnce` en la zona del nodo del Pod. [G09] |
+| NetworkPolicy *default deny + allow* [T17, p. 26] | Postgres solo acepta Pods con `acceso-db=true`; Cilium aplica las reglas. [G09] |
+| Gateway API [T17, p. 23] | Envoy Gateway con la `GatewayClass` `eg`, un Gateway y una `HTTPRoute` por servicio. [G09] |
+
 ## Alcance pendiente
 
 `T01` ubicaba en la clase de configuración y acceso volúmenes, StatefulSets, Helm Charts, API gateways (Nginx/Traefik) y Secrets/ConfigMaps. `T17` cubre volúmenes, entrada con Ingress y Gateway API, ConfigMaps y Secrets, pero no desarrolla Helm ni HPA. [T01, p. 12] [T17] `T15` da por visto un deck `api-gateway` usado para interceptar y redirigir tráfico en un Strangler Fig. [T15, p. 5] *Inferencia:* `T17` presenta los recursos de entrada del clúster, pero no ese uso, así que no reemplaza aquel deck. Ver [Dudas y conflictos](../dudas-y-conflictos.md).

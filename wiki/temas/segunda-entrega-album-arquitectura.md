@@ -13,7 +13,7 @@ Los insumos se aplican en este orden de precedencia: [E05]
 
 `E05` ya no menciona la [consigna general](consigna-general-album-2026.md) `consigna.md` (`E03`), que `E04` ponía primera. [E04] [E05] Así, la segunda entrega vuelve a la jerarquía de la primera, donde `E01` era la fuente de verdad del dominio. [E02]
 
-**Despliegue.** `E05` atribuye a `E01` requerimientos no funcionales de "despliegue en contenedores", pero la `E01` v1.1 incorporada exige producción en un cluster de Kubernetes en AKS y no acepta la ejecución local con docker compose como entrega. [E05] [E01, p. 6] [E01, p. 7] Para esta entrega rige `E05`: contenedores con Docker y docker compose, según confirmó el usuario. *Inferencia:* la entrega final vuelve al AKS de `E01`. Ver [Dudas y conflictos](../dudas-y-conflictos.md).
+**Despliegue.** `E05` atribuye a `E01` requerimientos no funcionales de "despliegue en contenedores", pero la `E01` v1.1 incorporada exige producción en un cluster de Kubernetes en AKS y no acepta la ejecución local con docker compose como entrega. [E05] [E01, p. 6] [E01, p. 7] Para esta entrega rige `E05`: contenedores con Docker y docker compose, según confirmó el usuario. *Inferencia:* la entrega final vuelve al AKS de `E01`; la guía de la cátedra presenta ese cluster como el del TP. [G09] Ver [Dudas y conflictos](../dudas-y-conflictos.md) y [Kubernetes en AKS](kubernetes-en-aks.md).
 
 **Criterio de la cátedra.** Un anuncio del Campus fijó que, ante la duda entre consignas, rige la consigna funcional. Con eso, el alcance de implementación es completo y ninguna funcionalidad queda como "solo diseño". [N-2026-10-04-criterio-consignas-tp-album] El anuncio es contexto para el equipo: el documento de arquitectura se apoya en `E01` y `E05`, sin citarlo.
 
@@ -164,7 +164,7 @@ Fuentes: [E04] [E05].
 
 ## Puntos aclarados y abiertos
 
-- **Contenedores o AKS.** Resuelto para esta entrega: contenedores con Docker y docker compose, como impone `E05`. [E05] *Inferencia:* la entrega final exige AKS, por el criterio de la cátedra. [N-2026-10-04-criterio-consignas-tp-album]
+- **Contenedores o AKS.** Resuelto para esta entrega: contenedores con Docker y docker compose, como impone `E05`. [E05] *Inferencia:* la entrega final exige AKS, por el criterio de la cátedra. [N-2026-10-04-criterio-consignas-tp-album] La guía `G09` describe ese cluster y sus scripts. [G09]
 - **Cuándo se aparta una copia.** Rige `E01` en ambas entregas: publicar no aparta, y el apartado empieza con la aceptación. [E01, p. 1] [E01, p. 2] [N-2026-10-04-criterio-consignas-tp-album]
 - **Autenticación.** Rige Google real (RF-A01 a RF-A05, RNF-06). [E01, p. 2] [E01, p. 6] La §2 sigue pidiendo explicar cómo se reemplazan los sistemas externos simulados; el proveedor de identidad no es uno de ellos. [E05]
 - **Numeración de escenarios.** `E05` nombra los escenarios con los títulos de `E03`, como "intercambio rechazado (escenario 4)" y "último uso concurrente de un código promocional (escenario 15)", pero toma a `E01` como fuente. Los números 1 a 15 coinciden en tema, salvo el 4: en `E01` son dos ofertas respaldadas por la misma copia, y una aceptación concurrente no la obtiene. `E01` agrega el 16, sin sesión válida. [E05] [E01, p. 6] [E03, p. 10] [E03, p. 11] Con el criterio de la cátedra, rige la versión de `E01`. [N-2026-10-04-criterio-consignas-tp-album]

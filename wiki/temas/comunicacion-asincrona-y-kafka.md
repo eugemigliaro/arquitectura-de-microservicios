@@ -79,6 +79,19 @@ A medida que un flujo crece en pasos, la coreografía pura se vuelve difícil de
 
 Fuente de la tabla: [T14, p. 28].
 
+### Laboratorio: saga coreografiada con Kafka
+
+`G06` corre el mismo flujo de venta, inventario y pago con Kafka, adaptado de un proyecto público. Se levanta con `docker compose up --build` y cada venta se crea con un `POST /api/sales`; repetir más allá de 10 unidades vendidas dispara el flujo de falla. [G06]
+
+- **Stack.** Java 17 con Spring Boot 3, Kafka, MySQL (una sola instancia con un schema por servicio) y arquitectura hexagonal en cada microservicio. Kafka UI queda en `localhost:8090`. [G06-CONTEXTO]
+- **Un único topic** (`tp-saga-sale`) para todos los eventos. [G06-CONTEXTO]
+- **Flujo feliz:** `sale` publica `CREATED_SALE`; `inventory` reserva stock y publica `UPDATED_INVENTORY`; `payment` descuenta saldo y publica `VALIDATED_PAYMENT`; `sale` finaliza la venta. [G06-CONTEXTO]
+- **Compensaciones:** sin stock, `inventory` publica `ROLLBACK_INVENTORY`; si falla el pago, `payment` publica `FAILED_PAYMENT`, `inventory` repone el stock y publica `ROLLBACK_INVENTORY`, y `sale` marca la venta como `CANCELED`. [G06-CONTEXTO]
+
+La guía enumera como ventajas el desacoplamiento, la escalabilidad horizontal y la consistencia eventual, y como desventajas la complejidad de implementación, el seguimiento de mensajes asíncronos y las condiciones de carrera con alta concurrencia. [G06] El diagrama de falla y la teoría escriben `PAYMENT_FAILED`; el código usa `FAILED_PAYMENT`. [G06] [T11, p. 39] Ver [Laboratorios de la cátedra](laboratorios-de-la-catedra.md).
+
+*Inferencia de estudio:* con un único topic, cada servicio recibe todos los eventos y filtra los que le corresponden. Conviene contrastarlo con el anti-pattern del *god topic* y con los patrones de confiabilidad de esta unidad (outbox, inbox, idempotencia), que la guía del laboratorio no menciona. [T14, p. 59] Ver [Checklist y anti-patterns](#checklist-y-anti-patterns).
+
 ## Cómo funciona Kafka
 
 Kafka aparece cuando integrar sistemas a gran escala se vuelve un problema en sí mismo: los datos se intercambian continuamente, las integraciones punto a punto acoplan, productores y consumidores trabajan a ritmos distintos, y muchas aplicaciones deben reaccionar en tiempo real y conservar historial para reprocesar. [T14, p. 30]

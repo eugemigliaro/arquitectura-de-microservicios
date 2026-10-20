@@ -18,3 +18,6 @@ laboratorio/**/node_modules/
 
 # Repositorio Git independiente del TP1 grupal
 /entregas/tp1-album-figuritas/
+
+# Clon del repositorio de guías de la cátedra (se actualiza con git pull)
+/laboratorio/catedra-2026s2/

@@ -263,6 +263,23 @@ Preguntas recuperables por tema. Mantener las respuestas separadas o plegadas cu
 191. ¿Cómo se entera una aplicación de un cambio en su ConfigMap según cómo lo consume?
 192. ¿Por qué un Secret no es confidencial por sí solo? Enumerá los riesgos de acceso, almacenamiento y creación, y las buenas prácticas.
 
+## Laboratorios de la cátedra
+
+193. En la guía de contenedores a mano, ¿por qué un PID namespace necesita también un mount namespace? ¿Por qué `curl localhost` no llega a un puerto publicado solo con DNAT en `PREROUTING`?
+194. Recorré las mejoras del Dockerfile del laboratorio de Compose y explicá qué problema resuelve cada una: `WORKDIR`, `.dockerignore`, versiones pinneadas, orden de `COPY`, usuario no root y `HEALTHCHECK`.
+195. ¿Por qué el laboratorio de Compose pone la configuración en `env_file` y no en `ENV`? ¿Cómo logra que cada Redis solo sea visible para su servicio?
+196. ¿Qué etapas del pipeline del laboratorio de CI/CD son simuladas y qué le falta para cumplir lo que pide la segunda entrega?
+197. En el monorepo del laboratorio de Valkey, ¿para qué sirven el job `compliance` y el child pipeline?
+198. En la demo de capacidad, ¿por qué se usa carga closed-loop y por qué `CONCURRENCY` no cambia la capacidad? ¿Qué muestran los 1,83 intentos por completado?
+199. ¿Por qué la cola "destruye la contrapresión" y cuál es el criterio para elegir entre sync con bulkhead y retry o una cola?
+200. Explicá el Redlock del laboratorio: quórum, token, validez y liberación. ¿Qué protección de la teoría no implementa?
+201. ¿Qué hace el laboratorio de cache-aside ante un producto inexistente y ante Valkey caído? ¿Por qué con concurrencia `db_reads` puede ser mayor que 1?
+202. Compará los laboratorios de coreografía y orquestación: qué protocolo implementa cada uno, qué topics usan y qué pasa cuando falla el pago o un participante vota NO.
+203. En Minikube, ¿por qué el cluster no ve las imágenes de tu Docker local? ¿Por qué el Pod de depuración no vuelve al borrarlo?
+204. En AKS, ¿qué componentes del control plane ya no ves en `kube-system` y qué agentes aparecen? ¿Qué crea Azure ante un Service LoadBalancer, un PVC y un Gateway?
+205. ¿Por qué el disco de Postgres necesita `PGDATA` en una subcarpeta? ¿Por qué Postgres tarda más que `web` en volver tras un `drain`?
+206. ¿Qué archivos y credenciales del cluster del TP no pueden ir al repositorio y cómo se comparte el cluster con el grupo? ¿Por qué hace falta un seed de datos?
+
 <details>
 <summary>Respuestas orientativas</summary>
 
@@ -460,11 +477,26 @@ Preguntas recuperables por tema. Mantener las respuestas separadas o plegadas cu
 190. Un tipo propio registrado con un CRD y un controlador con la lógica de la aplicación. El controlador crea las instancias, ajusta replicación y configuración, reporta en `status` y repite hasta converger. [T17, p. 39] [T17, p. 40]
 191. Variables y argumentos no cambian hasta recrear el Pod; un volumen proyectado se actualiza eventualmente salvo con `subPath`; la aplicación debe releer el archivo; un cliente de la API puede observar cambios. Nada de esto dispara un rollout. [T17, p. 48] [T16, p. 47]
 192. Quien puede hacer get/list/watch, acceder a etcd o crear Pods del namespace puede leerlo; en etcd está sin cifrar salvo cifrado at rest; Base64 no cifra. Prácticas: cifrado at rest, RBAC mínimo, acceso limitado, rotación y no versionar credenciales reales. [T17, p. 50] [T17, p. 51] [T17, p. 52] [T17, p. 53]
+193. Sin un mount namespace propio, `/proc` sigue mostrando la vista del host, y montarlo de nuevo puede afectarlo. `PREROUTING` solo procesa paquetes que llegan de afuera; el tráfico originado localmente necesita una regla DNAT en `OUTPUT`. [G01-S05] [G01-S07] [T05, p. 21]
+194. `WORKDIR` evita trabajar en `/`; `.dockerignore` achica el contexto y evita meter `.env` en una capa; pinnear evita builds distintos entre integrantes; copiar `requirements.txt` primero preserva el cache de dependencias; el usuario 999 evita ejecutar como root; el healthcheck con Python reporta salud sin instalar herramientas. [G02]
+195. Para que la imagen no quede atada a un ambiente: la configuración se fija al crear el contenedor y los valores quedan fuera de git. Con redes `internal` separadas: una compartida entre gateway y backends y una por backend con su Redis. [G02]
+196. `release` y `deploy` solo imprimen los comandos. Le falta un ambiente de staging con tests de integración como gate antes de producción, que exige `E05`. [G03] [E05]
+197. `compliance` valida rápido la estructura del monorepo antes de construir; el child pipeline se genera con los servicios afectados por el cambio, así que solo esos se construyen y prueban. [G05-MONOREPO]
+198. Porque la espera del cliente fija la tasa de llegada y hace que el retry tenga sentido; con la CPU como cuello de botella, `μ` depende de los cores y del trabajo por request, no de cuántos pedidos están en vuelo. El 1,83 dice cuánto hay que insistir en la práctica: es el dato para fijar `maxAttempts`. [G10]
+199. Porque responde 202 de inmediato: el cliente ya no espera, los 100 pedidos entran juntos y el backlog se muda al broker. Si quien llama necesita la respuesta, conviene acotar admisión y reintentar; la cola gana cuando nadie espera. [G10]
+200. `SET NX PX` con un UUID v7 en tres masters, lock con al menos dos; validez = TTL − transcurrido − drift, verificada antes de la sección crítica; liberación por Lua solo si coincide el token. No usa fencing tokens verificados por el recurso. [G05-LOCK] [T12, p. 11]
+201. Devuelve `null` y cachea `{"_absent":true}` con TTL; si Valkey falla, responde desde PostgreSQL y cuenta la falla. Con el cache frío, varias solicitudes concurrentes fallan antes de que el primer resultado se guarde. [G05-CACHE] [G05-EVAL]
+202. Coreografía: saga por eventos en un topic único; si falla el pago, inventario repone stock y la venta queda `CANCELED`. Orquestación: 2PC con `checkout-events` para prepare y decisión, y `checkout-notifications` para votos y ACKs; con un NO, el coordinador aborta. [G06-CONTEXTO] [G07] [T11, p. 29]
+203. Minikube tiene su propio almacén de containerd, así que hay que construir con `minikube image build` o cargar la imagen. El Pod de depuración no tiene un controlador que declare que debe existir. [G08]
+204. No están etcd, apiserver, scheduler, controller-manager ni kube-proxy; aparecen `konnectivity-agent`, `cloud-node-manager`, drivers CSI y Cilium. LoadBalancer → IP pública y regla en el balanceador; PVC → Azure Disk; Gateway → IP pública del proxy de Envoy. [G09]
+205. Un disco nuevo trae `lost+found` y Postgres no inicializa en un directorio no vacío. *Inferencia:* el Azure Disk es `ReadWriteOnce` y debe desengancharse del nodo viejo antes de engancharse en el nuevo. [G09] [T17, p. 31]
+206. `terraform.tfstate`, el kubeconfig, los deploy tokens y las contraseñas. El kubeconfig se comparte por un canal privado, o cada integrante levanta su cluster. El disco se borra al destruir el cluster, así que los datos de prueba deben poder recrearse. [G09]
 
 </details>
 
 ## Casos para practicar sin respuesta única
 
+- Tomá los manifiestos de la guía de AKS como punto de partida para el Álbum: listá qué `HTTPRoute` agregarías al Gateway, qué servicios necesitan base y cómo cambia la NetworkPolicy de Postgres, qué Secrets crea el script del grupo y qué seed necesitás para que la demo sobreviva a un `down.sh`. [G09] [E01, p. 6]
 - Para el despliegue del Álbum en un clúster, decidí qué Services son ClusterIP o headless, cuál es el único punto de entrada (Ingress o Gateway API), qué NetworkPolicies de *default deny + allow* hacen falta, qué datos van en PVC con qué modo de acceso y reclaim policy, y cómo llegan configuración y credenciales sin versionarlas. [E01, p. 6] [T17, p. 17] [T17, p. 23] [T17, p. 26] [T17, p. 31] [T17, p. 52]
 - Una fintech entrega semanalmente con seis equipos; un sistema interno cambia dos veces al año con un equipo de cuatro; un catálogo recibe cien veces más tráfico que checkout; una startup de tres personas construye su MVP. Elegí arquitectura y justificá por equipo, releases y escalado. [T02, p. 30]
 - Elegí `PagoRechazado` o `EntregaFallida`, escribí entre tres y cinco eventos y uno o dos comandos, asigná publicador y reactor, y marcá al menos un hotspot. [T03, p. 52]

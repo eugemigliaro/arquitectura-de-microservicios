@@ -76,3 +76,30 @@ La figura distingue consumidores independientes que leen todo con `XREAD` de un 
 Si un consumidor falla antes del ACK, al volver puede leer sus pendientes con `XREADGROUP ... 0`; si su caída es permanente, otro puede reclamarlos con `XAUTOCLAIM` pasado un tiempo mínimo de inactividad. [T12, p. 33]
 
 El log conserva el orden de sus IDs, pero repartirlo entre consumidores paralelos hace que el orden de finalización pueda diferir del de entrega, y productores independientes no establecen un orden causal. Si una entidad requiere orden, sus mensajes deben compartir una ruta serializada. [T12, p. 28] En Kafka esa ruta es la partición que elige la key del mensaje, y el Inbox de esta unidad reaparece con base de datos en lugar de Valkey; ver [Comunicación asincrónica y Kafka](comunicacion-asincrona-y-kafka.md). [T14, p. 35] [T14, p. 50]
+
+## Laboratorio con Valkey
+
+### Lock distribuido con Redlock
+
+`G05-LOCK` simula una venta flash: muchos consumidores descuentan stock de un servidor de inventario en memoria, y un lock por producto (`lock:inventory:{product_id}`) evita la sobreventa. Valkey guarda solo las keys del lock, no el stock. [G05-LOCK]
+
+- **Redlock con tres masters independientes y quórum 2.** El cliente hace `SET key token NX PX ttl` en los tres nodos con el mismo token, un UUID v7 nuevo por intento, y obtiene el lock solo si al menos dos aceptan. Si no alcanza el quórum, libera los nodos donde sí lo tomó. [G05-LOCK]
+- **Validez.** Antes de la sección crítica calcula el tiempo de validez como TTL menos el tiempo transcurrido menos un margen de *clock drift* (`0,01 × ttl + 2` ms). Si no es positivo, no llama a `POST /consume`, libera y reintenta. [G05-LOCK]
+- **Liberación.** Un script Lua borra la key solo si el valor coincide con el token, porque un `DEL` ciego dejaría a cualquier cliente borrar el lock de otro. Es la liberación condicional de la teoría. [G05-LOCK] [T12, p. 10]
+- **Límites.** Tres Valkey de un solo nodo en Compose ilustran el algoritmo, pero no reemplazan alta disponibilidad (Cluster, Sentinel o un servicio gestionado). Redlock supone *clock drift* acotado y latencias razonables. [G05-LOCK]
+
+*Inferencia de estudio:* el laboratorio protege la liberación con el token y controla la validez antes de entrar, pero no usa un **fencing token** verificado por el recurso. Si la validez vence mientras la llamada al inventario está en curso, el servidor no puede rechazar esa operación atrasada, que es el caso que la teoría resuelve con fencing. [T12, p. 11]
+
+### Cache-aside
+
+`G05-CACHE` es un catálogo de productos con mucha lectura: PostgreSQL como fuente, Valkey como cache y una API GraphQL con Strawberry. [G05-CACHE]
+
+| Decisión | Detalle |
+|---|---|
+| Key | `catalog:product:{id}`, con el mismo id que el argumento de la query. [G05-CACHE] |
+| TTL | `CACHE_TTL_SECONDS`, 1800 por defecto; los tests lo bajan a 2 para probar la expiración. [G05-CACHE] |
+| Producto inexistente | La query devuelve `null` y se cachea un valor centinela `{"_absent":true}` en la misma key (*negative caching*). [G05-CACHE] |
+| Valkey caído | El cache es best-effort: si existe la fila, se responde desde PostgreSQL y se cuentan las fallas de escritura en `/metrics`. [G05-CACHE] |
+| Métricas | Hits, misses, lecturas de la base y fallas de escritura del cache. [G05-CACHE] |
+
+`G05-EVAL` compara dos fases: sin cache, cada lectura va a la base; con cache, en secuencia, hay un miss y el resto son hits (`db_reads` ≈ 1). Con muchos pedidos concurrentes y el cache frío, varios pueden fallar antes de que se llene, así que `db_reads` supera 1 pero sigue muy por debajo de la fase sin cache. La reducción de alrededor del 80 % en lecturas para tráfico concentrado en pocas keys es un objetivo de diseño, no un SLA; las métricas principales son las lecturas a la base y la tasa de hits, y el tiempo es evidencia secundaria. [G05-EVAL]

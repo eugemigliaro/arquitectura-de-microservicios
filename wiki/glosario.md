@@ -24,9 +24,11 @@ Definiciones breves y enlaces al apunte donde se desarrolla cada término. Toda 
 | C4 (modelo) | Vistas de arquitectura por niveles. La segunda entrega pide el nivel 1, de contexto (sistema, actores y sistemas externos), y el nivel 2, de contenedores (servicios, almacenes, broker y demás piezas desplegables). [E05] |
 | Canary deployment | Despliegue que envía la nueva versión primero a un grupo de usuarios y la amplía progresivamente; limita el impacto de una falla y facilita el rollback. [T13, p. 42] En una migración, el servicio nuevo recibe el 1 %, el 10 %, el 50 %… y vuelve al 0 % si empeoran las métricas. [T15, p. 28] |
 | Capability de Linux | Privilegio de kernel independiente que reemplaza el modelo de root como conjunto indivisible de permisos. [T04, p. 33] Ver [Contenedores](temas/contenedores-linux.md). |
+| Carga closed-loop | Generación de carga en la que cada cliente espera la respuesta antes de enviar el pedido siguiente; la espera fija la tasa de llegada y la cantidad de clientes regula la sobrecarga. [G10] Ver [Comunicación síncrona](temas/comunicacion-sincrona.md). |
 | CDC (Change Data Capture) | Técnica que lee el write-ahead log de la base y publica los cambios al broker, por ejemplo con Debezium; es una de las formas de vaciar un outbox. [T14, p. 49] En una migración engancha servicios nuevos sin modificar el monolito y sincroniza datos mientras conviven. [T15, p. 27] [T15, p. 39] Ver [Del monolito a microservicios](temas/del-monolito-a-microservicios.md). |
 | cgroup | Mecanismo del kernel que contabiliza y limita recursos como CPU, memoria, PIDs e I/O para grupos de procesos. [T04, p. 16] [T04, p. 18] |
 | Change coupling | Acoplamiento revelado por el historial de versiones: archivos que cambian juntos en muchos commits aunque no se importen entre sí. [T15, p. 16] |
+| Child pipeline | Pipeline de GitLab generado y disparado por otro; en el monorepo del laboratorio incluye solo los servicios afectados por el cambio y propaga su resultado al padre con `strategy: depend`. [G05-MONOREPO] Ver [DevOps y CI/CD](temas/devops-y-ci-cd.md). |
 | Claim check | Patrón en el que el evento lleva un puntero (`uri`, `blobId`) al payload pesado guardado en un store, en lugar del payload mismo. [T14, p. 18] |
 | CloudEvents | Especificación de la CNCF para describir eventos con atributos comunes como `id`, `source`, `type`, `specversion` y `data`, agnóstica de transporte y lenguaje; es convención de cátedra en los labs event-driven. [T14, p. 11] |
 | Cohesión | Grado en que las responsabilidades de un servicio se relacionan con un propósito bien definido. [T02, p. 22] |
@@ -90,6 +92,7 @@ Definiciones breves y enlaces al apunte donde se desarrolla cada término. Toda 
 | Multi-stage build | Dockerfile con etapas separadas, donde la imagen de runtime recibe solo los artefactos copiados desde la etapa de compilación. [T06, p. 27] |
 | Namespace | Vista aislada de un recurso del kernel, como procesos, red, montajes, UTS, IPC o usuarios. [T04, p. 14] |
 | NATS | Broker ultraliviano con pub/sub, request-reply y queue groups; sin JetStream el mensaje se pierde si nadie está escuchando. [T14, p. 12] |
+| Negative caching | Cachear también la ausencia de un dato, con un valor centinela y TTL, para no consultar la base en cada pedido de una key inexistente. [G05-CACHE] Ver [Estado distribuido](temas/estado-distribuido.md). |
 | OCI | Conjunto de contratos estándar para empaquetar imágenes y ejecutar contenedores mediante runtimes intercambiables. [T04, p. 29] |
 | Offset | Próxima posición a leer de un consumer, guardada aparte del log; moverla hacia atrás permite replay. [T14, p. 38] |
 | Open Host Service (OHS) | Interfaz estable mediante la cual un contexto ofrece capacidades a múltiples consumidores. [T03, p. 27] |
@@ -97,11 +100,13 @@ Definiciones breves y enlaces al apunte donde se desarrolla cada término. Toda 
 | OverlayFS | Filesystem de unión que combina capas de solo lectura con una capa escribible y presenta una vista `merged`. [T04, p. 19] [T04, p. 21] |
 | Parallel Run | Ejecución de la implementación vieja y la nueva sobre cada request, devolviendo la vieja y registrando diferencias; en *dark launching* el servicio nuevo recibe tráfico espejado sin que su respuesta llegue al usuario. [T15, p. 26] |
 | Partición | Subdivisión de un topic de Kafka para paralelizar; el hash de la key elige la partición y el orden solo se garantiza dentro de ella. [T14, p. 32] [T14, p. 33] |
+| Perfil de Compose (`profiles`) | Etiqueta que hace que un servicio no arranque con `docker compose up` salvo que se pida su perfil; sirve para separar experimentos o herramientas a demanda. [G10] Ver [Docker Compose](temas/docker-compose.md). |
 | Pipeline | Secuencia de etapas automatizadas de CI/CD, compuestas por jobs que corren en runners, que ante una falla vuelve al inicio para corregirla. [T13, p. 27] [T13, p. 29] |
 | Poison message | Mensaje que no puede procesarse por payload corrupto o bug de deserialización; reintentarlo no lo arregla y debe ir a la DLQ. [T14, p. 52] |
 | Published Language | Contrato público de integración, separado del modelo interno, como OpenAPI, AsyncAPI, JSON Schema o un esquema de eventos. [T03, p. 27] |
 | Punto caliente (hot spot) | Recurso que concentra escrituras concurrentes bajo carga, como un código viral, una figurita muy buscada o una oferta popular, y puede volverse cuello de botella. [E03, p. 12] |
 | Readiness | Señal de que un servicio puede aceptar trabajo; en Compose, `service_healthy` permite esperar esa condición. [T07, p. 18] La versión anterior de la segunda entrega la pedía para cada servicio y consideraba un error de diseño una readiness que siempre responde OK [E04]; la versión 1.2 pide healthchecks de contenedor. [E05] |
+| Redlock | Algoritmo de lock distribuido sobre N nodos independientes: el lock se obtiene con quórum, se descuenta un margen de *clock drift* para calcular su validez y se libera con un compare-and-delete por token. [G05-LOCK] Ver [Estado distribuido](temas/estado-distribuido.md). |
 | Registry de imágenes | Catálogo público o privado que almacena imágenes y sus tags. [T06, p. 34] |
 | REST | Estilo de API basado en recursos y verbos HTTP, habitualmente con JSON; la cátedra lo presenta como opción predeterminada para APIs públicas. [T09, p. 8] [T09, p. 17] |
 | Rolling deployment | Actualización progresiva de los nodos hasta reemplazarlos todos; exige que convivan versiones retrocompatibles. [T13, p. 40] |
@@ -132,6 +137,7 @@ Definiciones breves y enlaces al apunte donde se desarrolla cada término. Toda 
 | Value Object | Objeto sin identidad propia, definido por sus atributos y normalmente inmutable. [T03, p. 36] |
 | Volumen nombrado | Almacenamiento gestionado por Docker fuera de la unión OverlayFS y desacoplado del ciclo de vida del contenedor. [T08, p. 35] [T08, p. 37] |
 | Whiteout | Marca en la capa superior de OverlayFS que oculta un archivo de una capa inferior sin modificar esa capa. [T04, p. 21] [T05, p. 50] |
+| YAML anchor y merge key | `&nombre` define un nodo reutilizable, `*nombre` lo referencia y `<<:` copia sus claves en un mapa, en un solo nivel; lo resuelve el parser antes que Compose. [G10] |
 
 ## Kubernetes
 
@@ -176,3 +182,6 @@ Ver [Kubernetes — Parte 1](temas/kubernetes-parte-1.md) y [Kubernetes — Part
 | Operator | Recurso personalizado registrado con un CRD más un controlador que reconcilia tareas específicas de una aplicación. [T17, p. 39] [T17, p. 40] |
 | ConfigMap | Datos de configuración no confidenciales, hasta 1 MiB, consumidos como variables, argumentos, archivos o vía API. [T17, p. 41] [T17, p. 42] |
 | Secret | Objeto para datos confidenciales; Base64 no es cifrado y su protección depende de RBAC y del cifrado *at rest*. [T17, p. 49] [T17, p. 51] |
+| Minikube | Cluster local de un solo nodo que cumple los roles de control plane y worker; con el driver Docker, el nodo es un contenedor y los Pods corren con containerd. [G08] |
+| AKS (Azure Kubernetes Service) | Kubernetes gestionado por Azure: el control plane queda fuera de los nodos y la nube crea IPs públicas y discos cuando un Service o un PVC los piden. Es el cluster del TP. [G09] Ver [Kubernetes en AKS](temas/kubernetes-en-aks.md). |
+| Envoy Gateway | Implementación de Gateway API instalada con Helm en el cluster del TP; la `GatewayClass` `eg` le asigna los Gateway. [G09] |

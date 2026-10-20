@@ -98,3 +98,25 @@ El ciclo de vida manual `create → start → stop → delete` se corresponde co
 - Para el segundo namespace de red, la propia fuente corrige que `10.0.1.2/24` debe configurarse sobre `veth3`, el extremo movido al namespace, y no sobre `veth2` en el host. [T05, p. 27]
 - El dispositivo usado por `io.max` debe detectarse; no corresponde asumir un `MAJ:MIN` fijo. [T05, p. 45]
 
+## Guía práctica del repositorio
+
+`G01` es la versión de laboratorio de la demo: las mismas nueve fases en 21 pasos, en inglés, cada uno con objetivos, comandos explicados, verificación y errores comunes. Ver [Laboratorios de la cátedra](laboratorios-de-la-catedra.md). [G01]
+
+| Fase | Pasos | Fuente |
+|---|---|---|
+| Filesystem | `chroot` y sus límites; mount namespace y propagación; `pivot_root` | [G01-S01] [G01-S02] [G01-S03] |
+| Procesos | PID namespace y responsabilidades del PID 1; combinarlo con mount para que `/proc` muestre la vista aislada | [G01-S04] [G01-S05] |
+| Red | Namespace de red con `veth` y rutas; bridge con NAT y publicación de puertos | [G01-S06] [G01-S07] |
+| Identidad | UTS (hostname) e IPC (memoria compartida, semáforos, colas) | [G01-S08] [G01-S09] |
+| Usuarios | User namespace, mapeo de UID/GID y propiedad de archivos con `newuidmap`/`newgidmap` | [G01-S10] [G01-S11] |
+| Recursos | Jerarquía de cgroup v2; `memory.max` y OOM; `cpu.max` y throttling; `io.max` por dispositivo | [G01-S12] [G01-S13] [G01-S14] [G01-S15] |
+| Seguridad | Capabilities con `capsh` y `setcap`; filtros seccomp-bpf | [G01-S16] [G01-S17] |
+| Runtime | OverlayFS con lower, upper y work y copy-on-write; bundle OCI ejecutado con `runc` | [G01-S18] [G01-S19] |
+| Integración | Script que combina namespaces, cgroups, capabilities, filesystem y red; ciclo de vida y procesos huérfanos | [G01-S20] [G01-S21] |
+
+La guía agrega advertencias de entorno que la demo no detalla: [G01]
+
+- Antes de empezar hay que permitir user namespaces sin privilegios en AppArmor (fase 5), habilitar el forwarding del bridge (fase 3) y activar `ip_forward` para el NAT. Conviene una VM Linux real y no Docker-in-Docker, para que funcionen OverlayFS y los controladores de cgroups.
+- En cgroup v2 no se pueden poner procesos en un cgroup que tenga controladores habilitados en `cgroup.subtree_control`: van en un hijo hoja.
+- El `capsh` actual no acepta `--add=`; se usa `--caps='cap_xxx=ep'`.
+- El DNAT en `PREROUTING` no se aplica al tráfico originado en el propio host: para probar con `curl localhost` hace falta también una regla en `OUTPUT`. [G01-S07]

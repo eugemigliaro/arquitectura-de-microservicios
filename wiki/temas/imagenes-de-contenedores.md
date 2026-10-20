@@ -45,3 +45,21 @@ Las prácticas que la cátedra reúne son: multi-stage, base mínima y actualiza
 Una referencia de imagen combina registry, repositorio o nombre y tag; si se omite el registry, se asume Docker Hub. Los registries mantienen el catálogo y pueden ser públicos o privados. [T06, p. 34]
 
 Un tag como `latest` es un puntero mutable: puede pasar a señalar otro contenido y generar drift entre nodos o impedir reconstruir con certeza un rollback. Para trazabilidad convienen tags que no se sobrescriban, como una versión exacta o commit, y el despliegue por digest `sha256`, que identifica el contenido del manifiesto. Las políticas de inmutabilidad del registry complementan esa práctica impidiendo reemplazar tags publicados. [T06, p. 35] [T06, p. 36]
+
+## Laboratorio: de un Dockerfile mínimo a uno endurecido
+
+`G02` parte de un Dockerfile de cuatro líneas para un servicio FastAPI (`FROM python:3.12`, `COPY . .`, `RUN pip install -r requirements.txt`, `CMD` con uvicorn) y lo mejora respondiendo preguntas que deja abiertas en el camino. [G02] `G02-SOLUCION` reúne el resultado final; ver [Laboratorios de la cátedra](laboratorios-de-la-catedra.md).
+
+| Mejora | Por qué, según la guía |
+|---|---|
+| Imagen base `python:3.12` | No hay restricción de espacio que justifique `-slim`, y `-alpine` puede traer problemas de dependencias; multi-stage se descarta porque no hay compilación. [G02] |
+| `WORKDIR /usr/app` | Sin él, los comandos y las copias se hacen desde `/`, con riesgo de pisar partes del sistema. [G02] |
+| `.dockerignore` por contexto | El cliente empaqueta el contexto entero antes del build: cuesta tiempo y, con `COPY . .`, un `.env` queda en una capa, y borrarlo en un `RUN` posterior no lo saca. [G02] |
+| Dependencias pinneadas | Sin versión, `pip` resuelve la última al momento del build: dos integrantes obtienen versiones distintas y el cache pierde sentido. Para el TP, pinnear las directas es el mínimo; para las transitivas hace falta un lock (`pip freeze`, `pip-tools` o `uv`). [G02] |
+| `COPY requirements.txt` antes de `COPY . .` | Cambiar código no invalida la capa de dependencias, y servicios con los mismos requisitos la reutilizan (`CACHED`). [G02] |
+| venv y usuario no root | Crea el usuario 999, le da `/usr/app`, copia con `--chown` y usa `USER 999`; `PIP_NO_CACHE_DIR` evita el error de un usuario sin home. [G02] |
+| `LABEL`, `EXPOSE` y `HEALTHCHECK` | Documentan la imagen; `EXPOSE` habilita `docker run -P`, y el healthcheck usa `python` para no instalar `curl`. [G02] |
+
+Son las prácticas que la teoría reúne: `.dockerignore`, ejecución sin root y secretos fuera de las capas. [T06, p. 24] [T06, p. 27] [T06, p. 31]
+
+La demo de teoría `G02-TEORIA` construye una imagen `FROM scratch` con un binario estático. Go lo produce por defecto (`CGO_ENABLED=0`) y C requiere `-static`; la discusión compara el peso con el de `python:3.12`, de alrededor de 1 GB. [G02-TEORIA]

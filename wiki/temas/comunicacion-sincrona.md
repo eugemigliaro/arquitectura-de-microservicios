@@ -44,3 +44,23 @@ Ante fallos, el diseño combina reintentos con backoff y jitter, idempotencia, D
 ## Límites de la demostración
 
 La cola de la demo está en memoria, no sobrevive a un crash y puede entregar duplicados. Además, si `λ > μ` de forma sostenida, cualquier backlog finito termina saturándose y reaparece el rechazo. Por eso la demo no prueba durabilidad ni garantías de entrega. [T09, p. 33] Esos temas se desarrollan en [Estado distribuido](estado-distribuido.md) y en [Comunicación asincrónica y Kafka](comunicacion-asincrona-y-kafka.md), que presenta el consumer lag como el costo operativo de convertir pérdida en latencia. [T14, p. 43]
+
+## Laboratorios
+
+### GraphQL con Apollo Server
+
+`G04` es una API GraphQL sobre Node.js con Apollo Server, para practicar queries, mutations y subscriptions y compararlas con REST. El esquema modela restaurantes, ítems de menú y pedidos; las queries consultan restaurantes, menús y pedidos, la mutation crea pedidos y la subscription avisa cuando se crea uno. Los datos son un mock en memoria (`_db.js`). Se levanta con Compose y se explora en `http://localhost:4000/graphql`; los ejemplos de la guía son plantillas para completar. [G04]
+
+### Demo de capacidad
+
+`G10` es el código del experimento de esta unidad, con los mismos resultados: 6 completados en sync naive, 21 con bulkhead, 41 con retry y 99 con cola, de los cuales 4 dentro del SLA. [G10] [T09, p. 29] Agrega detalles para reproducirlo e interpretarlo:
+
+- **Calibración.** `WORK_ITERS` fija la cantidad de trabajo, pero cuánto tarda depende del procesador. El objetivo es unos 0,25 CPU-segundos por request; sin calibrar, en una máquina lenta nada completa y en una rápida no hay sobrecarga. `CONCURRENCY` no cambia `μ` cuando la CPU es el cuello de botella: regula memoria y latencia. [G10]
+- **Comparación justa.** Un solo binario cumple los roles `sync`, `producer` y `worker`, así que el trabajo y la medición son el mismo código en las cuatro corridas, con el mismo presupuesto de 1 core. CPU y memoria se leen del cgroup (`cpu.stat` y `memory.peak`), no de `docker stats`, y el generador verifica que `ok + rechazados + timeouts + errores + dlq == enviados`. [G10]
+- **Por qué closed-loop.** Cada cliente espera la respuesta antes del pedido siguiente, así que la propia espera fija la tasa de llegada y la cantidad de clientes regula la sobrecarga: 20 clientes demandan unos 6,7 req/s contra unos 4 de capacidad, y con 10 no habría sobrecarga. El retry tiene sentido porque el pedido sigue pendiente. [G10]
+- **Cuánto reintentar.** Con bulkhead y retry hacen falta 1,83 intentos por pedido completado, con peor caso 4: es el dato para elegir `maxAttempts`. Reintentar **sin** admisión acotada completa 8 pedidos con 376 intentos, 218 MiB y 65 s de cliente ocupado. [G10]
+- **Escalado vertical.** Con 4 cores no quedan timeouts (88 completados; lo que falta son las fallas inyectadas), y la memoria baja a 53 MiB, contra 28 MiB con bulkhead sin tocar el hardware. [G10]
+- **Contrapresión.** El 202 inmediato de la cola la destruye: los 100 pedidos entran en 0,05 s y el backlog completo aparece en el broker. La cola no absorbió el pico, lo mudó de lugar. [G10]
+- **Criterio.** Si quien llama necesita la respuesta para seguir, la solución es acotar la admisión y reintentar; la cola gana cuando nadie espera. "Autorizar un pago necesita sync; emitir el comprobante, no." [G10]
+
+La cola usa NATS JetStream con almacenamiento en memoria, entrega at-least-once y un techo de 500 mensajes que, al llenarse, vuelve a devolver 503. [G10]

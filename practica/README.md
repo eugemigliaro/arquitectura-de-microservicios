@@ -7,3 +7,5 @@ Este espacio no implica que el contenido sea entregable. La política se declara
 ## Ejercicios en curso
 
 - [DDD — Huella](huella-ddd/resolucion.md): resolución acompañada de los entregables E1–E7.
+
+Las guías de laboratorio de la cátedra se corren en el clon `laboratorio/catedra-2026s2/`; ver `laboratorio/README.md` y la página `wiki/temas/laboratorios-de-la-catedra.md`.

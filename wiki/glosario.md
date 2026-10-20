@@ -135,7 +135,7 @@ Definiciones breves y enlaces al apunte donde se desarrolla cada término. Toda 
 
 ## Kubernetes
 
-Ver [Kubernetes — Parte 1](temas/kubernetes-parte-1.md) para el desarrollo y las comparaciones.
+Ver [Kubernetes — Parte 1](temas/kubernetes-parte-1.md) y [Kubernetes — Parte 2](temas/kubernetes-parte-2.md) para el desarrollo y las comparaciones.
 
 | Término | Definición |
 |---|---|
@@ -156,3 +156,23 @@ Ver [Kubernetes — Parte 1](temas/kubernetes-parte-1.md) para el desarrollo y l
 | ServiceAccount | Identidad de una aplicación ante la API, separada de la autorización de sus permisos. [T16, p. 53] |
 | Admisión | Etapa posterior a autenticación y autorización que puede modificar o rechazar solicitudes antes de persistir el objeto. [T16, p. 54] |
 | Namespace de Kubernetes | Ámbito de nombres y organización de recursos; por sí solo no aísla seguridad ni red, y es distinto de un namespace de Linux. [T16, p. 13] [T16, p. 56] |
+| CNI (Container Network Interface) | Estándar por el que el runtime invoca un plugin de red que conecta al Pod y le asigna IPs; el plugin decide entre ruteo nativo y overlay. [T17, p. 5] [T17, p. 6] |
+| Service | Acceso estable a un conjunto de Pods elegido por selector, independiente de sus IPs y su ciclo de vida; da un destino, no permisos. [T17, p. 7] [T17, p. 10] |
+| ClusterIP | IP virtual interna de un Service; `iptables`/`nftables` reparten por conexión, no por solicitud HTTP. [T17, p. 7] [T17, p. 17] |
+| Service headless | Service con `clusterIP: None`: sin IP virtual ni proxy, el DNS devuelve las IPs de los Pods y el cliente elige. [T17, p. 17] |
+| NodePort / LoadBalancer / ExternalName | Puerto publicado en los nodos (30000–32767 por defecto) / exposición mediante un proveedor o controlador, normalmente sobre NodePorts / CNAME externo sin proxy. [T17, p. 19] |
+| EndpointSlice | Objeto que lista direcciones y puertos de los backends de un Service; reemplaza a la API Endpoints, deprecada desde v1.33. [T17, p. 9] |
+| kube-proxy | Componente de cada nodo que programa IP virtual, NAT y balanceo de los Services a partir de Services y EndpointSlices; no conecta Pods entre sí. [T17, p. 14] |
+| CoreDNS | Implementación habitual del DNS del clúster, que resuelve Services por nombre (`svc.ns.svc.cluster.local`). [T17, p. 10] [T17, p. 16] |
+| Ingress / IngressClass | Reglas HTTP/S por host y path hacia Services / clase que asocia esas reglas a un controlador; sin controlador no hay tráfico. [T17, p. 21] [T17, p. 22] |
+| Gateway API | Modelo de entrada L4/L7 con GatewayClass, Gateway y HTTPRoute, recomendado para nuevos despliegues; requiere CRDs e implementación instalados. [T17, p. 8] [T17, p. 23] |
+| NetworkPolicy | Reglas L3/L4 aditivas que aíslan tráfico de los Pods seleccionados; solo tienen efecto si la red las aplica. [T17, p. 25] |
+| PersistentVolume (PV) | Recurso de almacenamiento con ciclo de vida independiente de los Pods; los datos viven en el backend. [T17, p. 29] [T17, p. 30] |
+| PersistentVolumeClaim (PVC) | Solicitud de almacenamiento por tamaño, modo de acceso y clase, que el Pod referencia sin conocer el backend. [T17, p. 33] |
+| StorageClass | Clase de almacenamiento con provisioner, parámetros, reclaim policy y modo de vinculación; permite aprovisionamiento dinámico. [T17, p. 35] |
+| Modos de acceso (RWO, ROX, RWX, RWOP) | Alcance de lectura/escritura de un volumen por nodo o por Pod; no son permisos. [T17, p. 31] |
+| Reclaim policy | Qué pasa con el almacenamiento al eliminar el PVC: `Retain`, `Delete` (predeterminada en PV dinámicos) o `Recycle`, deprecada. [T17, p. 31] |
+| CSI | Interfaz estándar que permite a un driver de almacenamiento, instalado aparte, aprovisionar volúmenes sin modificar Kubernetes. [T17, p. 36] |
+| Operator | Recurso personalizado registrado con un CRD más un controlador que reconcilia tareas específicas de una aplicación. [T17, p. 39] [T17, p. 40] |
+| ConfigMap | Datos de configuración no confidenciales, hasta 1 MiB, consumidos como variables, argumentos, archivos o vía API. [T17, p. 41] [T17, p. 42] |
+| Secret | Objeto para datos confidenciales; Base64 no es cifrado y su protección depende de RBAC y del cifrado *at rest*. [T17, p. 49] [T17, p. 51] |

@@ -101,4 +101,4 @@ Un Namespace organiza recursos y delimita sus nombres; por sí solo no impone ai
 
 ## Alcance pendiente
 
-Esta parte menciona Services, CNI y almacenamiento para explicar otras piezas, pero no desarrolla su configuración completa ni una instalación de clúster. Ese detalle no se deduce de los diagramas ni se agrega como contenido oficial. [T16, p. 9] [T16, p. 33] [T16, p. 56]
+Esta parte menciona Services, CNI y almacenamiento para explicar otras piezas, pero no desarrolla su configuración completa ni una instalación de clúster. Ese detalle no se deduce de los diagramas ni se agrega como contenido oficial. [T16, p. 9] [T16, p. 33] [T16, p. 56] Services, red y almacenamiento se desarrollan en [Kubernetes — Parte 2](kubernetes-parte-2.md). [T17]

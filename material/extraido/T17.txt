@@ -1,0 +1,1106 @@
+FUENTE: T17
+TITULO: Kubernetes — Parte 2
+ORIGINAL: material/catedra/teoria/Kubernetes - Parte 2 - Slidev.pdf
+PAGINAS: 54
+
+===== PAGINA 1 =====
+
+Arquitectura de
+Microservicios con
+Contenedores
+Docentes:
+
+- Ing. Federico Castañeda
+- Ing. Carlos Maceira
+- Ing. Franco Rupnik
+
+
+
+                            Microservicios (73.40) · ITBA
+
+===== PAGINA 2 =====
+
+ Networking · Rangos de IP del clúster
+                                             Nodos: IPs de las interfaces sobre la red de
+                                             infraestructura (underlay).
+                                             Pods: rango asignado por el plugin de red; cada
+                                             Pod tiene IP y puede comunicarse con los demás.
+                                             Services: rango virtual; una ClusterIP ofrece un
+                                             destino estable y reenvía a los Pods.
+
+                                           El CNI decide cómo viajan los paquetes Pod–Pod:
+                                           por rutas de la red de nodos o encapsulados dentro
+                                           de ella (overlay). La overlay es una implementación
+ Fuente: Kubernetes — Cluster Networking   posible, no un requisito de Kubernetes.
+
+
+
+
+Microservicios (73.40)                                                                           2
+
+===== PAGINA 3 =====
+
+ Networking
+ Hay cuatro necesidades de comunicación dentro de K8S:
+     Entre contenedores que están altamente acoplados, ejecutándose dentro del mismo pod.
+     De un Pod a otro Pod.
+     De un Pod a un Servicio
+     Externamente hacia un Servicio
+
+
+
+
+Microservicios (73.40)                                                                      3
+
+===== PAGINA 4 =====
+
+ Networking · Dentro del Pod
+ Un Pod agrupa contenedores que comparten el
+ mismo namespace de red.
+     Comparten sus direcciones IP y puertos; se
+     comunican por localhost.
+     Todos los contenedores del Pod se ejecutan en el
+     mismo nodo.
+     Pods distintos no comparten localhost: cada uno
+     tiene su propio namespace de red.
+     Las IPs pueden cambiar al recrear el Pod.
+
+
+
+
+Microservicios (73.40)                                  4
+
+===== PAGINA 5 =====
+
+ Networking · Entre Pods
+ La red del clúster conecta los Pods, tanto en el
+ mismo nodo como entre nodos.                                Nodo 1                         Nodo 2
+     Cada Pod recibe IPs únicas: IPv4, IPv6 o dual-stack.     Pod A                          Pod B
+     CNI (Container Network Interface) es el estándar       10.244.1.5                     10.244.2.7
+     por el que el runtime invoca un plugin de red. El
+     plugin configura la conexión del Pod y le asigna               Red del clúster (CNI)
+     sus IPs; el modelo de Kubernetes permite
+     comunicación Pod–Pod sin NAT.                                       Pod A   ⇄ Pod B
+     La topología depende de la implementación: no
+     exige una subred dedicada por nodo.
+     kube-proxy (o una alternativa) configura el
+     reenvío de Services hacia sus Pods; no conecta
+     Pods entre sí.
+
+ Para no depender de IPs efímeras, se utiliza un
+ Service
+Microservicios (73.40)                                                                                  5
+
+===== PAGINA 6 =====
+
+ Networking · Overlay o ruteo nativo
+ El CNI elige cómo transportar el paquete Pod–Pod       Mantenibilidad
+ entre nodos.                                           El underlay no necesita rutas de Pods; hay que operar
+                                                        túneles y MTU.
+   Ruteo nativo
+                                                        Extensibilidad
+          Pod A 10.244.1.5    → Pod B 10.244.2.7        Funciona sobre redes que desconocen las IPs de
+   La red conoce la ruta 10.244.2.0/24 → Nodo B. El     Pods; acceder a esas IPs desde afuera suele requerir
+   paquete conserva las IPs de los Pods.                un gateway.
+
+                                                        Seguridad
+   Overlay (VXLAN)                                      Suele mantener las IPs de Pods fuera del ruteo del
+
+               Nodo A 192.168.1.10   → Nodo B           underlay. No cifra ni reemplaza NetworkPolicy.
+
+                         192.168.1.11                   Performance
+   Dentro viaja el paquete Pod A 10.244.1.5   → Pod B   La encapsulación agrega encabezados y trabajo; el
+                                                        ruteo nativo suele ser más eficiente.
+   10.244.2.7.
+                                                        Fuentes: Calico · Cilium · NetworkPolicy
+
+Microservicios (73.40)                                                                                          6
+
+===== PAGINA 7 =====
+
+ Networking · Pods a un Servicio
+ Un Service ofrece un acceso estable a uno o más
+ Pods, sin depender de sus IPs ni de su ciclo de vida.
+ Su ClusterIP es una IP virtual interna que representa
+ ese acceso.
+ kube-proxy o una implementación alternativa
+ programa el reenvío desde esa IP virtual hacia los
+ Pods.
+ El Service ofrece un destino estable, no permisos de
+ acceso. NetworkPolicy restringe el tráfico si el
+ plugin de red aplica esas reglas.
+ El balanceo depende de la implementación; no
+ garantiza round-robin ni reparto por solicitud HTTP.
+
+
+
+
+Microservicios (73.40)                                   7
+
+===== PAGINA 8 =====
+
+ Networking · Externamente a un servicio
+ La ClusterIP se utiliza normalmente dentro del clúster.
+ Para publicar el servicio hacia afuera existen distintas       Cliente externo
+ opciones:
+                                                                      ↓
+     NodePort / LoadBalancer: exponen puertos de
+     transporte.                                               Entrada al clúster
+     Ingress: enruta HTTP/S por host y path.                NodePort · LoadBalancer
+     Gateway API: alternativa recomendada para                Ingress · Gateway
+     nuevos despliegues; admite enrutamiento L4/L7
+     según sus recursos y la implementación.
+                                                                       ↓
+     kubectl port-forward: acceso temporal para                 Service → Pods
+     desarrollo y diagnóstico.
+
+ Ingress y Gateway declaran reglas de entrada; un
+ controlador debe implementarlas para que el tráfico
+ llegue al Service.
+
+Microservicios (73.40)                                                                8
+
+===== PAGINA 9 =====
+
+ EndpointSlice
+ Un EndpointSlice lista direcciones y puertos de los       Ejemplo de un slice generado:
+ backends de un Service.
+                                                           apiVersion: discovery.k8s.io/v1
+     API discovery.k8s.io/v1, estable desde v1.21.         kind: EndpointSlice
+                                                           metadata:
+     Agrupa endpoints por Service, familia IP y puertos;     name: my-nginx-svc-abc
+     por defecto, hasta 100 por slice.                       labels:
+                                                               kubernetes.io/service-name: my-nginx-svc
+     Soporta IPv4/IPv6, readiness y topología.             addressType: IPv4
+                                                           ports:
+     El controlador actualiza los slices al cambiar los    - protocol: TCP
+     Pods o su disponibilidad.                               port: 80
+                                                           endpoints:
+ La API Endpoints está deprecada desde v1.33:              - addresses: ["10.244.0.10"]
+                                                             conditions: { ready: true }
+ no soporta dual-stack y trunca listas de más de 1000      - addresses: ["10.244.0.11"]
+ endpoints.                                                  conditions: { ready: true }
+                                                           - addresses: ["10.244.0.12"]
+                                                             conditions: { ready: true }
+
+
+
+
+Microservicios (73.40)                                                                                    9
+
+===== PAGINA 10 =====
+
+ Services
+ El selector determina qué Pods integran un Service.
+ Kubernetes mantiene sus direcciones y puertos en
+ EndpointSlices.
+ El cliente usa el nombre DNS —que normalmente
+ resuelve a la ClusterIP— o esa IP virtual, sin conocer
+ las IPs de los Pods.
+
+  mi-svc.mi-ns.svc.cluster.local
+
+ No todos los Services tienen IP virtual:
+     Headless: DNS devuelve las IPs de los Pods.
+     ExternalName: DNS devuelve un CNAME
+     externo, sin proxy.
+
+
+
+
+Microservicios (73.40)                                    10
+
+===== PAGINA 11 =====
+
+ Services · Deployment y Pods
+  apiVersion: apps/v1           Salida ilustrativa de kubectl get pods:
+  kind: Deployment
+  metadata:                      nginx-deployment-<hash>-klqjc 1/1 Running
+    name: nginx-deployment       nginx-deployment-<hash>-m4r9g 1/1 Running
+    labels:                      nginx-deployment-<hash>-w4mnq 1/1 Running
+      app: nginx
+  spec:                         IPs ilustrativas de los Pods:
+    replicas: 3
+    selector:                    10.244.0.10 minikube
+      matchLabels:               10.244.0.11 minikube
+        app: nginx               10.244.0.12 minikube
+    template:
+      metadata:
+        labels:
+          app: nginx
+      spec:
+        containers:
+        - name: nginx
+          image: nginx:1.30.5
+          ports:
+          - containerPort: 80
+
+
+Microservicios (73.40)                                                       11
+
+===== PAGINA 12 =====
+
+ Services · Service y EndpointSlice
+  apiVersion: v1                                          kubectl get endpointslices \
+  kind: Service                                             -l kubernetes.io/service-name=my-nginx-svc \
+  metadata:                                                 -o yaml
+    name: my-nginx-svc
+  spec:                                                  Fragmento ilustrativo de la salida:
+    selector:
+      app: nginx                                          # Dentro de items[0]
+    ports:                                                addressType: IPv4
+    - protocol: TCP                                       ports:
+      port: 80                                            - protocol: TCP
+                                                            port: 80
+ El controlador deriva los EndpointSlices del selector    endpoints:
+ y del estado de los Pods.                                - addresses: ["10.244.0.10"]
+                                                          - addresses: ["10.244.0.11"]
+                                                          - addresses: ["10.244.0.12"]
+
+
+
+
+Microservicios (73.40)                                                                                     12
+
+===== PAGINA 13 =====
+
+ Service · Acceso a un Pod
+ Acceso a un Pod por medio de la IP del servicio   Acceso a un Pod por medio de DNS
+                                                   service.namespace
+  /# wget -O - 10.96.36.226
+  Connecting to 10.96.36.226 (10.96.36.226:80)
+                                                   /# wget -O - my-nginx-svc.default
+  writing to stdout
+                                                   Connecting to my-nginx-svc.default (10.96.36.226:80)
+  <!DOCTYPE html>
+                                                   writing to stdout
+  <html>
+                                                   <!DOCTYPE html>
+  <head>
+                                                   <html>
+  <title>Welcome to nginx!</title>
+                                                   <head>
+                                                   <title>Welcome to nginx!</title>
+
+
+
+
+Microservicios (73.40)                                                                                    13
+
+===== PAGINA 14 =====
+
+ Kube-Proxy
+ kube-proxy programa el plano de datos de los
+ Services en cada nodo:                                              API server
+
+     Observa Services y EndpointSlices mediante el        ↓ watch Services y EndpointSlices
+     API server.
+     Configura reglas para redirigir tráfico de               kube-proxy en cada nodo
+     ClusterIP:puerto hacia un endpoint
+     disponible.
+                                                                  ↓ programa reglas
+     Implementa IP virtual, NAT y balanceo; no la           IP virtual → endpoint del Pod
+     conectividad base Pod–Pod.
+     No hay un proxy central: el reenvío se resuelve en
+     los nodos.
+
+
+
+
+Microservicios (73.40)                                                                        14
+
+===== PAGINA 15 =====
+
+ Kube-Proxy · Modos y alternativas
+ Modos en Linux                                            Otras implementaciones
+     iptables: vigente y predeterminado en                 Algunas redes pueden sustituir kube-proxy por su
+     Kubernetes 1.37.                                      propio mecanismo de acceso a Services.
+     nftables: alternativa estable; requiere kernel 5.13   Por ejemplo, Cilium con kube-proxy replacement
+     o superior.                                           utiliza eBPF para el balanceo de Services.
+     IPVS: deprecado desde v1.35.
+                                                           La función se mantiene: encaminar el acceso estable
+ En Windows se utiliza kernelspace.                        del Service hacia sus backends actuales.
+
+
+
+
+Microservicios (73.40)                                                                                           15
+
+===== PAGINA 16 =====
+
+ Cluster DNS
+ El DNS del clúster (habitualmente CoreDNS) permite descubrir Services por nombre: resuelve a la ClusterIP, a
+ las IPs de los Pods en un Service headless o a un CNAME en un ExternalName.
+
+  / # cat /etc/resolv.conf
+  nameserver 10.96.0.10
+  search default.svc.cluster.local svc.cluster.local cluster.local
+  options ndots:5
+
+  / # nslookup my-nginx-svc.default.svc.cluster.local
+  Server:     10.96.0.10
+  Address:    10.96.0.10:53
+
+  Name:           my-nginx-svc.default.svc.cluster.local
+  Address:        10.96.36.226
+
+
+
+
+Microservicios (73.40)                                                                                          16
+
+===== PAGINA 17 =====
+
+ ClusterIP vs Headless
+ ClusterIP                                               Headless
+     IP virtual estable delante de los Pods.              clusterIP: None: sin IP virtual ni proxy de
+     DNS resuelve a la ClusterIP del Service.             Service.
+     El selector determina los backends.                  Con selector, DNS devuelve las IPs de los Pods
+     kube-proxy o una alternativa programa el reenvío.    elegibles (A/AAAA).
+     No garantiza round-robin: iptables/nftables          El cliente elige a qué Pod conectarse.
+     seleccionan por conexión, no por solicitud HTTP.     Permite descubrir réplicas directamente o
+                                                          implementar balanceo en la aplicación.
+
+
+
+
+Microservicios (73.40)                                                                                     17
+
+===== PAGINA 18 =====
+
+ ClusterIP vs Headless · YAML
+ ClusterIP                  Headless
+  apiVersion: v1            apiVersion: v1
+  kind: Service             kind: Service
+  metadata:                 metadata:
+    name: regular-service     name: headless-svc
+  spec:                     spec:
+    type: ClusterIP           clusterIP: None
+    selector:                 selector:
+      app: web                  app: web
+    ports:                    ports:
+      - protocol: TCP           - protocol: TCP
+        port: 80                  port: 80
+        targetPort: 8080          targetPort: 8080
+
+
+
+
+Microservicios (73.40)                               18
+
+===== PAGINA 19 =====
+
+ Tipos de Servicios
+ ClusterIP                                                 LoadBalancer
+ IP interna para acceder al servicio desde el clúster.       Requiere integración con un proveedor o
+                                                             controlador; no exige cloud.
+ NodePort
+                                                             Normalmente asigna NodePorts; no prohíbe el
+     Publica un puerto en los nodos y conserva una
+                                                             acceso directo a ellos.
+     ClusterIP.
+                                                             Puede omitirlos con
+     Rango predeterminado 30000–32767,
+                                                             allocateLoadBalancerNodePorts: false si
+     configurable.
+                                                             la implementación lo soporta.
+     Su accesibilidad depende de las IPs habilitadas, la
+     red y los firewalls.                                  ExternalName
+                                                           CNAME hacia un nombre externo, sin proxy ni IP
+                                                           virtual.
+
+
+
+
+Microservicios (73.40)                                                                                      19
+
+===== PAGINA 20 =====
+
+ Tipos de Servicios · kubectl
+  [k8s-services]$ kubectl get svc
+  NAME                         TYPE           CLUSTER-IP       EXTERNAL-IP     PORT(S)
+  kubernetes                   ClusterIP      10.128.0.1       <none>          443/TCP
+  mongodb-service              ClusterIP      10.128.204.105   <none>          27017/TCP
+  mongodb-service-headless     ClusterIP      None             <none>          27017/TCP
+  ms-service-loadbalancer      LoadBalancer   10.128.233.22    172.104.255.5   3200:30010/TCP
+  ms-service-nodeport          NodePort       10.128.202.9     <none>          3200:30008/TCP
+
+
+
+
+Microservicios (73.40)                                                                          20
+
+===== PAGINA 21 =====
+
+ Ingress y su controlador
+ Un Ingress declara rutas HTTP/S por host y path
+ hacia Services internos.                                 Cliente externo
+
+     Requiere un controlador instalado que                   ↓ HTTP/S
+     implemente las reglas.
+                                                         Ingress controller
+     API networking.k8s.io/v1: estable desde
+     v1.19 y actualmente congelada, no deprecada ni          ↓ tráfico
+                                                          Service → Pods
+     en retirada.
+     ingress-nginx comunitario fue retirado en
+     marzo de 2026, sin nuevas correcciones de
+     seguridad.                                          Ingress (recurso)
+     No confundirlo con otros controladores NGINX.    configura al controlador
+     Para nuevos despliegues se recomienda Gateway
+     API.
+
+
+
+Microservicios (73.40)                                                           21
+
+===== PAGINA 22 =====
+
+ Ingress · Reglas y clase
+ ingressClassName referencia una IngressClass         apiVersion: networking.k8s.io/v1
+ asociada al controlador.                             kind: Ingress
+                                                      metadata:
+ Las reglas combinan host, path, pathType y backend     name: my-nginx
+                                                        namespace: default
+ (Service y puerto).                                  spec:
+                                                        ingressClassName: example-class
+ La clase y el controlador de este ejemplo son          rules:
+ ilustrativos: deben reemplazarse por una               - host: nginx.example.com
+                                                          http:
+ implementación instalada y mantenida.
+                                                            paths:
+                                                            - path: /
+  apiVersion: networking.k8s.io/v1
+                                                              pathType: Prefix
+  kind: IngressClass
+                                                              backend:
+  metadata:
+                                                                service:
+    name: example-class
+                                                                  name: my-nginx-svc
+  spec:
+                                                                  port:
+    controller: example.com/ingress-controller
+                                                                    number: 80
+
+
+
+
+Microservicios (73.40)                                                                    22
+
+===== PAGINA 23 =====
+
+ Gateway API · Modelo de recursos
+ Gateway API amplía el modelo de entrada con
+ recursos L4/L7 y separación de responsabilidades:            GatewayClass
+
+     GatewayClass: tipo de gateway y controlador.          ↑ gatewayClassName
+     Gateway: infraestructura de entrada y listeners.
+     HTTPRoute: reglas HTTP y sus backends.                      Gateway
+
+ El operador administra la infraestructura; las               ↑ parentRefs
+ aplicaciones declaran rutas.
+                                                        HTTPRoute → Service → Pods
+ Requiere CRDs e implementación compatible,
+ instalados aparte. Los objetos solos no habilitan
+ tráfico.
+
+
+
+
+Microservicios (73.40)                                                               23
+
+===== PAGINA 24 =====
+
+ Gateway API · Ejemplo
+  apiVersion: gateway.networking.k8s.io/v1           apiVersion: gateway.networking.k8s.io/v1
+  kind: GatewayClass                                 kind: HTTPRoute
+  metadata:                                          metadata:
+    name: example-gateway-class                        name: my-nginx-route
+  spec:                                                namespace: default
+    controllerName: example.com/gateway-controller   spec:
+                                                       parentRefs:
+  apiVersion: gateway.networking.k8s.io/v1             - name: my-gateway
+  kind: Gateway                                        hostnames:
+  metadata:                                            - nginx.example.com
+    name: my-gateway                                   rules:
+    namespace: default                                 - matches:
+  spec:                                                  - path:
+    gatewayClassName: example-gateway-class                  type: PathPrefix
+    listeners:                                               value: /
+    - name: http                                         backendRefs:
+      protocol: HTTP                                     - name: my-nginx-svc
+      port: 80                                             port: 80
+
+                                                     Clase y controlador ilustrativos: requieren una
+                                                     implementación instalada.
+
+Microservicios (73.40)                                                                                 24
+
+===== PAGINA 25 =====
+
+ NetworkPolicy
+ Publicar una ruta no implica permitir cualquier          Reglas de aislamiento
+ comunicación. NetworkPolicy restringe el tráfico
+                                                            Las políticas son aditivas: se permite la unión de
+ de los Pods.
+                                                            sus reglas, sin prioridad por orden.
+     API networking.k8s.io/v1, reglas L3/L4.                Si ambos extremos están aislados, deben permitir
+     podSelector selecciona Pods del namespace.             la conexión la egress del origen y la ingress del
+     policyTypes indica Ingress, Egress o ambas.            destino.
+     Sin políticas que lo seleccionen en una dirección,     Requiere una implementación de red
+     el Pod no está aislado por NetworkPolicy en esa        compatible; sin enforcement, el objeto no tiene
+     dirección.                                             efecto.
+
+                                                          No autentica ni cifra, y no filtra HTTP por URL.
+
+
+
+
+Microservicios (73.40)                                                                                           25
+
+===== PAGINA 26 =====
+
+ NetworkPolicy · Default deny + allow
+ Aislar el tráfico entrante de todos los Pods de     Permitir app=frontend del mismo namespace
+ default:                                            hacia app=nginx, puerto 80:
+
+  apiVersion: networking.k8s.io/v1                   apiVersion: networking.k8s.io/v1
+  kind: NetworkPolicy                                kind: NetworkPolicy
+  metadata:                                          metadata:
+    name: default-deny-ingress                         name: allow-frontend-ingress
+    namespace: default                                 namespace: default
+  spec:                                              spec:
+    podSelector: {}                                    podSelector:
+    policyTypes:                                         matchLabels: { app: nginx }
+    - Ingress                                          policyTypes:
+                                                       - Ingress
+ Otras políticas pueden habilitar conexiones           ingress:
+ específicas. Esta no aísla el tráfico saliente.       - from:
+                                                         - podSelector:
+ El acceso desde el Gateway requiere una regla que           matchLabels: { app: frontend }
+                                                         ports:
+ permita su origen.                                      - protocol: TCP
+                                                           port: 80
+
+
+
+Microservicios (73.40)                                                                           26
+
+===== PAGINA 27 =====
+
+Storage
+
+===== PAGINA 28 =====
+
+ Storage en Kubernetes
+ Kubernetes no proporciona por sí mismo un backend persistente. El ciclo de vida depende de dónde se
+ almacenen los datos:
+
+    Almacenamiento                   Ciclo de vida           Qué sobrevive
+
+    Capa escribible del contenedor   Contenedor              No sobrevive al reinicio o reemplazo del contenedor
+
+    emptyDir                         Pod                     Reinicios del contenedor, no la eliminación del Pod
+
+    Volumen persistente (PV/PVC)     Independiente del Pod   Reemplazo del Pod, sujeto al backend y a la retención
+
+ No todos los volúmenes son efímeros. Un PV permite separar los datos del ciclo de vida del Pod.
+
+
+
+
+Microservicios (73.40)                                                                                               28
+
+===== PAGINA 29 =====
+
+ Storage · Garantías y límites
+ Disponibilidad y topología                                Durabilidad
+ No es necesario que un volumen sea accesible desde        Sobrevivir a la destrucción del clúster no es una
+ todos los nodos.                                          garantía de Kubernetes.
+     Un disco zonal está disponible en su zona.            El PV es un objeto de Kubernetes; los datos viven en
+     Un volumen local está ligado a un nodo.               el backend.
+     El scheduling debe respetar esas restricciones, por   Su conservación depende de la infraestructura y de la
+     ejemplo mediante nodeAffinity.                        política de retención. Persistencia no significa
+                                                           disponibilidad ilimitada.
+
+
+
+
+Microservicios (73.40)                                                                                            29
+
+===== PAGINA 30 =====
+
+ PersistentVolume
+ Un PersistentVolume (PV) representa un recurso de almacenamiento: disco local, volumen de red u otro
+ backend.
+ Su ciclo de vida es independiente de los Pods que lo consumen. Se describe mediante:
+     capacity: capacidad ofrecida.
+     accessModes: modos de acceso soportados.
+     persistentVolumeReclaimPolicy: qué sucede con el almacenamiento cuando se elimina su claim.
+
+
+
+
+Microservicios (73.40)                                                                                  30
+
+===== PAGINA 31 =====
+
+ PersistentVolume · Acceso y retención
+ Modos de acceso                                    Reclaim policy
+     RWO / ReadWriteOnce: lectura/escritura desde   Al eliminarse el PVC:
+     un nodo; puede haber varios Pods en él.          Retain: conserva el volumen y sus datos;
+     ROX / ReadOnlyMany: lectura desde varios         recuperación manual.
+     nodos.                                           Delete: elimina el PV y el almacenamiento
+     RWX / ReadWriteMany: lectura/escritura desde     subyacente, si el backend lo soporta.
+     varios nodos.                                    Recycle: deprecado; no se recomienda.
+     RWOP / ReadWriteOncePod: un único Pod;
+     requiere CSI, estable desde v1.29.             Los PV dinámicos heredan la política de su
+                                                    StorageClass; el valor predeterminado es Delete.
+ No son permisos de acceso ni sustituyen la
+ protección de escritura.
+
+
+
+
+Microservicios (73.40)                                                                                 31
+
+===== PAGINA 32 =====
+
+ PersistentVolume (NFS)
+ Ejemplo estático: el administrador crea el PV. NFS sigue vigente; requiere un servidor disponible con el
+ recurso exportado.
+
+  apiVersion: v1
+  kind: PersistentVolume
+  metadata:
+    name: nfs
+  spec:
+    capacity:
+      storage: 1Mi
+    accessModes:
+      - ReadWriteMany
+    nfs:
+      server: nfs-server.default.svc.cluster.local
+      path: "/"
+    mountOptions:
+      - nfsvers=4.2
+
+
+
+
+Microservicios (73.40)                                                                                      32
+
+===== PAGINA 33 =====
+
+ PersistentVolumeClaim
+ Un PersistentVolumeClaim (PVC) solicita almacenamiento indicando tamaño, modos de acceso y,
+ opcionalmente, clase.
+ El Pod referencia el PVC, no necesita conocer los detalles del backend. Kubernetes vincula el claim con un
+ PV compatible.
+ La solicitud puede resolverse mediante:
+     Aprovisionamiento estático: un PV creado previamente por el administrador.
+     Aprovisionamiento dinámico: creación de un PV mediante el provisioner de una StorageClass.
+
+
+
+
+Microservicios (73.40)                                                                                        33
+
+===== PAGINA 34 =====
+
+ PersistentVolumeClaim · YAML estático
+ Este ejemplo elige explícitamente el PV nfs y solicita almacenamiento sin clase.
+
+  apiVersion: v1
+  kind: PersistentVolumeClaim
+  metadata:
+    name: nfs
+  spec:
+    accessModes:
+      - ReadWriteMany
+    storageClassName: ""
+    resources:
+      requests:
+        storage: 1Mi
+    volumeName: nfs
+
+
+
+
+Microservicios (73.40)                                                              34
+
+===== PAGINA 35 =====
+
+ StorageClass
+ Una StorageClass describe una clase de almacenamiento disponible: rendimiento, backend o políticas. No
+ se limita a la nube.
+     provisioner: componente que aprovisiona los PV.
+     parameters: opciones específicas del proveedor.
+     reclaimPolicy: retención del almacenamiento, Delete o Retain.
+     volumeBindingMode: Immediate o WaitForFirstConsumer.
+
+ Con WaitForFirstConsumer, la vinculación/aprovisionamiento espera un Pod consumidor y considera sus
+ restricciones de scheduling y la topología del volumen.
+ El PVC solicita la clase con storageClassName; si omite el campo, puede utilizarse la clase predeterminada.
+
+
+
+
+Microservicios (73.40)                                                                                         35
+
+===== PAGINA 36 =====
+
+ StorageClass · Aprovisionamiento dinámico
+ Un driver CSI implementa la interfaz estándar de       apiVersion: storage.k8s.io/v1
+ almacenamiento sin modificar Kubernetes.               kind: StorageClass
+                                                        metadata:
+ El provisioner puede crear un PV para el PVC que         name: fast
+                                                        provisioner: csi-driver.example-vendor.example
+ solicita esta clase, si no existe uno compatible.
+                                                        reclaimPolicy: Delete
+ El driver se instala aparte. Su nombre y parámetros    volumeBindingMode: WaitForFirstConsumer
+                                                        parameters:
+ en este ejemplo son ilustrativos: deben ajustarse al     type: ssd
+ driver elegido.
+
+
+
+
+Microservicios (73.40)                                                                                   36
+
+===== PAGINA 37 =====
+
+ PersistentVolumeClaim · Dinámico
+ El PVC pide la clase fast, sin fijar un volumeName.   apiVersion: v1
+                                                       kind: PersistentVolumeClaim
+ Con WaitForFirstConsumer, el provisioner              metadata:
+ coordina el volumen con la ubicación del Pod            name: app-data
+                                                       spec:
+ consumidor.                                             accessModes:
+                                                           - ReadWriteOnce
+ Una vez vinculado, el Pod consume el PVC igual que      storageClassName: fast
+ en el ejemplo estático.                                 resources:
+                                                           requests:
+                                                             storage: 5Gi
+
+
+
+
+Microservicios (73.40)                                                               37
+
+===== PAGINA 38 =====
+
+ StorageClass + PVC + PV
+                                     PVC solicita clase   → provisioner crea PV
+                                       Pod   → monta PVC ↔ vinculado a PV
+     La StorageClass define cómo aprovisionar.
+     El provisioner crea el PV; Kubernetes lo vincula al PVC.
+     El Pod monta el almacenamiento referenciando el PVC.
+     En modo estático, el administrador crea el PV; este también puede pertenecer a una clase.
+
+
+
+
+Microservicios (73.40)                                                                           38
+
+===== PAGINA 39 =====
+
+ Operators
+ Un Operator combina recursos personalizados con un controlador para automatizar tareas específicas de una
+ aplicación.
+     El CRD registra el tipo de recurso personalizado.
+     El recurso declara el estado deseado.
+     El controlador observa el estado actual y ejecuta un ciclo de reconciliación para acercarlos.
+     No se limita a aplicaciones stateful ni a cambios de Deployment.
+     OperatorHub.io es un catálogo; el mantenimiento depende de cada proyecto.
+
+ La reconciliación puede coordinar recursos de cómputo, red y almacenamiento.
+
+
+
+
+Microservicios (73.40)                                                                                   39
+
+===== PAGINA 40 =====
+
+ Operators · Ejemplo PostgreSQL
+ Recurso ilustrativo, definido por el CRD de un   Al cambiar instances de 3 a 5, el controlador:
+ operador:
+                                                    Crea las nuevas instancias.
+  apiVersion: postgres.example.com/v1               Ajusta replicación y configuración.
+  kind: PostgresCluster
+  metadata:                                         Informa el avance mediante status.
+    name: pagos                                     Repite el ciclo para converger al estado deseado.
+  spec:
+    version: "16"                                 La lógica específica de PostgreSQL vive en el
+    instances: 3
+                                                  controlador, no en el manifiesto del usuario.
+ No pertenece a la API nativa de Kubernetes.
+
+
+
+
+Microservicios (73.40)                                                                                  40
+
+===== PAGINA 41 =====
+
+ ConfigMap
+ Para configurar una aplicación sin reconstruir su      apiVersion: v1
+ imagen, un ConfigMap almacena datos no                 kind: ConfigMap
+                                                        metadata:
+ confidenciales en pares clave-valor.                     name: game-demo
+                                                        data:
+ Permite desacoplar la configuración específica del
+                                                          # property-like keys; each key maps to a simple value
+ entorno de las imágenes de su contenedor, para que       player_initial_lives: "3"
+ sus aplicaciones sean fácilmente portátiles.             ui_properties_file_name: "user-interface.properties"
+
+ No proporciona confidencialidad ni encriptación. Si     # file-like keys
+                                                         game.properties: |
+ los datos que desea almacenar son confidenciales,         enemy.types=aliens,monsters
+ use un Secreto en lugar de un ConfigMap, o use            player.maximum-lives=5
+                                                         user-interface.properties: |
+ herramientas adicionales (de terceros) para mantener      color.good=purple
+ la privacidad de sus datos.                               color.bad=yellow
+                                                           allow.textmode=true
+ 1MiB Max
+
+
+
+
+Microservicios (73.40)                                                                                            41
+
+===== PAGINA 42 =====
+
+ ConfigMaps · Consumo
+ Los pods pueden consumir ConfigMaps y usarlos como variables de entorno, argumentos de línea de
+ comandos o como archivos de configuración en un volumen.
+ Los ConfigMaps se usan dentro del Pod de la siguiente manera:
+     Dentro de command (o argumentos de este)
+     Como variables de ambiente para un container
+     Archivos read-only montados dentro del Pod
+     Consumidos por código dentro de la aplicación, por un cliente de la API de Kubernetes
+
+
+
+
+Microservicios (73.40)                                                                             42
+
+===== PAGINA 43 =====
+
+ ConfigMaps · Variables de entorno (ConfigMap)
+  apiVersion: v1
+  kind: ConfigMap
+  metadata:
+    name: game-demo
+  data:
+    player_initial_lives: "3"
+    ui_properties_file_name: "user-interface.properties"
+
+
+
+
+Microservicios (73.40)                                     43
+
+===== PAGINA 44 =====
+
+ ConfigMaps · Variables de entorno (Pod)
+  spec:
+    containers:
+    - name: demo
+      image: alpine
+      command: ["sleep", "3600"]
+      env:
+      # Define the environment variable
+      - name: PLAYER_INITIAL_LIVES
+        # Notice that the case is different here
+        # from the key name in the ConfigMap.
+        valueFrom:
+          configMapKeyRef:
+            name: game-demo # The ConfigMap this value comes from.
+            key: player_initial_lives # The key to fetch.
+      - name: UI_PROPERTIES_FILE_NAME
+        valueFrom:
+          configMapKeyRef:
+            name: game-demo
+            key: ui_properties_file_name
+
+
+
+
+Microservicios (73.40)                                               44
+
+===== PAGINA 45 =====
+
+ ConfigMaps · Archivos montados (ConfigMap)
+  apiVersion: v1
+  kind: ConfigMap
+  metadata:
+    name: game-demo
+  data:
+    player_initial_lives: "3"
+    ui_properties_file_name: "user-interface.properties"
+    game.properties: |
+      enemy.types=aliens,monsters
+      player.maximum-lives=5
+    user-interface.properties: |
+      color.good=purple
+      color.bad=yellow
+      allow.textmode=true
+
+
+
+
+Microservicios (73.40)                                     45
+
+===== PAGINA 46 =====
+
+ ConfigMaps · Archivos montados (Pod)
+  apiVersion: v1
+  kind: Pod
+  metadata:
+    name: configmap-demo-pod
+  spec:
+    containers:
+    - name: demo
+      image: alpine
+      command: ["sleep", "3600"]
+      volumeMounts:
+      - name: config
+        mountPath: "/config"
+        readOnly: true
+
+
+
+
+Microservicios (73.40)                  46
+
+===== PAGINA 47 =====
+
+ ConfigMaps · Archivos montados (volumen)
+     volumes:
+     # You set volumes at the Pod level, then mount them into containers inside that Pod
+     - name: config
+       configMap:
+         # Provide the name of the ConfigMap you want to mount.
+         name: game-demo
+         # An array of keys from the ConfigMap to create as files
+         items:
+         - key: "game.properties"
+           path: "game.properties"
+         - key: "user-interface.properties"
+           path: "user-interface.properties"
+
+
+
+
+Microservicios (73.40)                                                                     47
+
+===== PAGINA 48 =====
+
+ Cambios en los ConfigMaps
+ El mecanismo de consumo determina cómo se aplica una actualización:
+     Variables de entorno y argumentos derivados: no cambian automáticamente; hay que recrear el Pod.
+     Volumen proyectado: los archivos se actualizan de forma eventual mediante el kubelet.
+     subPath: el montaje no recibe actualizaciones del ConfigMap.
+     Aplicación: debe releer o recargar el archivo; actualizarlo no reinicia el proceso.
+     Cliente de la API: puede leer u observar cambios sin depender del kubelet.
+
+ La demora del volumen depende de la sincronización y de la estrategia de detección de cambios del kubelet.
+
+
+
+
+Microservicios (73.40)                                                                                        48
+
+===== PAGINA 49 =====
+
+ Secrets
+ Un Secret contiene datos confidenciales, como contraseñas, tokens o claves, separados de la imagen y del
+ código de la aplicación.
+ Se crea independientemente del Pod y puede consumirse como archivo o variable de entorno.
+ Es similar a un ConfigMap, pero su tratamiento de acceso es diferente. Usar un Secret no garantiza por sí
+ solo la confidencialidad: hay que proteger acceso, almacenamiento y consumo.
+
+
+
+
+Microservicios (73.40)                                                                                       49
+
+===== PAGINA 50 =====
+
+ Secrets · Acceso
+ El acceso a la API no basta: leer o modificar Secrets requiere autorización, habitualmente mediante RBAC.
+     get, list y watch pueden revelar sus datos; aplicar mínimo privilegio.
+     Acceder a etcd evita los controles de la API y es altamente privilegiado.
+     Crear Pods o Deployments puede permitir montar Secrets del mismo namespace, salvo controles
+     adicionales.
+
+ El namespace delimita referencias, pero no reemplaza una política de seguridad.
+
+
+
+
+Microservicios (73.40)                                                                                       50
+
+===== PAGINA 51 =====
+
+ Secrets · Almacenamiento y cifrado
+ En una instalación estándar, los Secrets se almacenan sin cifrar en etcd, salvo que se configure cifrado at-
+ rest.
+ Base64 no es cifrado: codificar data no protege su contenido.
+ El cifrado se configura en el API server mediante EncryptionConfiguration, con claves o un proveedor
+ KMS. En servicios gestionados, verificar las garantías y opciones concretas del proveedor.
+
+
+
+
+Microservicios (73.40)                                                                                          51
+
+===== PAGINA 52 =====
+
+ Secrets · Creación
+ Se crean mediante kubectl o manifiestos. En data,   stringData acepta texto plano; Kubernetes lo
+ los valores se codifican en Base64:                 incorpora a data al persistir el objeto:
+
+  apiVersion: v1                                     apiVersion: v1
+  kind: Secret                                       kind: Secret
+  metadata:                                          metadata:
+    name: mysecret                                     name: mysecret
+  type: Opaque                                       type: Opaque
+  data:                                              stringData:
+    username: YWRtaW4=                                 config.yaml: |
+    password: MWYyZDFhMmU2N2Rm                           apiUrl: "https://my.api.com/api/v1"
+                                                         username: <user>
+ Valores educativos, no credenciales reales.             password: <password>
+
+                                                     No guardar manifiestos con credenciales reales en el
+                                                     repositorio.
+
+
+
+
+Microservicios (73.40)                                                                                      52
+
+===== PAGINA 53 =====
+
+ Buenas Prácticas con los Secrets
+     Habilitar cifrado at-rest y proteger las claves de cifrado.
+     Aplicar RBAC con mínimo privilegio y controlar la creación de workloads.
+     Limitar el acceso a los contenedores que lo necesitan.
+     Rotar credenciales y asegurar que la aplicación recargue sus valores.
+     Evaluar proveedores externos según sus garantías de persistencia y actualización.
+
+ External Secrets Operator sincroniza a Secrets de Kubernetes (etcd). Secrets Store CSI Driver puede
+ montar desde un proveedor externo sin sincronizarlos a Secrets.
+
+
+
+
+Microservicios (73.40)                                                                                 53
+
+===== PAGINA 54 =====
+
+Fin!!
+

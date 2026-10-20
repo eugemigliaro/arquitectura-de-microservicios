@@ -246,6 +246,23 @@ Preguntas recuperables por tema. Mantener las respuestas separadas o plegadas cu
 177. Separá autenticación, autorización y admisión. ¿Qué sucede con get, list y watch?
 178. ¿Qué representa apiVersion y qué aislamiento aporta por sí solo un Namespace? Compará el alcance de PVC y PV.
 
+## Kubernetes — Parte 2
+
+179. Distinguí los tres rangos de IP del clúster y las cuatro necesidades de comunicación. ¿Quién resuelve cada una?
+180. ¿Qué hace el plugin CNI y qué no hace kube-proxy? Compará ruteo nativo y overlay en mantenibilidad, extensibilidad, seguridad y performance.
+181. ¿Cómo sabe un Service a qué Pods reenviar? ¿Qué es un EndpointSlice y por qué se dejó de usar la API Endpoints?
+182. ¿Por qué un Pod en `default` puede llegar a `my-nginx-svc.default` sin escribir el nombre completo?
+183. Compará ClusterIP y headless. ¿Por qué un Service no garantiza round-robin por solicitud HTTP?
+184. Diferenciá ClusterIP, NodePort, LoadBalancer y ExternalName. ¿LoadBalancer exige nube?
+185. ¿Qué falta para que un Ingress o un Gateway hagan llegar tráfico? ¿Qué separa Gateway API entre GatewayClass, Gateway y HTTPRoute, y por qué se la recomienda?
+186. ¿Cuándo un Pod está aislado por NetworkPolicy? ¿Qué hace falta si ambos extremos están aislados? ¿Qué no hace una NetworkPolicy?
+187. ¿Qué sobrevive en la capa escribible, en un `emptyDir` y en un PV? ¿Persistente significa disponible desde cualquier nodo o después de destruir el clúster?
+188. Compará aprovisionamiento estático y dinámico. ¿Qué rol cumplen StorageClass, provisioner, CSI y `WaitForFirstConsumer`?
+189. ¿Qué garantiza RWO y qué RWOP? ¿Qué pasa con los datos al borrar un PVC con `Retain` y con `Delete`?
+190. ¿Qué agrega un Operator a la reconciliación nativa? Explicá el ejemplo de PostgreSQL al pasar de 3 a 5 instancias.
+191. ¿Cómo se entera una aplicación de un cambio en su ConfigMap según cómo lo consume?
+192. ¿Por qué un Secret no es confidencial por sí solo? Enumerá los riesgos de acceso, almacenamiento y creación, y las buenas prácticas.
+
 <details>
 <summary>Respuestas orientativas</summary>
 
@@ -429,11 +446,26 @@ Preguntas recuperables por tema. Mantener las respuestas separadas o plegadas cu
 176. Son operaciones asíncronas distintas: persistir Namespace, observarlo, solicitar crear la cuenta y persistirla. Convergencia del clúster no equivale a inconsistencia de etcd. [T16, p. 48] [T16, p. 49]
 177. Autenticación identifica, autorización permite la acción y admisión puede mutar o rechazar el objeto. get/list/watch no pasan por admisión ni persisten objetos. ServiceAccount es identidad; RBAC concede permisos aparte. [T16, p. 52] [T16, p. 53] [T16, p. 54]
 178. apiVersion es la versión de la API del recurso, no del clúster. Namespace delimita nombres y organiza, sin aislamiento de seguridad o red por sí solo; PVC es namespaced y PV tiene alcance de clúster. [T16, p. 55] [T16, p. 56]
+179. Nodos en el underlay, Pods en el rango del plugin de red y Services en un rango virtual. Contenedores del mismo Pod usan localhost; Pod–Pod, la red del CNI sin NAT; Pod–Service, la ClusterIP programada por kube-proxy o una alternativa; desde afuera, NodePort, LoadBalancer, Ingress, Gateway o port-forward. [T17, p. 2] [T17, p. 3] [T17, p. 4] [T17, p. 5] [T17, p. 7] [T17, p. 8]
+180. CNI conecta al Pod y le asigna IPs; kube-proxy solo programa el reenvío de Services. El ruteo nativo conserva IPs de Pods y suele ser más eficiente; la overlay encapsula, no requiere rutas de Pods en el underlay pero obliga a operar túneles y MTU, y no cifra ni reemplaza NetworkPolicy. [T17, p. 5] [T17, p. 6]
+181. Por el selector; Kubernetes mantiene direcciones y puertos en EndpointSlices que el controlador actualiza según Pods y readiness. Endpoints está deprecada desde v1.33 porque no soporta dual-stack y trunca más de 1000 endpoints. [T17, p. 9] [T17, p. 10] [T17, p. 12]
+182. CoreDNS resuelve el Service y el `resolv.conf` del Pod incluye la búsqueda `default.svc.cluster.local svc.cluster.local cluster.local`. [T17, p. 13] [T17, p. 16]
+183. ClusterIP da IP virtual estable con reenvío; headless (`clusterIP: None`) devuelve IPs de Pods y el cliente elige. iptables/nftables eligen backend por conexión. [T17, p. 17]
+184. ClusterIP es interna; NodePort publica un puerto en los nodos (30000–32767 por defecto); LoadBalancer requiere integración con proveedor o controlador, no necesariamente nube, y suele usar NodePorts; ExternalName es un CNAME sin proxy. [T17, p. 19]
+185. Un controlador instalado; Gateway API además requiere sus CRDs. GatewayClass define tipo y controlador, Gateway la infraestructura y listeners, HTTPRoute las reglas: el operador administra la infraestructura y las aplicaciones las rutas. Se recomienda para nuevos despliegues; la API Ingress está congelada y el ingress-nginx comunitario fue retirado. [T17, p. 8] [T17, p. 21] [T17, p. 23]
+186. Cuando alguna política lo selecciona en esa dirección. Si ambos están aislados, debe permitirlo el egress del origen y el ingress del destino; las reglas se suman sin orden. No autentica, no cifra, no filtra URLs y sin enforcement de la red no tiene efecto. [T17, p. 25] [T17, p. 26]
+187. Capa escribible: nada tras reinicio o reemplazo; `emptyDir`: reinicios del contenedor, no la eliminación del Pod; PV: reemplazo del Pod según backend y retención. Un volumen puede estar ligado a una zona o un nodo, y sobrevivir al clúster no es garantía de Kubernetes. [T17, p. 28] [T17, p. 29]
+188. En estático el administrador crea el PV y el PVC lo elige; en dinámico el PVC pide una clase y su provisioner, por ejemplo un driver CSI instalado aparte, crea el PV. `WaitForFirstConsumer` demora la vinculación hasta conocer el Pod y su topología. [T17, p. 33] [T17, p. 34] [T17, p. 35] [T17, p. 36] [T17, p. 37] [T17, p. 38]
+189. RWO admite lectura/escritura desde un nodo, aunque haya varios Pods en él; RWOP restringe a un único Pod y requiere CSI. `Retain` conserva volumen y datos para recuperación manual; `Delete` borra PV y almacenamiento si el backend lo soporta. [T17, p. 31]
+190. Un tipo propio registrado con un CRD y un controlador con la lógica de la aplicación. El controlador crea las instancias, ajusta replicación y configuración, reporta en `status` y repite hasta converger. [T17, p. 39] [T17, p. 40]
+191. Variables y argumentos no cambian hasta recrear el Pod; un volumen proyectado se actualiza eventualmente salvo con `subPath`; la aplicación debe releer el archivo; un cliente de la API puede observar cambios. Nada de esto dispara un rollout. [T17, p. 48] [T16, p. 47]
+192. Quien puede hacer get/list/watch, acceder a etcd o crear Pods del namespace puede leerlo; en etcd está sin cifrar salvo cifrado at rest; Base64 no cifra. Prácticas: cifrado at rest, RBAC mínimo, acceso limitado, rotación y no versionar credenciales reales. [T17, p. 50] [T17, p. 51] [T17, p. 52] [T17, p. 53]
 
 </details>
 
 ## Casos para practicar sin respuesta única
 
+- Para el despliegue del Álbum en un clúster, decidí qué Services son ClusterIP o headless, cuál es el único punto de entrada (Ingress o Gateway API), qué NetworkPolicies de *default deny + allow* hacen falta, qué datos van en PVC con qué modo de acceso y reclaim policy, y cómo llegan configuración y credenciales sin versionarlas. [E01, p. 6] [T17, p. 17] [T17, p. 23] [T17, p. 26] [T17, p. 31] [T17, p. 52]
 - Una fintech entrega semanalmente con seis equipos; un sistema interno cambia dos veces al año con un equipo de cuatro; un catálogo recibe cien veces más tráfico que checkout; una startup de tres personas construye su MVP. Elegí arquitectura y justificá por equipo, releases y escalado. [T02, p. 30]
 - Elegí `PagoRechazado` o `EntregaFallida`, escribí entre tres y cinco eventos y uno o dos comandos, asigná publicador y reactor, y marcá al menos un hotspot. [T03, p. 52]
 - Dibujá el proceso y las vistas del kernel para un contenedor que usa PID, mount, user y net namespaces, un cgroup de memoria y OverlayFS. Señalá qué sigue compartiendo con el host. [T04, p. 14] [T04, p. 18] [T04, p. 19]

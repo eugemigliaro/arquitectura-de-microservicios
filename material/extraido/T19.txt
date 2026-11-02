@@ -1,0 +1,188 @@
+FUENTE: T19
+TITULO: Helm
+ORIGINAL: material/catedra/teoria/Helm - Slidev.pdf
+PAGINAS: 11
+
+===== PAGINA 1 =====
+
+Arquitectura de Microservicios
+con Contenedores
+Docentes:
+- Ing. Federico Castañeda
+- Ing. Carlos Maceira
+- Ing. Franco Rupnik
+
+
+
+
+                            Microservicios (73.40) · ITBA
+
+===== PAGINA 2 =====
+
+Helm
+
+
+       Microservicios (73.40) · ITBA
+
+===== PAGINA 3 =====
+
+ Problemática
+ Desplegar una aplicación en Kubernetes implica:
+     Generar y pushear imagen en Docker
+     Crear deployment
+     Crear Service
+     Crear volumen y persistencia
+     Definir configMaps, secrets, ingress
+     Variables de ambiente
+
+ La modificación de la estructura desplegada no es sencilla
+
+
+
+
+Microservicios (73.40)                                        3
+
+===== PAGINA 4 =====
+
+ ¿Qué es Helm?
+ Es un gestor de paquetes para Kubernetes que facilita la instalación, actualización y administraciones de
+ aplicaciones.
+ Similar a un npm o apt-get.
+ Contiene paquetes de todo tipo: gitlab, jenkins, grafana, nginx, mysql.
+
+
+
+
+Microservicios (73.40)                                                                                       4
+
+===== PAGINA 5 =====
+
+ Conceptos clave
+ Chart
+ Es el paquete en sí que contiene todos los recursos necesarios para ejecutar una aplicación en Kubernetes.
+ Incluye todas las estructuras (deployment, service, etc), las cuales son configurables.
+
+ Release
+ Es una implementación específica del chart. Incluye versionado, lo cual hace que sea fácilmente posible hacer
+ un rollback.
+
+ Repositorio
+ Es una fuente de charts desde donde se pueden descargar e instalar los mismos. Se puede actualizar
+ fácilmente.
+
+
+
+
+Microservicios (73.40)                                                                                           5
+
+===== PAGINA 6 =====
+
+ Repositorios
+ En primer lugar se agrega el repositorio
+
+  helm repo add bitnami https://charts.bitnami.com/bitnami
+  Helm search repo bitnami
+
+
+  NAME                   CHART VERSION APP VERSION DESCRIPTION
+  bitnami/airflow         19.0.10       2.9.2       Apache Airflow is a tool to express and execute...
+  bitnami/apache          11.2.20       2.4.62      Apache HTTP Server is an open-source HTTP serve...
+  bitnami/apisix          3.5.1         3.10.0      Apache APISIX is high-performance, real-time AP...
+  bitnami/appsmith        4.0.9         1.32.0      Appsmith is an open source platform for buildin...
+  bitnami/argo-cd         7.0.14        2.12.4      Argo CD is a continuous delivery tool for Kuber...
+  bitnami/argo-workflows 9.1.17         3.5.11      Argo Workflows is meant to orchestrate Kubernet...
+  bitnami/aspnet-core     6.2.15        8.0.8       ASP.NET Core is an open-source framework for w...
+  bitnami/cassandra       12.0.3        5.0.1       Apache Cassandra is an open source distributed...
+
+
+
+
+Microservicios (73.40)                                                                                   6
+
+===== PAGINA 7 =====
+
+ Instalación de chart
+  helm install my-postgresql bitnami/postgresql --version 15.5.37
+
+
+
+  leandro@leandro-HP-Laptop-14s-dq1xxx:~$ kubectl get all
+  NAME                  READY STATUS      RESTARTS AGE
+  pod/my-postgresql-0    1/1     Running 0            6m9s
+
+  NAME                       TYPE        CLUSTER-IP      EXTERNAL-IP   PORT(S)    AGE
+  service/kubernetes         ClusterIP   10.96.0.1       <none>        443/TCP    6m27s
+  service/my-postgresql      ClusterIP   10.108.247.68   <none>        5432/TCP   6m9s
+  service/my-postgresql-hl   ClusterIP   None            <none>        5432/TCP   6m9s
+
+  NAME                             READY AGE
+  statefulset.apps/my-postgresql    1/1     6m9s
+  leandro@leandro-HP-Laptop-14s-dq1xxx:~$ kubectl get pvc
+  NAME                   STATUS VOLUME                                       CAPACITY     ACCESS MODES   STORAGECLASS   VOLUMEATTRIBUTESCLASS   AGE
+  data-my-postgresql-0 Bound      pvc-d6483dde-7773-42cf-85a4-b276ad32b657   8Gi          RWO            standard       <unset>                 6m22s
+
+
+
+
+Microservicios (73.40)                                                                                                                                  7
+
+===== PAGINA 8 =====
+
+ Creación e instalación de charts propios
+  helm create my-python-app
+
+
+ Estructura creada            values.yaml
+  my-python-app               replicaCount: 1
+  ├── charts
+  ├── templates               # This sets the container image more infor
+  │ ├── tests                 image:
+  │ ├── _helpers.tpl            repository: my-python-app
+  │ ├── deployment.yaml         # This sets the pull policy for images.
+  │ ├── hpa.yaml                pullPolicy: IfNotPresent
+  │ ├── ingress.yaml            # Overrides the image tag whose default
+  │ ├── NOTES.txt               tag: "2.0.0"
+  │ ├── service.yaml
+  │ └── serviceaccount.yaml   # This is for the secrets for pulling an
+  ├── .helmignore             imagePullSecrets: []
+  ├── Chart.yaml              # This is to override the chart name.
+  └── values.yaml             nameOverride: ""
+                              fullnameOverride: ""
+
+
+
+
+Microservicios (73.40)                                                     8
+
+===== PAGINA 9 =====
+
+ Beneficios
+     Confiabilidad de los repositorios
+     Simplifica la creación y gestión de recursos
+     Permite versionados de release y rollbacks
+     Facilidad de instalación y actualización de charts y despliegues
+     Configuración personalizable
+
+
+
+
+Microservicios (73.40)                                                  9
+
+===== PAGINA 10 =====
+
+ Helm Tutorial
+
+
+
+
+                         Fuente: https://www.youtube.com/watch?v=-ykwb1d0DXU
+
+Microservicios (73.40)                                                   10
+
+===== PAGINA 11 =====
+
+Fin!!
+
+
+        Microservicios (73.40) · ITBA
+

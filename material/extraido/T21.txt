@@ -1,0 +1,1196 @@
+FUENTE: T21
+TITULO: Resiliencia y escalabilidad en Kubernetes
+ORIGINAL: material/catedra/teoria/Resiliencia y Escalabilidad en Kubernetes - Slidev.pdf
+PAGINAS: 55
+
+===== PAGINA 1 =====
+
+Arquitectura de
+microservicios
+Resiliencia y escalabilidad en Kubernetes
+
+Docentes:
+- Ing. Federico Castañeda
+- Ing. Carlos Maceira
+- Ing. Franco Rupnik
+
+
+
+
+                                            Patrones y buenas prácticas, de un Pod a múltiples regiones
+
+===== PAGINA 2 =====
+
+ Caso motivador: una falla chica que tumba todo
+ Los grandes incidentes rara vez empiezan con una falla grande.
+     Un componente interno se degrada (red, DB, dependencia).
+     Los clientes reintentan de inmediato y en masa.
+     La carga extra satura aún más el componente degradado.
+     La falla se propaga a servicios que no tenían relación directa.
+     Recuperar requiere frenar el tráfico, no solo arreglar la causa.
+
+ Ejemplos: AWS us-east-1 (dic. 2021), Cloudflare (jul. 2019), Facebook (oct. 2021).
+
+    Pregunta: ¿qué mecanismo habría contenido el daño en cada caso?
+
+
+
+
+Microservicios (73.40)                                                                2
+
+===== PAGINA 3 =====
+
+ Agenda y objetivos
+ Resiliencia ≠ escalabilidad ≠ disponibilidad.
+
+    Concepto                          Pregunta que responde
+
+    Resiliencia                       ¿Qué pasa cuando algo falla?
+
+    Escalabilidad                     ¿Qué pasa cuando la carga crece?
+
+    Disponibilidad                    ¿Qué porcentaje del tiempo funciona?
+
+
+ 1. Patrones de resiliencia · 2. Kubernetes: HA y escalado · 3. Multi-región · 4. Validación y costo
+
+
+
+
+Microservicios (73.40)                                                                                 3
+
+===== PAGINA 4 =====
+
+ Falacias de la computación distribuida
+ Recap: lo que asumimos y no es cierto.
+     La red es confiable.
+     La latencia es cero.
+     El ancho de banda es infinito.
+     La topología no cambia.
+     Hay un solo administrador.
+
+ Consecuencia: toda llamada remota puede fallar, demorar o duplicarse. El diseño debe asumirlo.
+
+
+
+
+Microservicios (73.40)                                                                            4
+
+===== PAGINA 5 =====
+
+ Falla parcial y en cascada
+    Vas a ver. El mismo POST /checkout entra en una DB lenta y en una DB caída.
+    Al terminar. La lenta queda 3/3 en cada hop y el cuarto request falla en el gateway. La caída sigue en 0.
+
+   POST /checkout · 0/4 · 3 slots por hop
+                                                                                                                                   Enviar request         Reset
+   Cada hop tiene 3 slots. Enviá el mismo POST a las dos cadenas.
+
+
+
+     DB lenta · sin timeout                                          0 retenidos    DB caída · 503 inmediato                                          0 × 503
+
+
+
+
+        GATEWAY
+                     →    CHECKOUT
+                                       →       PAGOS
+                                                           →          DB               GATEWAY
+                                                                                                     →      CHECKOUT
+                                                                                                                       →   PAGOS
+                                                                                                                                        →           DB
+
+
+
+           0/3                0/3                0/3                 0/3                  0/3                  0/3          0/3                     0/3
+
+     Esperando un POST.                                                             Esperando un POST.
+
+
+
+                                                    Un 200 tardío ocupa toda la cadena. Un 503 rápido la libera.
+
+
+
+
+Microservicios (73.40)                                                                                                                                            5
+
+===== PAGINA 6 =====
+
+ Retry storm y thundering herd
+    Vas a ver. Cuántos 503 llegan a Pagos si reintenta una, dos o tres capas.
+    Al terminar. Tres capas suman 27. Con jitter el pico baja a 9. Con budget llegan 11, no 270.
+
+   POST /checkout · Pagos responde 503
+                                                                                                                                                                        Reset
+   Solo el cliente reintenta. 1 usuario.
+
+
+                                                                            1 capa       2 capas       3 capas       Jitter     Budget +10%   Disparar      Siguiente oleada
+
+               USUARIOS                            CLIENTE                             GATEWAY                                CHECKOUT                      PAGOS
+
+                   1                                  ×3                                   ×1                                   ×1                          503
+                ENTRAN                            REINTENTA                               PASA                                  PASA                     NO REINTENTA
+
+   LLEGAN           PICO             FAN-OUT
+
+   —                —                —
+   El fan-out aparece al disparar.
+
+                                                     random.uniform(0, min(cap, base * 2 ** attempt)) · solo 503 y timeouts
+
+
+                                               Reintentar en cada capa multiplica la carga. Jitter baja el pico y el budget corta el extra.
+
+
+
+
+Microservicios (73.40)                                                                                                                                                          6
+
+===== PAGINA 7 =====
+
+ SLI, SLO, SLA y error budget
+    Término              Qué es                             Ejemplo
+
+    SLI                  Métrica medida                     % de requests con 2xx en menos de 300 ms
+
+    SLO                  Objetivo interno                   99.9% en 30 días
+
+    SLA                  Compromiso contractual             Crédito si baja de 99.5%
+
+    Error budget         100% − SLO                         43 min/mes de falla permitida
+
+     Si el budget se agota, se frenan features y se prioriza confiabilidad.
+     El SLO decide cuánta resiliencia vale la pena construir.
+
+
+
+
+Microservicios (73.40)                                                                                 7
+
+===== PAGINA 8 =====
+
+ Disponibilidad compuesta
+ Dependencias en serie multiplican su disponibilidad.
+
+    Dependencias al 99.9%                           Disponibilidad resultante
+
+    1                                               99.9%
+
+    5                                               ≈ 99.5% (≈ 3.6 hs/mes caído)
+
+    10                                              ≈ 99.0%
+
+
+     Réplicas en paralelo la mejoran: dos instancias independientes al 99.9%    ⇒ 99.9999%.
+     Los patrones siguientes buscan romper la dependencia en serie.
+
+
+
+
+Microservicios (73.40)                                                                        8
+
+===== PAGINA 9 =====
+
+ Mapa de patrones de resiliencia
+ Capas de defensa para una llamada remota.
+
+    Patrón                                   Protege contra
+
+    Timeout                                  Esperas infinitas
+
+    Retry + backoff + jitter                 Fallas transitorias
+
+    Idempotencia                             Duplicados por reintentos
+
+    Circuit breaker                          Insistir sobre un servicio caído
+
+    Bulkhead                                 Que una falla consuma todos los recursos
+
+    Load shedding / rate limit               Sobrecarga
+
+    Fallback                                 Dependencia no disponible
+
+
+
+
+Microservicios (73.40)                                                                  9
+
+===== PAGINA 10 =====
+
+ Timeouts
+    Vas a ver. La misma query de 2,5 s, con timeouts locales y con el deadline propagado.
+    Al terminar. A la derecha la cadena se canceló. A la izquierda el cliente se fue y el cobro quedó hecho.
+
+   POST /checkout · la DB tarda 2,5 s · el cliente espera 2 s
+                                                                                                                              Avanzar tiempo        Reset
+   Las dos cadenas enviaron el POST. Avanzá el tiempo.
+
+
+                                                                        t = 0 s · POST enviado
+
+
+     Timeouts locales                                           cada capa espera sola   Deadline propagado                            2   → 1,5 → 1 → 0,5 s
+          Cliente        2s     en vuelo                                                   Cliente       2s        en vuelo
+
+          Checkout       3s     en vuelo                                                   Checkout      1,5 s     en vuelo
+
+          Pagos          3s     en vuelo                                                   Pagos         1s        en vuelo
+
+          DB             3s     en vuelo                                                   DB            0,5 s     en vuelo
+
+
+
+
+                                                   Si el deadline no baja, Pagos sigue cobrando después del timeout.
+
+
+
+
+Microservicios (73.40)                                                                                                                                        10
+
+===== PAGINA 11 =====
+
+ Retries con backoff exponencial y jitter
+  def delay(attempt, base=0.1, cap=10.0):
+      # full jitter
+      return random.uniform(0, min(cap, base * 2 ** attempt))
+
+     Backoff: espaciar los intentos.
+     Jitter: desincronizar clientes (evita thundering herd).
+     Retry budget: máximo ~10% de requests adicionales.
+     Reintentar solo errores transitorios (503, timeouts), nunca 4xx.
+     Solo en un nivel de la cadena.
+
+
+
+
+Microservicios (73.40)                                                  11
+
+===== PAGINA 12 =====
+
+ Ejemplo: retries en Kubernetes Jobs
+  apiVersion: batch/v1
+  kind: Job
+  metadata:
+    name: sync-facturas
+  spec:
+    backoffLimit: 4                 # reintentos antes de marcar Failed
+    activeDeadlineSeconds: 600      # tope total, corta cualquier retry
+    ttlSecondsAfterFinished: 3600
+    template:
+      spec:
+        restartPolicy: OnFailure    # Never | OnFailure (Always no vale)
+        containers:
+          - name: sync
+            image: registry/sync-facturas:1.4.2
+
+     Cada falla del pod cuenta contra backoffLimit (default 6).
+     Kubernetes aplica backoff exponencial: 10 s, 20 s, 40 s… con tope de 6 min. No es configurable y no
+     lleva jitter.
+
+
+
+
+Microservicios (73.40)                                                                                     12
+
+===== PAGINA 13 =====
+
+ Jobs: detalle de la configuración de retry
+    Campo                               Qué controla
+
+    backoffLimit                        Máximo de fallas antes de marcar el Job como Failed
+
+    activeDeadlineSeconds               Tiempo total del Job; al vencer se terminan los pods, aunque queden reintentos
+
+    restartPolicy: OnFailure            Reinicia el contenedor en el mismo pod (el backoff es el de kubelet)
+
+    restartPolicy: Never                Crea un pod nuevo por intento; conserva logs de cada falla
+
+    backoffLimitPerIndex                En Jobs indexados, límite por índice; una tarea mala no tumba al resto
+
+    podFailurePolicy                    Distingue errores: FailJob (no reintentar), Ignore (no cuenta), Count
+
+
+  podFailurePolicy:
+    rules:
+      - action: FailJob           # error de validación: reintentar no sirve
+        onExitCodes: { containerName: sync, operator: In, values: [2] }
+      - action: Ignore            # preemption / drain: no gasta el presupuesto
+        onPodConditions: [{ type: DisruptionTarget }]
+
+         dF il
+Microservicios (73.40)
+                         P li     i        t    tP li        N                                                           13
+
+===== PAGINA 14 =====
+
+ Idempotencia
+    Vas a ver. Un POST /payments que el servidor cobra antes de que vuelva el 200.
+    Al terminar. Sin clave hay dos cobros. Con Idempotency-Key queda uno y vuelve el 200 original.
+
+   POST /payments · el servidor cobra antes de que vuelva el 200
+                                                                                                                                                    Avanzar    Reset
+   El mismo POST /payments en las dos columnas. Avanzá el tiempo.
+
+
+                                                                                Listo
+
+
+     Sin clave                                            sin Idempotency-Key         Con clave                                             Idempotency-Key: 7f3c9a1e
+
+
+
+
+      CLIENTE                            SERVIDOR                                       CLIENTE                                  SERVIDOR
+      todavía no envió                   no tiene clave                                 todavía no envió                         clave en el request
+                                             sin cobros                                                                             sin cobros
+
+
+     POST /payments                                                                   POST /payments
+
+
+
+                                          Un timeout no alcanza. El reintento es seguro solo si el servidor recuerda la clave.
+
+
+
+
+Microservicios (73.40)                                                                                                                                                  14
+
+===== PAGINA 15 =====
+
+ Circuit Breaker
+    Vas a ver. Cada POST y si llega a Pagos o lo corta el breaker.
+    Al terminar. Con 3 fallas abre. El siguiente es 503 y Pagos no lo recibe. Tras esperar, una prueba 200 lo cierra.
+
+   POST /payments · 3 fallas consecutivas abren el breaker
+                                                                                                                                                                Reset
+   Cerrado, 0/3. El próximo POST llega a Pagos.
+
+
+                                                                                                                                   Pagos 500    Pagos OK      Esperar
+
+                         Cerrado                                                    Abierto                                             Semi-abierto
+                             0/3
+                                                       →                            503 local
+                                                                                                                       →                  1 prueba
+
+                                                  3 fallas seguidas abren · Esperar habilita una prueba · 200 cierra, 500 reabre
+
+
+
+        Cliente                                                                     Breaker                                                                 Pagos
+
+         POST                                                                      Cerrado                                                                 espera
+        entrante                                                                     cortó 0                                                               recibió 0
+
+   #     Breaker           Pedido      HTTP
+        Ningún pedido todavía.
+
+
+                                              El estado del breaker decide si el pedido llega a Pagos o vuelve 503 sin llamarlo.
+
+
+
+
+Microservicios (73.40)                                                                                                                                                  15
+
+===== PAGINA 16 =====
+
+ Circuit Breaker en la práctica
+    Dónde                               Herramientas
+
+    En el código                        Resilience4j (Java), Polly (.NET), gobreaker (Go)
+
+    En la infraestructura               Proxies / service mesh con outlier detection
+
+     Parámetros clave: umbral de fallas, ventana, tiempo en abierto, llamadas de prueba.
+     Medir y alertar cuando el breaker abre: es un síntoma, no el problema.
+     El service mesh puede aplicarlo sin tocar el código; se verá en una clase posterior.
+
+
+
+
+Microservicios (73.40)                                                                      16
+
+===== PAGINA 17 =====
+
+ Bulkhead
+    Vas a ver. Los mismos 4 slots, en un pool único y detrás de un mamparo.
+    Al terminar. Recomendaciones llenan el pool único y Checkout es 503. Con mamparo, Checkout entra igual.
+
+   Misma capacidad · 4 slots de cada lado
+                                                                                                                              Recomendaciones   Checkout     Reset
+   4 slots de cada lado. Recomendaciones lentas no liberan el suyo.
+
+      Checkout     Recomendaciones lentas
+
+
+     Sin mamparo                                                        un solo pool     Con mamparo                                                       dos pools
+
+
+
+                                    POOL ÚNICO                                                         CHECKOUT                          RECOMENDACIONES
+
+
+
+                                        0/4                                                               0/2                                   0/2
+
+
+     Checkout y Recomendaciones comparten los slots.                                     Cada dependencia tiene sus propios slots.
+
+
+                                      Misma cantidad de slots. El mamparo impide que Recomendaciones lentas hundan a Checkout.
+
+                                            En Kubernetes: ResourceQuota, node pools dedicados y deployments por tipo de tráfico.
+
+
+
+
+Microservicios (73.40)                                                                                                                                                 17
+
+===== PAGINA 18 =====
+
+ Rate limiting y load shedding
+ Proteger al servicio rechazando trabajo temprano y barato.
+     Token bucket: permite ráfagas, limita el promedio.
+     Leaky bucket: salida a ritmo constante.
+     Responder 429 Too Many Requests (límite por cliente) o 503 + Retry-After (sobrecarga).
+     Load shedding: descartar primero lo menos crítico (prioridades).
+
+    Rechazar el 10% de los requests a tiempo es mejor que fallar el 100% por saturación.
+
+
+
+
+Microservicios (73.40)                                                                        18
+
+===== PAGINA 19 =====
+
+ Ataques de volumen (DDoS)
+ Objetivo del atacante: agotar ancho de banda o recursos hasta que los usuarios legítimos no puedan usar
+ el servicio.
+
+    Capa                     Ejemplo                                            Qué satura
+
+    L3/L4 (red/transporte)   UDP flood, SYN flood, amplificación (DNS, NTP)     Ancho de banda, tabla de conexiones
+
+    L7 (aplicación)          HTTP flood, requests costosos (búsquedas, login)   CPU, threads, DB
+
+
+     Un ataque L7 parece tráfico legítimo: pocos requests bastan si cada uno es caro.
+     El autoscaling no es una defensa: escala el costo junto con el ataque (denial of wallet).
+     Absorber el volumen es un problema del borde, no del cluster.
+
+
+
+
+Microservicios (73.40)                                                                                                19
+
+===== PAGINA 20 =====
+
+ Mitigar ataques de volumen: defensa en capas
+ Filtrar lo más lejos posible del servicio, y lo más barato posible.
+
+                         CDN / Anycast            WAF + rate limit       API Gateway / Ingress           Servicios
+      Tráfico
+                           scrubbing               bot detection          límites por cliente         load shedding
+
+
+
+
+    Capa                             Mitigación
+
+    Borde (proveedor)                Anycast + scrubbing: AWS Shield, Cloudflare, Cloud Armor
+
+    WAF                              Reglas, reputación de IP, desafíos (CAPTCHA), geo-bloqueo
+
+    Gateway / Ingress                Rate limit por IP, API key o usuario; límite de conexiones y tamaño de body
+
+    Servicio                         Load shedding, colas acotadas, circuit breaker
+
+
+
+
+Microservicios (73.40)                                                                                                20
+
+===== PAGINA 21 =====
+
+ Mitigar ataques de volumen en Kubernetes
+     No exponer NodePorts ni LoadBalancers directos: todo el tráfico entra por CDN / WAF.
+     Ingress: limit-rps y limit-connections (ingress-nginx), RateLimitPolicy (Gateway API / Envoy).
+     Timeouts de cabecera y body cortos contra ataques lentos (slowloris).
+     NetworkPolicy y cuentas de servicio: limitar el movimiento lateral si algo se filtra.
+     Capar maxReplicas del HPA y fijar presupuesto: evita facturas y cascadas hacia la DB.
+     Cachear en el CDN las respuestas costosas y proteger endpoints caros (login, búsqueda).
+     Plan de respuesta: alertas por tráfico anómalo, runbook de bloqueo y contacto con el proveedor.
+
+    Defensa en profundidad: ningún componente solo absorbe un ataque volumétrico.
+
+
+
+
+Microservicios (73.40)                                                                                 21
+
+===== PAGINA 22 =====
+
+ Backpressure
+ Que el consumidor lento pueda frenar al productor.
+     Colas acotadas: cuando se llenan, se rechaza o se bloquea.
+     Flow control: HTTP/2 y gRPC, Reactive Streams.
+     Kafka: el consumidor controla su ritmo con poll y max.poll.records.
+     Una cola sin límite solo traslada el problema a la memoria (OOMKilled).
+
+
+
+
+Microservicios (73.40)                                                         22
+
+===== PAGINA 23 =====
+
+ Fallbacks y degradación elegante
+ Si una dependencia falla, ofrecer una experiencia reducida en lugar de un error.
+
+    Funcionalidad                          Fallback
+
+    Recomendaciones                        Lista genérica o la última calculada
+
+    Precio / stock                         Cache con datos levemente viejos
+
+    Reseñas                                Ocultar el bloque
+
+    Pago externo                           Encolar y confirmar luego
+
+     Definir de antemano qué es crítico y qué es prescindible.
+     Los feature flags permiten degradar manualmente en un incidente.
+
+
+
+
+Microservicios (73.40)                                                              23
+
+===== PAGINA 24 =====
+
+ ¿Dónde implementar cada patrón?
+    Nivel                  Ventajas                                   Límites
+
+    Código / librería      Conoce la semántica de negocio             Repetido por lenguaje y equipo
+
+    API Gateway            Punto central en el borde                  No ve el tráfico interno
+
+    Plataforma (K8s)       Uniforme y declarativo                     Solo infraestructura
+
+    Service mesh           Retries, timeouts y CB sin código          Costo operativo (clase posterior)
+
+     Regla práctica: negocio en el código, políticas uniformes en la plataforma.
+
+
+
+
+Microservicios (73.40)                                                                                    24
+
+===== PAGINA 25 =====
+
+ Qué da Kubernetes "gratis"
+ El reconciliation loop mantiene el estado deseado.
+     Reinicia contenedores que mueren (restartPolicy).
+     Reprograma Pods si cae un nodo.
+     Mantiene el número de réplicas.
+     Saca del Service a los Pods que no están Ready.
+
+ Lo que NO da:
+     Timeouts, retries ni circuit breakers en tu código.
+     Idempotencia ni manejo de datos duplicados.
+     Capacidad ante la caída de una zona o región.
+
+
+
+
+Microservicios (73.40)                                     25
+
+===== PAGINA 26 =====
+
+ Recap: lo básico bien hecho
+ Visto en Programar microservicios para Kubernetes.
+
+    Mecanismo                           Error común
+
+    Readiness / liveness / startup      Liveness que depende de la DB (reinicios en cadena)
+
+    requests / limits                   Sin requests: el scheduler no puede decidir
+
+    PodDisruptionBudget                 Sin PDB, un drenado de nodo baja todas las réplicas
+
+    Graceful shutdown                   Sin preStop ni manejo de SIGTERM: errores en cada deploy
+
+     Mínimo 2 réplicas para servicios que deben estar siempre disponibles.
+
+
+
+
+Microservicios (73.40)                                                                             26
+
+===== PAGINA 27 =====
+
+ Distribución de réplicas
+ Que las réplicas no compartan el mismo punto de falla.
+
+  topologySpreadConstraints:
+    - maxSkew: 1
+      topologyKey: topology.kubernetes.io/zone
+      whenUnsatisfiable: DoNotSchedule
+      labelSelector:
+        matchLabels: { app: checkout }
+
+     Repartir por nodo y por zona de disponibilidad.
+     podAntiAffinity evita colocar réplicas en el mismo nodo.
+     Con DoNotSchedule, si no hay capacidad en una zona el Pod queda Pending.
+
+
+
+
+Microservicios (73.40)                                                          27
+
+===== PAGINA 28 =====
+
+ QoS, PriorityClass y preemption
+ Quién muere primero cuando el nodo se queda sin recursos.
+
+    QoS                         Condición                                   Orden de desalojo
+
+    BestEffort                  Sin requests ni limits                      Primero
+
+    Burstable                   requests < limits                           Intermedio
+
+    Guaranteed                  requests = limits                           Último
+
+
+     PriorityClass: un Pod crítico puede desplazar (preempt) a otros de menor prioridad.
+     Usar prioridades para separar servicios críticos de batch y de pods "de relleno".
+
+
+
+
+Microservicios (73.40)                                                                          28
+
+===== PAGINA 29 =====
+
+ Despliegues seguros
+ La mayoría de los incidentes empiezan con un cambio.
+
+    Estrategia                Idea
+
+    Rolling update            Reemplazo gradual (maxSurge, maxUnavailable)
+
+    Blue/green                Dos entornos completos; cambio de tráfico instantáneo
+
+    Canary                    5%   → 25% → 100% con análisis de métricas
+     Argo Rollouts o Flagger automatizan el canary y hacen rollback según SLO.
+     Combinar con feature flags: desplegar no es lo mismo que liberar.
+
+
+
+
+Microservicios (73.40)                                                                29
+
+===== PAGINA 30 =====
+
+ Demo 1: matar pods bajo carga
+ Objetivo: comprobar qué errores ve el cliente cuando mueren réplicas.
+
+  # Terminal 1: carga constante
+  k6 run --vus 20 --duration 2m script.js
+
+  # Terminal 2: provocar fallas
+  kubectl delete pod -l app=checkout --wait=false
+  kubectl drain <nodo> --ignore-daemonsets
+
+ 1. Sin probes, sin PDB, sin preStop: observar errores 5xx.
+ 2. Con readiness + PDB + preStop + graceful shutdown: observar la diferencia.
+
+
+
+
+Microservicios (73.40)                                                           30
+
+===== PAGINA 31 =====
+
+ Escalar: vertical vs. horizontal
+                              Vertical                                      Horizontal
+
+    Cómo                      Más CPU/RAM por instancia                     Más instancias
+
+    Límite                    Tamaño máximo de nodo                         Coordinación y estado
+
+    Disponibilidad            Un solo punto de falla                        Mejora con réplicas
+
+     Escalar horizontalmente exige servicios stateless (o con estado externalizado).
+     Pregunta de diseño: ¿qué pasa si hay 10 réplicas en vez de 1?
+
+
+
+
+Microservicios (73.40)                                                                              31
+
+===== PAGINA 32 =====
+
+ HPA: Horizontal Pod Autoscaler
+  réplicas = ceil( réplicas_actuales × métrica_actual / métrica_objetivo )
+
+  spec:
+    minReplicas: 3
+    maxReplicas: 30
+    behavior:
+      scaleDown:
+        stabilizationWindowSeconds: 300
+
+     Ejemplo: 4 réplicas al 90% de CPU con objetivo 60%          ⇒ 6 réplicas.
+     behavior evita oscilaciones (flapping): subir rápido, bajar lento.
+     Requiere requests de CPU definidos.
+
+
+
+
+Microservicios (73.40)                                                           32
+
+===== PAGINA 33 =====
+
+ HPA con métricas custom y externas
+ La CPU rara vez refleja la carga real del servicio.
+
+    Tipo                           Ejemplo
+
+    Resource                       CPU, memoria
+
+    Pods                           Requests por segundo por Pod
+
+    External                       Longitud de cola, lag de Kafka
+
+
+     Prometheus Adapter expone métricas de Prometheus a la API de HPA.
+     Buenas señales: RPS por réplica, latencia p95, profundidad de cola.
+     La métrica debe moverse al agregar réplicas.
+
+
+
+
+Microservicios (73.40)                                                     33
+
+===== PAGINA 34 =====
+
+ VPA y right-sizing
+ Vertical Pod Autoscaler recomienda (o ajusta) requests y limits.
+
+    Modo                        Efecto
+
+    Off                         Solo recomienda
+
+    Initial                     Aplica al crear el Pod
+
+    Auto                        Reinicia Pods para aplicar
+
+
+     No combinar HPA y VPA sobre la misma métrica (CPU/memoria).
+     Uso recomendado: modo Off como guía para dimensionar.
+     Requests bien ajustados bajan costo y mejoran el scheduling.
+
+
+
+
+Microservicios (73.40)                                              34
+
+===== PAGINA 35 =====
+
+ KEDA: escalado por eventos
+ Escala según la demanda real de trabajo, incluso hasta cero.
+
+  apiVersion: keda.sh/v1alpha1
+  kind: ScaledObject
+  spec:
+    scaleTargetRef: { name: order-worker }
+    minReplicaCount: 0
+    maxReplicaCount: 20
+    triggers:
+      - type: kafka
+        metadata: { topic: orders, lagThreshold: "100" }
+
+     Soporta Kafka, colas, Prometheus, cron, etc.
+     Internamente crea y gestiona un HPA.
+
+
+
+
+Microservicios (73.40)                                          35
+
+===== PAGINA 36 =====
+
+ Cluster Autoscaler y Karpenter
+ Escalar Pods requiere nodos disponibles.
+
+    Herramienta                     Enfoque
+
+    Cluster Autoscaler              Ajusta node groups existentes
+
+    Karpenter                       Elige tipo de instancia según los Pods pendientes
+
+     Aprovisionar un nodo toma de 1 a varios minutos.
+     Overprovisioning: Pods "de relleno" de baja prioridad que se desalojan al llegar carga real.
+     Los picos rápidos requieren capacidad ya caliente.
+
+
+
+
+Microservicios (73.40)                                                                              36
+
+===== PAGINA 37 =====
+
+ Escalar el estado
+ Los Pods escalan fácil; los datos no.
+     Réplicas de lectura para repartir consultas.
+     Sharding/particionado para repartir escrituras.
+     Cache (Valkey/Redis) delante de la base.
+     Kafka: las particiones son la unidad de paralelismo (máx. un consumidor por partición dentro del grupo).
+
+    Más consumidores que particiones no aumenta el throughput.
+
+
+
+
+Microservicios (73.40)                                                                                          37
+
+===== PAGINA 38 =====
+
+ Cuellos de botella aguas abajo
+ Escalar un servicio puede mover el problema a la base de datos.
+     50 réplicas × 20 conexiones = 1000 conexiones a la DB.
+     Usar connection pooling (PgBouncer, pools acotados).
+     Limitar el máximo de réplicas según la capacidad de la DB.
+     Rate limit y colas delante de recursos no elásticos.
+
+    Escalar es una decisión de toda la cadena, no de un solo servicio.
+
+
+
+
+Microservicios (73.40)                                                   38
+
+===== PAGINA 39 =====
+
+ Cache como patrón de escalabilidad
+    Patrón                         Idea
+
+    Cache-aside                    La app consulta el cache y, si falla, la DB
+
+    TTL                            Expiración con tolerancia a datos viejos
+
+    CDN                            Contenido estático en el borde
+
+     Cache stampede: muchas peticiones recalculan el mismo valor al expirar.
+     Mitigación: request coalescing, TTL con jitter, refresco anticipado.
+     Invalidar es difícil: decidir qué nivel de obsolescencia es aceptable.
+
+
+
+
+Microservicios (73.40)                                                           39
+
+===== PAGINA 40 =====
+
+ Escalado asincrónico
+ Absorber los picos en lugar de resistirlos.
+     Queue-based load leveling: la cola amortigua; los workers procesan a ritmo sostenible.
+     Competing consumers: varios workers sobre la misma cola.
+     Dead Letter Queue: mensajes que fallan N veces se apartan para análisis.
+     Combinar con KEDA: escalar workers según el lag.
+
+  API → Cola/Topic → Workers (autoscaling) → DB
+
+
+
+
+Microservicios (73.40)                                                                        40
+
+===== PAGINA 41 =====
+
+ ¿Por qué (y cuándo no) multi-región?
+    Motivo                        Detalle
+
+    Disponibilidad                Sobrevivir a la caída de una región completa
+
+    Latencia                      Acercar el servicio a los usuarios
+
+    Compliance                    Residencia de datos por país
+
+     Costo: infraestructura duplicada, replicación, operación más compleja.
+     Multi-AZ ya cubre fallas de datacenter; las regiones completas caen muy poco.
+     Decidir con SLO y RTO/RPO, no por moda.
+
+
+
+
+Microservicios (73.40)                                                               41
+
+===== PAGINA 42 =====
+
+ Topologías de cluster
+     No estirar un cluster entre regiones: etcd y el   DNS / Global LB
+     control plane esperan latencias de pocos ms.
+     Un cluster por región.
+     Active-active: ambas sirven tráfico.                      Cluster Región A
+
+     Active-passive: una espera.
+                                                                  replicación
+     Celdas: unidades independientes que limitan el
+     blast radius.
+                                                       Cluster Región B
+
+
+
+
+Microservicios (73.40)                                                            42
+
+===== PAGINA 43 =====
+
+ Tráfico global
+    Mecanismo                                Uso
+
+    DNS con health checks                    Failover y routing por latencia, geo o pesos
+
+    ExternalDNS                              Publica registros desde recursos de K8s
+
+    Anycast / Global LB                      Una IP, ruteo al punto más cercano
+
+     TTL: bajo para failover rápido, pero más consultas; algunos clientes lo ignoran.
+     Health checks profundos (no solo "el LB responde").
+     Sticky por región cuando hay datos locales.
+
+
+
+
+Microservicios (73.40)                                                                      43
+
+===== PAGINA 44 =====
+
+ Gestión multi-cluster con GitOps
+ Misma definición, muchos clusters.
+     Argo CD ApplicationSet / Flux: generan una Application por cluster.
+     Base común + overlays por región (Kustomize / Helm values).
+     Cluster API para crear y mantener clusters de forma declarativa.
+     Despliegue por olas: una región, validar con métricas, luego las demás.
+
+    Un cambio malo desplegado en todas las regiones a la vez derrota el propósito del multi-región.
+
+
+
+
+Microservicios (73.40)                                                                                44
+
+===== PAGINA 45 =====
+
+ Conectividad y descubrimiento entre clusters
+    Opción                                    Qué resuelve
+
+    Multi-Cluster Services API                Exportar/importar Services entre clusters
+
+    Cilium Cluster Mesh                       Conectividad y service discovery a nivel de red
+
+    Submariner                                Túneles entre clusters
+
+    Service mesh multi-cluster                Opción más completa (clase posterior)
+
+     Preferir tráfico local a la región; cruzar regiones agrega latencia y costo.
+     Cruzar solo en failover o para datos que lo requieren.
+
+
+
+
+Microservicios (73.40)                                                                          45
+
+===== PAGINA 46 =====
+
+ Datos multi-región
+ El problema más difícil: el estado.
+
+    Estrategia                           Trade-off
+
+    Replicación síncrona                 Sin pérdida (RPO ≈ 0), pero latencia en cada escritura
+
+    Replicación asíncrona                Rápida, pero puede perder las últimas escrituras
+
+    Escritor único + réplicas            Simple; failover requiere promoción
+
+    Multi-escritor                       Requiere resolver conflictos (LWW, CRDT)
+
+     Bases globales: Spanner, CockroachDB, Aurora Global, DynamoDB Global Tables.
+     Kafka: MirrorMaker 2 o Cluster Linking. PACELC: latencia vs. consistencia incluso sin fallas.
+
+
+
+
+Microservicios (73.40)                                                                               46
+
+===== PAGINA 47 =====
+
+ Failover y failback
+     Detección: health checks y señales de varias fuentes.
+     Automático vs. manual: un failover erróneo puede ser peor que la falla.
+     Split-brain: dos regiones creen ser la principal y aceptan escrituras.
+     Región pasiva caliente: capacidad reservada, no a cero.
+     La región sobreviviente recibe 2× la carga: dimensionar para eso.
+     Failback planificado: resincronizar datos antes de volver.
+     Runbooks ensayados en game days.
+
+
+
+
+Microservicios (73.40)                                                         47
+
+===== PAGINA 48 =====
+
+ RTO, RPO y estrategias de DR
+ RTO: cuánto tiempo puede estar caído. RPO: cuántos datos puede perder.
+
+    Estrategia                         RTO / RPO                          Costo
+
+    Backup y restore                   Horas / horas                      Bajo
+
+    Pilot light                        Decenas de minutos                 Bajo-medio
+
+    Warm standby                       Minutos                            Medio
+
+    Active-active                      Segundos / ~0                      Alto
+
+     Velero respalda recursos y volúmenes de Kubernetes.
+     Un backup no probado no es un backup.
+
+
+
+
+Microservicios (73.40)                                                                 48
+
+===== PAGINA 49 =====
+
+ Observabilidad para resiliencia
+ No se puede mejorar lo que no se mide.
+     Golden signals: latencia, tráfico, errores, saturación.
+     RED (servicios) y USE (recursos).
+     Alertas por burn rate del SLO, no por umbrales de CPU.
+     Trazas distribuidas para ubicar el origen de una cascada.
+     Paneles y alertas por región para detectar degradación parcial.
+
+
+
+
+Microservicios (73.40)                                                 49
+
+===== PAGINA 50 =====
+
+ Chaos engineering
+ Provocar fallas controladas para descubrir debilidades antes que los usuarios.
+ 1. Definir el estado estable (p. ej. checkout con SLO cumplido).
+ 2. Formular una hipótesis ("si cae un nodo, no hay errores visibles").
+ 3. Inyectar la falla con blast radius acotado.
+ 4. Observar, aprender y corregir.
+
+     Herramientas: Chaos Mesh, Litmus.
+     Game day: simular la caída de una región con el equipo completo.
+
+
+
+
+Microservicios (73.40)                                                            50
+
+===== PAGINA 51 =====
+
+ Load, stress y soak testing
+    Prueba                   Pregunta
+
+    Load                     ¿Soporta la carga esperada?
+
+    Stress                   ¿Dónde y cómo se rompe?
+
+    Spike                    ¿Resiste un pico repentino?
+
+    Soak                     ¿Se degrada con las horas (leaks)?
+
+     Herramientas: k6, Gatling, Locust.
+     Probar en un entorno representativo; medir latencia p95/p99 y no solo promedio.
+     Verificar que el autoscaling reacciona a tiempo.
+
+
+
+
+Microservicios (73.40)                                                                 51
+
+===== PAGINA 52 =====
+
+ Capacity planning y costo de la resiliencia
+ Cada "nueve" extra cuesta más.
+
+    SLO                                 Falla permitida / mes
+
+    99%                                 ≈ 7.3 hs
+
+    99.9%                               ≈ 43 min
+
+    99.99%                              ≈ 4.4 min
+
+
+     Capacidad N+1 por zona y por región.
+     Overprovisioning vs. autoscaling: costo contra tiempo de reacción.
+     Elegir el nivel de resiliencia según el costo de la indisponibilidad para el negocio.
+
+
+
+
+Microservicios (73.40)                                                                       52
+
+===== PAGINA 53 =====
+
+ Ejercicio de diseño (grupal, 10 min)
+ Caso: checkout de un e-commerce en Black Friday: 10× el tráfico habitual y debe sobrevivir a la caída de una
+ región.
+ Definir en la pizarra:
+ 1. SLOs y qué es crítico vs. prescindible.
+ 2. Patrones de resiliencia entre servicios (timeouts, retries, breaker, fallbacks).
+ 3. Autoscaling: qué métrica, qué mínimos y máximos.
+ 4. Topología multi-región y estrategia de datos.
+ 5. Cómo validarían el diseño antes del evento.
+
+
+
+
+Microservicios (73.40)                                                                                          53
+
+===== PAGINA 54 =====
+
+ Checklist de production readiness
+    Resiliencia                            Escalabilidad                    Multi-región
+
+    Timeouts en toda llamada               Servicios stateless              RTO/RPO definidos
+
+    Retries con jitter e idempotencia      HPA con métrica real             Failover ensayado
+
+    Circuit breaker y bulkhead             Límites en la DB                 Datos replicados y probados
+
+    Degradación definida                   Pods + nodos autoscaling         Despliegue por olas
+
+ Anti-patrones: retries en cada capa · liveness que depende de la DB · colas sin límite · un solo AZ · DR nunca
+ probado.
+
+
+
+
+Microservicios (73.40)                                                                                            54
+
+===== PAGINA 55 =====
+
+Preguntas
+
+
+     Lecturas: Release It! (M. Nygard) · Site Reliability Engineering (Google) · AWS Well-Architected Reliability Pillar
+                                                                                          Próxima clase: Service Mesh
+

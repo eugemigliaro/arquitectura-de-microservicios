@@ -6,7 +6,7 @@ Síntesis de `G09`, la guía de la clase 11 del [repositorio de laboratorios](la
 
 Los manifiestos, scripts y archivos Terraform que se mencionan acá están en el clon local `laboratorio/catedra-2026s2/guias/k8s-aks/`, en el commit `36b9189`; no se versionan en este repositorio.
 
-**Relación con el TP.** `E01` exige producción en AKS y solo acepta la entrega desplegada ahí; la segunda entrega usa Docker Compose según `E05`. [E01, p. 6] [E05] `G09` refuerza la inferencia de que la entrega final del Álbum se despliega en este cluster. Ver [Dudas y conflictos](../dudas-y-conflictos.md) y [Segunda entrega](segunda-entrega-album-arquitectura.md).
+**Relación con el TP.** `E01` exige producción en AKS y solo acepta la entrega desplegada ahí; la segunda entrega usa Docker Compose según `E05`. [E01, p. 6] [E05] `G09` refuerza la inferencia de que la entrega final del Álbum se despliega en este cluster. La [tercera entrega](tercera-entrega-album-cicd-aks.md) lo confirma: un AKS con los namespaces `dev`, `staging` y `prod`, gestionados por ArgoCD. [E06] Algunas prácticas de esta guía no se admiten en esa entrega: el registry de GitLab en lugar de ACR, el Secret creado con `kubectl create secret` y el kubeconfig de administrador compartido. [E06] Ver [Dudas y conflictos](../dudas-y-conflictos.md) y [Segunda entrega](segunda-entrega-album-arquitectura.md).
 
 ## Costo y hábito de trabajo
 

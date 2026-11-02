@@ -24,6 +24,8 @@ La cátedra también indicó oralmente que a `integration test` se lo llama `fun
 
 Para evitar una equivalencia ambigua, esta wiki conserva ambos contextos: la nota registra el uso terminológico de clase, mientras el material escrito define `integration` por alcance y `functional` por intención, y afirma que alcance e intención son preguntas distintas. [T10, p. 7] [T10, p. 9] La tensión está registrada en [Dudas y conflictos](../dudas-y-conflictos.md).
 
+La [tercera entrega](tercera-entrega-album-cicd-aks.md) usa tres niveles con nombres propios: **unitarios**, sobre el código sin infraestructura; **funcionales**, con Docker en el runner contra el servicio, su infraestructura real y mocks de los otros servicios; y **de integración**, contra los servicios desplegados en `staging`. [E06] *Inferencia:* con las categorías de esta página, sus funcionales tienen alcance de componente y sus tests de integración son end-to-end. [T10, p. 9] [T10, p. 12]
+
 ## Dobles y estructura de una prueba
 
 Un **stub** devuelve una respuesta fija sin verificar interacciones; un **mock** además comprueba que una interacción ocurrió; un **fake** es una implementación real pero simplificada, como una base en memoria. Un unit test puede ser solitary, con todo lo externo simulado, o sociable, usando algunas dependencias reales. [T10, p. 6]

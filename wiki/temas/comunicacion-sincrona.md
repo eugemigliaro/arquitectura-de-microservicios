@@ -64,3 +64,5 @@ La cola de la demo está en memoria, no sobrevive a un crash y puede entregar du
 - **Criterio.** Si quien llama necesita la respuesta para seguir, la solución es acotar la admisión y reintentar; la cola gana cuando nadie espera. "Autorizar un pago necesita sync; emitir el comprobante, no." [G10]
 
 La cola usa NATS JetStream con almacenamiento en memoria, entrega at-least-once y un techo de 500 mensajes que, al llenarse, vuelve a devolver 503. [G10]
+
+La unidad de [Resiliencia y escalabilidad](resiliencia-y-escalabilidad.md) generaliza estos mecanismos a toda la cadena: deadline propagado, retries en un solo nivel con jitter y budget, circuit breaker, bulkhead en Kubernetes y load shedding. [T21, p. 9] [T21, p. 10] [T21, p. 11] [T21, p. 17]

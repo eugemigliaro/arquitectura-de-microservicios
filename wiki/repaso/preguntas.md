@@ -280,6 +280,59 @@ Preguntas recuperables por tema. Mantener las respuestas separadas o plegadas cu
 205. ¿Por qué el disco de Postgres necesita `PGDATA` en una subcarpeta? ¿Por qué Postgres tarda más que `web` en volver tras un `drain`?
 206. ¿Qué archivos y credenciales del cluster del TP no pueden ir al repositorio y cómo se comparte el cluster con el grupo? ¿Por qué hace falta un seed de datos?
 
+## Programar microservicios para Kubernetes
+
+207. ¿Qué responsabilidades quedan en la aplicación y cuáles en Kubernetes? ¿Qué significa "no reimplementar el control plane dentro del servicio"?
+208. Recorré las etapas de la terminación gradual. ¿Qué pasa si el drenado dura más que `terminationGracePeriodSeconds`? ¿Qué hace distinto un worker?
+209. ¿Por qué la liveness no debe depender de PostgreSQL? ¿Qué debería representar la readiness?
+210. En un rolling update con `maxUnavailable: 0` y `maxSurge: 1`, ¿por qué el Pod viejo tiene que seguir atendiendo después de recibir `SIGTERM`?
+211. Un worker cobra un pago, la base confirma y el Pod muere antes del ACK. ¿Qué pasa después y dónde se resuelve?
+212. ¿Qué recurso de Kubernetes corresponde a una API HTTP, a un consumidor continuo, a una tarea finita y a una programada? ¿Qué contrato le toca al código en cada caso?
+213. Encontrá los cuatro problemas del ejercicio de la API de pagos y proponé una corrección para cada uno.
+
+## Helm
+
+214. ¿Qué diferencia hay entre chart, release y repositorio? ¿Qué distinguen `CHART VERSION` y `APP VERSION`?
+215. ¿Qué recursos crea el `helm install` del chart de PostgreSQL de Bitnami y qué patrón de Kubernetes reconocés?
+216. ¿Por qué en la tercera entrega no se puede usar `helm upgrade` ni un rollback con `helm` contra el cluster? ¿Qué rol puede cumplir Helm?
+
+## GitOps y entrega continua
+
+217. ¿Cuáles son los cuatro principios de OpenGitOps y qué cambia al pasar de "ejecutar pasos" a "declarar un estado"?
+218. ¿Por qué un commit en Git no garantiza reproducibilidad si se usan tags mutables? ¿Qué referencia conviene en producción?
+219. Compará push y pull por seguridad, riesgos y contextos en los que tiene sentido cada uno.
+220. ¿Qué es drift? Clasificá y decidí qué hacer con un `kubectl edit` en producción, el HPA cambiando réplicas, un sidecar inyectado por el mesh y un Secret rotado por External Secrets.
+221. ¿Qué no revierte un rollback por revert del estado deseado y cómo se mitiga?
+222. Describí los componentes de ArgoCD y el riesgo de cada uno. ¿Qué se pierde si ArgoCD cae?
+223. ¿Qué es "CI con poder total y GitOps decorativo" y por qué es un antipatrón?
+224. Compará ArgoCD y Flux por experiencia, arquitectura, multi-clúster y riesgo.
+
+## Resiliencia y escalabilidad
+
+225. Distinguí resiliencia, escalabilidad y disponibilidad. ¿Por qué un 200 tardío puede ser peor que un 503 rápido?
+226. ¿Por qué reintentar en cada capa genera una retry storm? ¿Cuántas llamadas llegan a Pagos si tres capas reintentan tres veces? ¿Qué la mitiga?
+227. Con un SLO de 99,9 % en 30 días, ¿cuál es el error budget? ¿Qué disponibilidad dan cinco dependencias en serie al 99,9 %? ¿Y dos réplicas independientes?
+228. ¿Qué diferencia hay entre timeouts locales y un deadline propagado? ¿Qué consecuencia de negocio muestra la demo?
+229. Describí los estados del circuit breaker. ¿Por qué su apertura es un síntoma y no el problema?
+230. ¿Cuándo se responde 429 y cuándo 503 con `Retry-After`? ¿Por qué el autoscaling no defiende de un ataque L7?
+231. ¿Qué da Kubernetes "gratis" y qué no? ¿Para qué sirven el PDB, `topologySpreadConstraints` y `podAntiAffinity`?
+232. En un Job, ¿qué diferencia hay entre `backoffLimit` y `activeDeadlineSeconds`, y entre `restartPolicy: OnFailure` y `Never`? ¿Para qué sirve `podFailurePolicy`?
+233. Un HPA tiene 4 réplicas al 90 % de CPU con objetivo de 60 %. ¿Cuántas réplicas pide? ¿Qué requisito tiene y por qué la CPU puede ser una mala métrica?
+234. ¿Qué agrega KEDA al HPA? ¿Por qué no combinar HPA y VPA sobre la misma métrica? ¿Por qué más consumidores que particiones no ayuda?
+235. ¿Cómo puede escalar un servicio romper la base de datos y qué medidas lo previenen?
+236. Ordená backup y restore, pilot light, warm standby y active-active por RTO, RPO y costo. ¿Por qué no se estira un clúster entre regiones?
+
+## Tercera entrega: CI/CD y AKS
+
+237. ¿Qué decisiones vienen impuestas en la tercera entrega y sobre qué partes de la segunda prevalecen?
+238. ¿Qué credenciales tiene el pipeline y cuáles no? ¿Cómo llegan los Secrets al cluster?
+239. Recorré las cinco etapas de promoción con su disparador y su gate. ¿Qué tiene que pasar con `prod` si fallan los tests de integración en `staging`?
+240. ¿Por qué la imagen de release no puede contener código de testing? ¿Cómo se miden entonces las dos coberturas?
+241. ¿Qué condiciones tiene que cumplir un test de integración para contar en el mínimo de cinco? ¿Por qué no alcanza uno que ejercite un solo servicio real?
+242. ¿Cómo se prueba IT-24 (falla durante un intercambio) sin dar al pipeline credenciales del cluster ni agregar endpoints de test a la imagen?
+243. ¿Cómo se hace y se demuestra un rollback en esta entrega? ¿Qué no cuenta?
+244. ¿Qué hace que la tercera entrega no se evalúe y qué defectos solo bajan la nota?
+
 <details>
 <summary>Respuestas orientativas</summary>
 
@@ -491,6 +544,44 @@ Preguntas recuperables por tema. Mantener las respuestas separadas o plegadas cu
 204. No están etcd, apiserver, scheduler, controller-manager ni kube-proxy; aparecen `konnectivity-agent`, `cloud-node-manager`, drivers CSI y Cilium. LoadBalancer → IP pública y regla en el balanceador; PVC → Azure Disk; Gateway → IP pública del proxy de Envoy. [G09]
 205. Un disco nuevo trae `lost+found` y Postgres no inicializa en un directorio no vacío. *Inferencia:* el Azure Disk es `ReadWriteOnce` y debe desengancharse del nodo viejo antes de engancharse en el nuevo. [G09] [T17, p. 31]
 206. `terraform.tfstate`, el kubeconfig, los deploy tokens y las contraseñas. El kubeconfig se comparte por un canal privado, o cada integrante levanta su cluster. El disco se borra al destruir el cluster, así que los datos de prueba deben poder recrearse. [G09]
+207. La aplicación se ocupa de reglas de negocio y contratos, idempotencia y transacciones, ACK/NACK, timeouts y compensaciones, y de saber cuándo está lista. Kubernetes crea, reemplaza y distribuye Pods, descubre servicios, enruta tráfico, programa Jobs, aplica límites y escala. No reimplementar el control plane es no escribir supervisores, descubrimiento de IPs, esperas eternas ni reintentos infinitos que la plataforma ya resuelve: la plataforma administra procesos y el código protege la semántica del negocio. [T18, p. 2] [T18, p. 3] [T18, p. 32]
+208. `SIGTERM`, drenar (no aceptar trabajo nuevo), finalizar o cancelar lo en curso, cerrar conexiones, ACK y flush, y salir antes del plazo. Si se agota, llega `SIGKILL`; por eso el timeout del `Shutdown` (25 s en el ejemplo) tiene que ser coherente con el período de gracia. El worker deja de consumir, espera lo que está en vuelo, hace ACK solo de lo completado y devuelve lo demás a la cola. [T18, p. 6] [T18, p. 7] [T18, p. 21]
+209. Si cae la base, el kubelet reiniciaría todos los Pods sin arreglar nada: reinicios en cadena. La liveness detecta un bloqueo local; la readiness representa la capacidad real y evalúa las dependencias según la degradación posible. [T18, p. 16] [T18, p. 17] [T21, p. 26]
+210. Porque el cambio de endpoints es asíncrono y no garantiza que el Pod saliente deje de recibir solicitudes nuevas; si corta de golpe, esas requests fallan. [T18, p. 18]
+211. El broker reentrega el mensaje y otro worker intenta cobrar de nuevo. La unicidad se diseña en el dominio y la persistencia: clave idempotente, restricción única y consulta del resultado previo. [T18, p. 22]
+212. API HTTP: Deployment + Service, con readiness, shutdown y sin estado. Consumidor continuo: Deployment, con KEDA opcional, con ACK, backpressure y drenaje. Tarea finita: Job, con exit codes e idempotencia. Tarea programada: CronJob que crea Jobs, con idempotencia y control de concurrencia. [T18, p. 20]
+213. Sesión en memoria → estado fuera del Pod. ACK antes del commit → ACK solo después del commit, con idempotencia. Worker sin `SIGTERM` → drenaje que confirma solo lo completado. Retry infinito y logs a archivo → reintentos acotados a operaciones seguras e idempotentes, y logs a `stdout`. [T18, p. 30] [T18, p. 10] [T18, p. 21] [T18, p. 22] [T18, p. 24] [T18, p. 8]
+214. El chart es el paquete con los recursos configurables; la release, una instalación concreta y versionada, que permite rollback; el repositorio, la fuente de charts. `CHART VERSION` es la versión del empaquetado y `APP VERSION` la de la aplicación: `bitnami/argo-cd` 7.0.14 empaqueta Argo CD 2.12.4. [T19, p. 5] [T19, p. 6]
+215. Un StatefulSet con el Pod `my-postgresql-0`, un Service ClusterIP y uno headless (`-hl`) en el 5432, y un PVC `data-my-postgresql-0` de 8 Gi `RWO`. Es el patrón de StatefulSet con Service headless y `volumeClaimTemplates`. [T19, p. 7] [T16, p. 33]
+216. Porque el despliegue es pull con ArgoCD: el pipeline no toca el cluster, y un rollback con `kubectl` o `helm` directo no cuenta; se hace por Git. Helm sirve como base común con valores por ambiente, que el `repo-server` de ArgoCD renderiza. [E06] [T20, p. 18]
+217. Declarativo, versionado e inmutable, obtenido automáticamente y reconciliado continuamente. Cambian la seguridad, la auditoría, el rollback, la propiedad del cambio y la respuesta a incidentes. [T20, p. 3] [T20, p. 4]
+218. Git solo versiona lo declarado: si el registry permite sobrescribir el tag, el artefacto cambia sin que Git lo registre. En producción, digest, o SemVer + digest como compromiso. [T20, p. 8] [T20, p. 9]
+219. Push es simple, familiar y de baja latencia, pero deja kubeconfigs en los runners, expone el API server y agranda el *blast radius* si se compromete el CI; sirve en laboratorios, ambientes efímeros y despliegues no críticos. Pull deja las credenciales dentro del clúster y reconcilia continuamente, a costa de más componentes, consistencia eventual y dependencia del agente; sirve en producción, multi-clúster, sectores regulados y redes cerradas. [T20, p. 11]
+220. Es la divergencia entre lo declarado y lo observado. El `kubectl edit` se audita y vuelve a Git o se revierte; el HPA no debe pelearse con GitOps (ignorar el campo o delegar su propiedad); el sidecar es esperado si lo gobierna la plataforma; el Secret externo es correcto: Git declara la intención de consumirlo, no el valor. [T20, p. 12] [T20, p. 13]
+221. Datos, migraciones y efectos externos. Se mitiga separando el rollback de la aplicación, el de los datos y el del tráfico. [T20, p. 7]
+222. `argocd-server` (API, UI, SSO, RBAC; superficie de administración), `repo-server` (clona y renderiza; puede saturarse), `application-controller` (compara y reconcilia; una mala configuración produce syncs peligrosos), Redis (caché; afecta la performance) y ApplicationSet Controller (genera Applications; multiplica errores). Si cae, las aplicaciones siguen corriendo, pero se pierden la sincronización, la visibilidad, la detección de drift y la operación declarativa. [T20, p. 18] [T20, p. 19] [T20, p. 20]
+223. Kubeconfigs en el CI y ArgoCD instalado solo para mirar dashboards: se conservan los riesgos del push sin ganar la seguridad del pull. [T20, p. 14] [T20, p. 11]
+224. ArgoCD: UI fuerte, modelo `Application` claro, control plane centralizado, multi-clúster práctico con ApplicationSets; riesgo de centralización y credenciales amplias. Flux: CLI, eventos y CRDs, controladores componibles, multi-clúster sólido pero menos visual; riesgo de complejidad distribuida al depurar. [T20, p. 25]
+225. Resiliencia: qué pasa cuando algo falla; escalabilidad: qué pasa cuando crece la carga; disponibilidad: qué porcentaje del tiempo funciona. Un 200 tardío retiene un slot en cada salto de la cadena hasta agotarlos, mientras un 503 rápido los libera. [T21, p. 3] [T21, p. 5]
+226. Cada capa multiplica los intentos de la anterior: 3 × 3 × 3 = 27. Se mitiga reintentando en un solo nivel, solo errores transitorios, con backoff y jitter, y con un budget de alrededor del 10 %. [T21, p. 6] [T21, p. 11]
+227. Unos 43 minutos por mes. Cinco en serie dan ≈ 99,5 %, unas 3,6 horas caído por mes; dos réplicas independientes, 99,9999 %. [T21, p. 7] [T21, p. 8]
+228. Con timeouts locales cada capa espera por su cuenta y la cadena sigue trabajando aunque el cliente se haya ido; con el deadline propagado, cada salto recibe lo que queda del presupuesto y la cadena se cancela. En la demo, sin propagación el cobro queda hecho después del timeout del cliente. [T21, p. 10]
+229. Cerrado (las llamadas pasan), abierto tras el umbral de fallas (503 local sin llamar a la dependencia) y semiabierto tras esperar (una prueba: un 200 cierra, un 500 reabre). Su apertura indica que una dependencia está fallando: hay que alertar e investigar esa causa. [T21, p. 15] [T21, p. 16]
+230. 429 cuando un cliente supera su límite; 503 con `Retry-After` cuando el servicio está sobrecargado. Un ataque L7 parece tráfico legítimo y el autoscaling escala el costo junto con el ataque (*denial of wallet*); el volumen se absorbe en el borde. [T21, p. 18] [T21, p. 19]
+231. Da reinicio de contenedores, reprogramación ante la caída de un nodo, cantidad de réplicas y salida del Service de los Pods no `Ready`. No da timeouts, retries, circuit breakers, idempotencia ni capacidad ante la caída de una zona o región. El PDB evita que un drenado baje todas las réplicas; `topologySpreadConstraints` reparte por zona o nodo; `podAntiAffinity` evita réplicas en el mismo nodo. [T21, p. 25] [T21, p. 26] [T21, p. 27]
+232. `backoffLimit` cuenta fallas (6 por defecto); `activeDeadlineSeconds` corta el Job por tiempo total aunque queden reintentos. `OnFailure` reinicia el contenedor en el mismo Pod; `Never` crea un Pod por intento y conserva los logs. `podFailurePolicy` distingue errores: `FailJob` para uno que no vale la pena reintentar, `Ignore` para una disrupción que no debe gastar el presupuesto. [T21, p. 12] [T21, p. 13]
+233. `ceil(4 × 90 / 60)` = 6. Requiere requests de CPU definidos. La CPU rara vez refleja la carga real; conviene una métrica que se mueva al agregar réplicas, como RPS por réplica, p95 o profundidad de cola. [T21, p. 32] [T21, p. 33]
+234. KEDA escala por eventos, como el lag de Kafka, incluso hasta cero, creando un HPA por debajo. HPA y VPA sobre la misma métrica se pelean. Dentro de un grupo, cada partición tiene como máximo un consumidor, así que los consumidores de más quedan ociosos. [T21, p. 35] [T21, p. 34] [T21, p. 37]
+235. 50 réplicas × 20 conexiones son 1000 conexiones a la base. Se previene con connection pooling, un máximo de réplicas según la capacidad de la base, y rate limit y colas delante de los recursos no elásticos. [T21, p. 38]
+236. Backup y restore: horas/horas, bajo costo; pilot light: decenas de minutos, bajo-medio; warm standby: minutos, medio; active-active: segundos/≈ 0, alto. No se estira porque etcd y el control plane esperan latencias de pocos milisegundos: un clúster por región. [T21, p. 48] [T21, p. 42]
+237. Un único AKS con `dev`, `staging` y `prod` como namespaces; GitOps pull con ArgoCD; registro y credenciales sin secretos en el repo; tests unitarios y funcionales en Docker. Prevalecen sobre las secciones 8 y 9 de la segunda entrega, y los cambios se registran en `docs/cicd.md`. [E06]
+238. Push al ACR, escritura en el repositorio de estado deseado y, si hace falta consultar ArgoCD, un token de solo lectura; nunca credenciales de administración del cluster. Los Secrets llegan por Sealed Secrets, SOPS o External Secrets, nunca con `kubectl create secret`. [E06]
+239. CI en push o PR (checks en verde); `dev` en el merge (*Synced*, *Healthy* y smoke test); `staging` con las mismas imágenes (*Synced* y *Healthy*); integración en `staging` (todos pasan); `prod` con aprobación manual (*Synced*, *Healthy* y smoke test). Si falla la integración, no se genera ningún cambio en el estado deseado de `prod`. [E06]
+240. Porque `prod` ejecuta la misma imagen que se probó en `staging`, y no puede haber testing en producción ni, por lo tanto, en `staging`. Los unitarios corren en una etapa o imagen de test; la cobertura funcional se mide con el servicio instrumentado en una imagen de test aparte. Cada una tiene que superar el 80 % por separado, con gate. [E06]
+241. Trazable a un RF o escenario, con datos conocidos y repetible, que verifique un resultado de negocio y no solo un 200, y cuya aserción la produzcan los dos servicios reales. Un test de un solo servicio no prueba la integración entre ellos. [E06]
+242. Con un mecanismo versionado y acotado a `staging`: un mock cuya confirmación el test puede retener, un proxy de fallas desplegado por ArgoCD o un Job de ArgoCD con permiso solo para borrar Pods de ese namespace, documentado con su limpieza en `docs/cicd.md`. [E06]
+243. Con `git revert` del cambio de versión en el estado deseado, o fijando la versión anterior, para que ArgoCD converja; se muestran el commit, la sincronización y el resultado. Un rollback con `kubectl` o `helm` contra el cluster no cuenta. [E06] [T20, p. 7]
+244. No se evalúa si no puede reproducirse un despliegue en AKS vía pipeline con promoción `staging` → `prod` (RNF-04 y RNF-05). La falta del gate de integración, el incumplimiento de RNF-06 y otros defectos bajan la nota en esta entrega, pero en la final rigen RNF-01 a RNF-06 completos. [E06] [E01, p. 6]
 
 </details>
 
@@ -510,3 +601,7 @@ Preguntas recuperables por tema. Mantener las respuestas separadas o plegadas cu
 - Redactá el ADR del estilo de coordinación del intercambio con dos alternativas reales, saga orquestada y coreografiada, y mostrá cómo cambia la máquina de estados si la copia se aparta al publicar o al aceptar. [E05] [E03, p. 4] [E01, p. 2] [T11, p. 20] [T11, p. 37] [T14, p. 27]
 - Para MegaShop, armá el plan de migración en una hoja: decidí si migrar y qué responderle al directorio, el primer servicio y su patrón, qué hacer con el cron nocturno, el dueño de `orders`, `inventory` y `users`, los estados intermedios del checkout sin transacción, el destino del SQL de BI y un roadmap de tres fases con riesgo, rollback y métrica. [T15, p. 50] [T15, p. 51] [T15, p. 52] [T15, p. 53]
 - ¿Migrarían? Una startup de 6 devs buscando product–market fit; un e-commerce de 80 devs en 9 equipos con un release mensual y un Black Friday que tira el sitio; una liquidación de sueldos con 3 devs y cambios regulatorios dos veces por año. Justificá con las razones que alcanzan y los prerrequisitos. [T15, p. 12]
+- Elegí los dos servicios reales del Álbum a partir de tu arquitectura de la segunda entrega, justificalos con los criterios de la consigna y armá la lista de cinco tests de integración que cuentan, con al menos uno de fallo o concurrencia y el mecanismo de control que necesita cada uno sin credenciales de cluster. [E06]
+- Diseñá el repositorio de estado deseado del Álbum: base común y valores por ambiente, una `Application` por ambiente con su `syncPolicy`, el commit que promueve un digest de `staging` a `prod` y dónde entra la aprobación manual. Marcá qué campos debería ignorar ArgoCD si en el futuro se agrega un HPA. [E06] [T20, p. 13] [T20, p. 17]
+- Pasá un servicio del Álbum por las seis preguntas de revisión de Kubernetes y por el checklist de production readiness, y escribí qué cambiarías en su código y en sus manifiestos. [T18, p. 31] [T21, p. 54]
+- Resolvé el ejercicio de Black Friday: SLOs, qué es prescindible, patrones entre servicios, métrica y límites del autoscaling, topología multi-región, estrategia de datos y validación previa. [T21, p. 53]

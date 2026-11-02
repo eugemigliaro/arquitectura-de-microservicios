@@ -1,0 +1,441 @@
+FUENTE: T20
+TITULO: GitOps y entrega continua
+ORIGINAL: material/catedra/teoria/GitOps y Entrega Continua - Slidev.pdf
+PAGINAS: 27
+
+===== PAGINA 1 =====
+
+Arquitectura de
+Microservicios
+GitOps y Entrega Continua
+
+Docentes:
+- Ing. Federico Castañeda
+- Ing. Carlos Maceira
+- Ing. Franco Rupnik
+
+===== PAGINA 2 =====
+
+Principios de GitOps
+
+===== PAGINA 3 =====
+
+ ¿Qué es GitOps?
+     Un modelo de operación para sistemas declarativos.
+         El estado deseado se expresa en archivos versionados.
+         Un agente lo obtiene de forma automática.
+         Un reconciliador hace converger el estado real.
+
+     Los cuatro principios de OpenGitOps:
+         Declarativo
+         Versionado e inmutable
+         Pulled automatically
+         Continuously reconciled
+
+
+
+
+Microservicios (73.40)                                           3
+
+===== PAGINA 4 =====
+
+ Cambio de paradigma
+     No se “ejecutan pasos” como unidad principal de operación.
+     Se declara un estado objetivo: el sistema de reconciliación observa la realidad y corrige la divergencia.
+     Este cambio parece menor, pero modifica:
+         Seguridad
+         Auditoría
+         Rollback
+         Propiedad del cambio
+         Respuesta a incidentes
+
+
+
+
+Microservicios (73.40)                                                                                           4
+
+===== PAGINA 5 =====
+
+ Describir resultado, no procedimiento
+     En un pipeline imperativo, el deployment es una   GitOps
+     secuencia de acciones.
+                                                               IaC            CaC
+     En GitOps, el manifiesto describe cómo debe
+                                                         Infrastructure   Configuration      XaC
+     quedar el sistema.                                     as Code         as Code       X as Code
+     Kubernetes y el controlador GitOps calculan y
+     ejecutan la convergencia.
+                                                                               Git
+     Esto alinea GitOps con el modelo de
+     controladores de Kubernetes.
+                                                                             CI/CD
+
+
+
+
+                                                                             Cloud
+                                                                             Server
+
+
+
+
+Microservicios (73.40)                                                                                5
+
+===== PAGINA 6 =====
+
+ Imperativo vs Declarativo
+ Imperativo                                     Declarativo
+  kubectl set image deployment/payments-api \   apiVersion: apps/v1
+    api=registry/payments-api:v2                kind: Deployment
+  kubectl rollout status \                      metadata:
+    deployment/payments-api                       name: payments-api
+                                                spec:
+                                                  replicas: 4
+                                                  template:
+                                                    spec:
+                                                      containers:
+                                                      - name: api
+                                                        image: registry/payments-api@sha256:...
+
+
+
+
+Microservicios (73.40)                                                                            6
+
+===== PAGINA 7 =====
+
+ Declarativo: trade-offs
+     Estado deseado auditable y reproducible.
+         Costo: los pasos intermedios quedan menos explícitos.
+         Criterio: hooks, sync waves o Jobs cuando haya orden operacional estricto.
+
+     Facilita rollback mediante revert del estado deseado.
+         Costo: no siempre revierte datos, migraciones o efectos externos.
+         Criterio: separar rollback de aplicación, de datos y de tráfico.
+
+     Reduce scripts ad-hoc.
+         Costo: puede ocultar operaciones destructivas detrás de un YAML inocente.
+         Criterio: revisión de PR y policy-as-code para cambios sensibles.
+
+
+
+
+Microservicios (73.40)                                                                7
+
+===== PAGINA 8 =====
+
+ Versionado e inmutabilidad
+     Git funciona como registro de decisiones. Cada cambio debería responder:
+         Quién lo propuso y quién lo aprobó.
+         Qué se modificó y cuándo se aplicó.
+         Cómo volver a una versión previa.
+
+     Pero Git sólo versiona lo que está efectivamente declarado.
+     Si el registry permite sobrescribir tags, Git puede decir lo mismo mientras el artefacto real cambió.
+
+
+
+
+Microservicios (73.40)                                                                                       8
+
+===== PAGINA 9 =====
+
+ Tags mutables vs digest
+     Tag mutable: cómodo para humanos, riesgoso para auditoría.
+         “v1.4.2” puede apuntar a otra imagen si el registry lo permite.
+
+     Digest: más incómodo de leer, pero identifica el artefacto exacto.
+         En producción es la opción sólida.
+
+     SemVer + digest: compromiso práctico.
+         Semántica humana más reproducibilidad de máquina.
+
+
+
+
+Microservicios (73.40)                                                     9
+
+===== PAGINA 10 =====
+
+ Pull-based vs Push-based
+     El contraste no es meramente de implementación: cambia el modelo de seguridad y de red.
+     Push-based: el sistema CI entra al clúster y aplica cambios.
+     Pull-based: un agente dentro del clúster sale a buscar el estado deseado y lo reconcilia.
+
+
+
+
+Microservicios (73.40)                                                                           10
+
+===== PAGINA 11 =====
+
+ Push vs Pull: comparación
+ Push-based                                                  Pull-based
+     Simple, familiar, baja latencia.                         Menor exposición del API Server; credenciales de
+     Fácil de integrar con CI existente.                      clúster dentro del clúster.
+     Riesgos: kubeconfigs en runners, API Server expuesto,    Reconciliación continua, mejor postura de seguridad.
+     mayor blast radius si CI es comprometido.                Riesgos: más componentes, eventual consistency,
+     Tiene sentido en: laboratorios, entornos efímeros,       debugging del controlador, dependencia del agente
+     organizaciones pequeñas, despliegues no críticos.        GitOps.
+                                                              Tiene sentido en: producción, multi-clúster, sectores
+                                                              regulados, redes cerradas, separación fuerte CI/CD.
+
+
+
+
+Microservicios (73.40)                                                                                                11
+
+===== PAGINA 12 =====
+
+ Reconciliación: el loop de GitOps
+     Es una extensión del loop de Kubernetes:
+     1. Leer estado deseado.
+     2. Leer estado real.
+     3. Comparar.
+     4. Aplicar la diferencia.
+     5. Reportar y repetir.
+
+     Drift = divergencia entre lo declarado y lo observado.
+     No todo drift es igual: puede ser peligroso, esperado o producido por otro controlador.
+
+
+
+
+Microservicios (73.40)                                                                         12
+
+===== PAGINA 13 =====
+
+ Fuentes de drift
+     Cambio manual — kubectl edit en producción.
+         Debe quedar auditado y luego volver a Git o ser revertido.
+
+     Controlador legítimo — HPA cambia replicas.
+         No debe pelearse con GitOps: ignorar campos o delegar propiedad.
+     Webhook / mutación — service mesh inyecta sidecar.
+         Diferencia esperada si está gobernada por la plataforma.
+     Defaulting de Kubernetes — campos completados por el API Server.
+         No necesariamente es un problema.
+     Secreto externo — External Secrets rota un Secret.
+         Git no debería contener el valor secreto; sí la intención de consumirlo.
+
+
+
+
+Microservicios (73.40)                                                              13
+
+===== PAGINA 14 =====
+
+ Antipatrones de GitOps
+     Git como basurero de YAML: manifiestos sin propiedad, revisión ni contrato de promoción.
+     GitOps sin inmutabilidad: tags mutables creyendo que el commit alcanza para reproducibilidad.
+     Self-heal sin política de incidentes: el controlador revierte cambios manuales necesarios durante
+     emergencias.
+     Secretos en claro: confundir versionado con exposición de datos sensibles.
+     CI con poder total y GitOps decorativo: kubeconfigs en CI y ArgoCD instalado sólo para mirar
+     dashboards.
+
+
+
+
+Microservicios (73.40)                                                                                   14
+
+===== PAGINA 15 =====
+
+ArgoCD
+
+===== PAGINA 16 =====
+
+ ArgoCD: control plane GitOps orientado a aplicaciones
+     Modela el despliegue mediante el recurso Application:
+         Una fuente declarativa (repo, revisión, path).
+         Un destino Kubernetes (clúster, namespace).
+
+     Internamente separa responsabilidades en componentes:
+         API server, repo-server, application-controller, Redis, SSO/Dex, notificaciones, ApplicationSet Controller.
+
+
+
+
+                                                                   Fuente: https://www.opsmx.com/blog/how-to-create-applications-in-argocd/
+
+Microservicios (73.40)                                                                                                                  16
+
+===== PAGINA 17 =====
+
+ El recurso Application
+  apiVersion: argoproj.io/v1alpha1
+  kind: Application
+  metadata:
+    name: payments-api
+    namespace: argocd
+  spec:
+    source:
+      repoURL: https://git.example.com/platform/manifests
+      targetRevision: main
+      path: apps/payments-api/overlays/prod
+    destination:
+      server: https://kubernetes.default.svc
+      namespace: payments
+    syncPolicy:
+      automated:
+        prune: true
+        selfHeal: true
+
+
+
+
+Microservicios (73.40)                                      17
+
+===== PAGINA 18 =====
+
+ Arquitectura de ArgoCD (1/2)
+     argocd-server
+                                                             Developer                      ArgoCD
+         API gRPC/REST, UI, CLI, SSO, RBAC, sync/rollback,
+         credenciales.
+         Riesgo: superficie de administración. Mal            Commit         Pull Changes     Sync Cluster Status
+         expuesto, es una entrada privilegiada a
+         producción.
+
+     argocd-repo-server                                                Git                           Kubernetes
+
+         Clona repositorios, cachea y genera manifiestos
+         con Helm/Kustomize/Jsonnet.
+         Riesgo: puede saturarse por generación
+         concurrente, repos grandes o templates pesados.
+
+
+
+
+Microservicios (73.40)                                                                                              18
+
+===== PAGINA 19 =====
+
+ Arquitectura de ArgoCD (2/2)
+     application-controller
+         Compara desired state vs live state y ejecuta la reconciliación.
+         Riesgo: corazón del sistema. Una mala configuración produce syncs peligrosos o lentos.
+
+     Redis
+         Caché para reducir llamadas al API Server y a proveedores Git.
+         Riesgo: no es fuente de verdad, pero afecta performance y experiencia.
+
+     ApplicationSet Controller
+         Genera Applications a escala para muchos clusters o namespaces.
+         Riesgo: muy potente; multiplica errores si el template o generator está mal.
+
+
+
+
+Microservicios (73.40)                                                                            19
+
+===== PAGINA 20 =====
+
+ Arquitectura
+     ArgoCD no es “un pod que hace pull de Git”.
+     Es un control plane de entrega continua.
+     Si cae:
+         Las aplicaciones existentes siguen corriendo.
+         Se pierde sincronización, visibilidad, drift detection y operación declarativa.
+
+
+
+
+Microservicios (73.40)                                                                     20
+
+===== PAGINA 21 =====
+
+ ArgoCD: ventajas y precauciones
+ Ventajas                                                   Precauciones
+     Excelente visibilidad visual para equipos.              La UI puede tentar a operar manualmente si no se
+     Modelo Application fácil de explicar.                   gobierna por RBAC y proceso.
+     Buen soporte para Helm, Kustomize, multi-clúster,       Control plane más centralizado: hay que diseñar el
+     SSO y RBAC.                                             blast radius.
+     Muy útil para entender reconciliación, drift y sync.    Requiere operar componentes propios: repo-server,
+                                                             controller, Redis, credenciales, HA.
+                                                             Puede volverse “sistema central mágico” si los
+                                                             equipos no entienden Kubernetes.
+
+
+
+
+Microservicios (73.40)                                                                                            21
+
+===== PAGINA 22 =====
+
+Flux
+
+===== PAGINA 23 =====
+
+ Flux: toolkit de controladores Kubernetes
+     Una CLI más una serie de controladores Kubernetes.
+     El GitOps Toolkit separa responsabilidades en controladores independientes.
+     Diseño más granular y nativo de Kubernetes:
+         Cada pieza es un controlador que reconcilia CRDs.
+         Más natural para equipos platform maduros.
+
+
+
+
+Microservicios (73.40)                                                             23
+
+===== PAGINA 24 =====
+
+ Controladores del GitOps Toolkit
+     source-controller
+         Obtiene fuentes desde Git, Helm repositories u OCI y produce artefactos.
+
+     kustomize-controller
+         Reconcilia Kustomizations y aplica manifiestos ensamblados con Kustomize.
+     helm-controller
+         Gestiona HelmRelease como recurso declarativo: Helm operado como reconciliador, no como comando
+         manual.
+     notification-controller
+         Emite eventos e integra webhooks: la operación se vuelve observable.
+     image reflector / automation
+         Detecta nuevas imágenes y propone cambios declarativos. Requiere gobierno para no automatizar
+         promociones inseguras.
+
+
+
+
+Microservicios (73.40)                                                                                     24
+
+===== PAGINA 25 =====
+
+ ArgoCD vs Flux
+ ArgoCD                                                         Flux
+     UX: UI fuerte, modelo Application claro, onboarding         UX: CLI, eventos y CRDs; más natural para equipos
+     rápido.                                                     platform maduros.
+     Arquitectura: control plane GitOps visible y                Arquitectura: controladores componibles dentro del
+     centralizado.                                               modelo Kubernetes.
+     Multi-clúster: muy práctico con UI, clusters registrados    Multi-clúster: muy sólido con el GitOps Toolkit, pero
+     y ApplicationSets.                                          menos visual.
+     Riesgo: centralización y credenciales amplias si no se      Riesgo: complejidad distribuida; el troubleshooting
+     segmenta.                                                   exige entender varios controladores.
+
+
+
+
+Microservicios (73.40)                                                                                                   25
+
+===== PAGINA 26 =====
+
+ Fuentes
+ OpenGitOps — GitOps Principles: https://opengitops.dev/
+
+ ArgoCD — Architectural Overview: https://argo-cd.readthedocs.io/en/stable/operator-manual/architecture/
+
+ ArgoCD — Component Architecture: https://argo-cd.readthedocs.io/en/stable/developer-guide/architecture/components/
+
+ Flux — GitOps Toolkit components: https://fluxcd.io/flux/components/
+
+
+
+
+Microservicios (73.40)                                                                                                26
+
+===== PAGINA 27 =====
+
+Fin!!
+

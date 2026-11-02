@@ -1,0 +1,589 @@
+FUENTE: T18
+TITULO: Programar microservicios para Kubernetes
+ORIGINAL: material/catedra/teoria/Programar microservicios para Kubernetes - Slidev.pdf
+PAGINAS: 33
+
+===== PAGINA 1 =====
+
+Arquitectura de
+microservicios
+Programar microservicios para Kubernetes
+
+Docentes:
+- Ing. Federico Castañeda
+- Ing. Carlos Maceira
+- Ing. Franco Rupnik
+
+
+
+
+                                           Patrones de diseño para aplicaciones cloud-native
+
+===== PAGINA 2 =====
+
+ Responsabilidades de la aplicación y Kubernetes
+ Separación entre lógica de negocio y operación.
+
+ Responsabilidades de la aplicación                Responsabilidades de Kubernetes
+     Reglas de negocio y contratos.                  Crear, reemplazar y distribuir Pods.
+     Idempotencia y transacciones.                   Descubrir servicios y enrutar tráfico.
+     ACK/NACK, timeouts y compensaciones.            Programar Jobs y CronJobs.
+     Cuándo está lista para trabajar.                Aplicar límites y escalar réplicas.
+
+                                                   No reimplementar el control plane dentro del
+                                                   servicio.
+
+
+
+
+Microservicios (73.40)                                                                            2
+
+===== PAGINA 3 =====
+
+ Diseño de servicios para Kubernetes
+ Microservicio aislado                  Servicio diseñado para Kubernetes
+     Descubre Pods e IPs manualmente.    Se conecta a Services por DNS.
+     Tiene un supervisor propio.         Expone salud y gestiona señales.
+     Mantiene sesiones en memoria.       Tolera réplicas reemplazables.
+     Reintenta indefinidamente.          Restringe retries a operaciones seguras.
+
+
+
+
+Microservicios (73.40)                                                              3
+
+===== PAGINA 4 =====
+
+1 · Contrato del
+contenedor
+
+
+                   Procesos, señales y terminación.
+
+===== PAGINA 5 =====
+
+ Proceso principal del contenedor
+ Señales y ciclo de vida.
+
+    Contrato                Correcto                            Antipatrón
+
+    Proceso                 Foreground; señalización real       Daemonize / supervisor casero
+
+    Terminación             SIGTERM + cierre con plazo          SIGTERM ignorado
+
+    Logs                    stdout / stderr estructurados       Solo log a disco local
+
+    Configuración           Env vars / archivos montados        Valores embebidos en imagen
+
+    Persistencia            Estado externo cuando corresponda   Depender del writable layer
+
+
+
+
+Microservicios (73.40)                                                                          5
+
+===== PAGINA 6 =====
+
+ Terminación gradual del contenedor
+ Secuencia de cierre iniciada por Kubernetes.
+
+    Etapa                        Acción
+
+    SIGTERM                      Se inicia la terminación.
+
+    Drenar                       Dejar de aceptar trabajo nuevo.
+
+    Finalizar                    Completar o cancelar en curso
+
+    Cerrar                       Conexiones, ACK y flush.
+
+    Salir                        Antes del plazo.
+
+
+ Si se agota el grace period, el proceso recibe SIGKILL.
+ Para HTTP: finalizar requests. Para workers: detener consumo y confirmar solo el trabajo completado.
+
+
+
+
+Microservicios (73.40)                                                                                  6
+
+===== PAGINA 7 =====
+
+ Servidor HTTP en Go con cierre gradual
+ Manejo de señales y drenaje de solicitudes.
+
+  srv := &http.Server{Addr: ":8080", Handler: mux}
+  stop, cancel := signal.NotifyContext(
+    context.Background(), syscall.SIGTERM, syscall.SIGINT,
+  )
+  defer cancel()
+
+  go func() {
+    _ = srv.ListenAndServe()
+  }()
+  <-stop.Done()
+
+  drainCtx, done := context.WithTimeout(
+    context.Background(), 25*time.Second,
+  )
+  defer done()
+
+  _ = srv.Shutdown(drainCtx)
+
+ El tiempo de drenado debe ser coherente con terminationGracePeriodSeconds.
+
+
+Microservicios (73.40)                                                        7
+
+===== PAGINA 8 =====
+
+ Configuración, logs y almacenamiento
+ Variables de entorno, salida estándar y persistencia.
+
+ Configuración                                           Almacenamiento
+     Variables de entorno y montajes.                     Writable layer efímero.
+     Fail fast si es inválida.                            emptyDir solo temporal.
+     No reconstruir imagen por entorno.                   PVC u objeto externo si persiste.
+
+ Observabilidad
+     Logs en stdout/stderr.
+     Correlación y trazas.
+     Sin rotación casera de logs.
+
+
+
+
+Microservicios (73.40)                                                                        8
+
+===== PAGINA 9 =====
+
+2 · Estado, red y recursos
+
+
+                     Instancias reemplazables y escalables.
+
+===== PAGINA 10 =====
+
+ Estado local y réplicas
+ Antipatrón                               Diseño apropiado
+     Sesiones en memoria por Pod.          Estado persistente fuera del Pod.
+     Uploads únicamente en disco local.    Archivos en storage apropiado.
+     Contadores críticos locales.          Operaciones atómicas / BD.
+     Caché como fuente de verdad.          Caché local solo como optimización.
+
+                                           Prueba mental: ¿qué pasa si este Pod desaparece
+                                           ahora mismo?
+
+
+
+
+Microservicios (73.40)                                                                       10
+
+===== PAGINA 11 =====
+
+ Service discovery mediante Kubernetes
+ Resolución de servicios mediante DNS.
+
+              →
+ Cliente payment-api.default.svc Service →         La plataforma
+                         →
+ (VIP / DNS estable) EndpointSlice (Pods
+                    →
+ disponibles) Pod Ready (instancia reemplazable)
+                                                     Discovery y endpoints.
+                                                     Enrutamiento hacia destinos disponibles.
+
+                                                   El cliente
+                                                     Timeouts y reconexión.
+                                                     Semántica segura del retry.
+
+
+
+
+Microservicios (73.40)                                                                          11
+
+===== PAGINA 12 =====
+
+ Requests y limits de recursos
+ CPU, memoria y almacenamiento por contenedor.
+
+    Recurso              Qué hace Kubernetes             Qué debe hacer el código
+
+    CPU                  Requests, limits, throttling    Limitar paralelismo y medir p95/p99
+
+    Memoria              Memory limit / OOMKilled        Buffers, cachés y colas acotadas
+
+    Disco                Ephemeral storage y volúmenes   No crecer sin límite en tmp/logs
+
+    Réplica              HPA ajusta Pod count            Escalar sin estado local obligatorio
+
+
+
+
+Microservicios (73.40)                                                                          12
+
+===== PAGINA 13 =====
+
+ Backpressure y límites de concurrencia
+ Control de concurrencia y tamaño de cola por instancia.
+
+ Sin límites                                               Con límites
+     1.000 tareas simultáneas.                              Worker pool o semaphore.
+     Buffer en memoria sin cota.                            Prefetch y cola acotada.
+     Latencia creciente, OOM.                               Backpressure y métricas.
+
+                                                            La plataforma escala instancias; el servicio regula el
+                                                            trabajo dentro de cada instancia.
+
+
+
+
+Microservicios (73.40)                                                                                               13
+
+===== PAGINA 14 =====
+
+3 · Ciclo de vida y
+disponibilidad
+
+
+                      Probes de salud y despliegues progresivos.
+
+===== PAGINA 15 =====
+
+ Probes de startup, readiness y liveness
+ Semántica y efecto de cada probe.
+
+    Probe                   Pregunta                        Efecto
+
+    startupProbe            ¿Terminó el arranque inicial?   Protege de reinicios prematuros.
+
+    readinessProbe          ¿Puede atender tráfico ahora?   Pod fuera de endpoints si falla.
+
+    livenessProbe           ¿Proceso irrecuperable?         Kubelet reinicia el contenedor.
+
+
+
+
+Microservicios (73.40)                                                                         15
+
+===== PAGINA 16 =====
+
+ Diseño de health checks
+ Probes con semántica incorrecta               Contrato operativo
+     Siempre devuelve HTTP 200.                 Liveness detecta bloqueo local.
+     Liveness depende de PostgreSQL.            Readiness representa capacidad real.
+     Readiness exige que TODO esté perfecto.    Dependencias se evalúan según degradación
+                                                posible.
+
+                                                Caso: adquirente externo caído. ¿Apagás todos los
+                                                Pods o degradás la funcionalidad?
+
+
+
+
+Microservicios (73.40)                                                                              16
+
+===== PAGINA 17 =====
+
+ Configuración de probes en un Deployment
+ Parámetros de startup, readiness y liveness.
+
+  startupProbe:
+    httpGet: {path: /health/startup, port: 8080}
+    failureThreshold: 24
+    periodSeconds: 5
+  readinessProbe:
+    httpGet: {path: /health/ready, port: 8080}
+    periodSeconds: 5
+  livenessProbe:
+    httpGet: {path: /health/live, port: 8080}
+    periodSeconds: 10
+
+
+    Regla: el endpoint de liveness no debe fallar solo porque PostgreSQL o Redis estén caídos.
+
+
+
+
+Microservicios (73.40)                                                                           17
+
+===== PAGINA 18 =====
+
+ Rolling update y terminación gradual
+ Secuencia coordinada de actualización y cierre.
+
+                                                    strategy:
+    Etapa                Acción                       type: RollingUpdate
+                                                      rollingUpdate: {maxUnavailable: 0, maxSurge: 1}
+    Pod nuevo            Startup + warm-up.         terminationGracePeriodSeconds: 30
+
+    Ready                Recibe tráfico.            El cambio de endpoints es asíncrono: no garantiza
+    Pod viejo            Entra en terminating.
+                                                    cero solicitudes nuevas al Pod saliente.
+
+    Drenaje              SIGTERM + requests.
+
+    Salida               Termina antes del grace.
+
+
+
+
+Microservicios (73.40)                                                                                  18
+
+===== PAGINA 19 =====
+
+4 · API, worker y job
+
+
+                 Controladores de Kubernetes según el tipo de proceso.
+
+===== PAGINA 20 =====
+
+ Recursos de Kubernetes según el tipo de proceso
+ Deployment, Job y CronJob según la duración del proceso.
+
+    Tipo de aplicación         Recurso habitual             Contrato en código
+
+    API HTTP                   Deployment + Service         Readiness, shutdown, stateless
+
+    Consumer continuo          Deployment (+ KEDA)          ACK, backpressure, drenaje
+
+    Tarea finita               Job                          Exit codes, idempotencia
+
+    Tarea programada           CronJob   → Job              Idempotencia, concurrencia
+
+
+
+
+Microservicios (73.40)                                                                       20
+
+===== PAGINA 21 =====
+
+ Terminación ordenada de un worker
+ Drenaje de mensajes y confirmación del trabajo completado.
+
+                 →
+ SIGTERM detener consumo nuevo Drain:  →               En Kubernetes
+                         →
+ esperar in-flight ACK solo completados     →
+                             →
+ Requeue no terminados Exit: cerrar conexión.
+                                                         Reinicio, réplicas y scheduling.
+                                                         Recursos y escala opcional por cola.
+ En la aplicación
+     ACK/NACK, idempotencia, transacción.
+     Prefetch/concurrencia acotados.
+
+
+
+
+Microservicios (73.40)                                                                          21
+
+===== PAGINA 22 =====
+
+ Entrega de mensajes e idempotencia
+ Redelivery de mensajes después de perder el ACK.
+
+                          →
+ Worker ejecuta pago DB commit exitoso Pod  →       La unicidad de la operación se diseña en el dominio y
+                         →              →
+ muere antes de ACK Broker redelivery Worker        la persistencia.
+ nuevo detecta duplicado.                           Ejemplo: clave idempotente + restricción única +
+                                                    consulta del resultado previo.
+
+
+
+
+Microservicios (73.40)                                                                                  22
+
+===== PAGINA 23 =====
+
+ Escalado con KEDA, HPA y concurrencia
+ Réplicas y concurrencia por instancia.
+
+    Pregunta                              Quién responde
+
+    ¿Cuántos Pods se ejecutan?            Deployment + HPA/KEDA
+
+    ¿Cuánto trabajo toma cada Pod?        Código: concurrencia, prefetch, buffers
+
+    ¿Qué ocurre si la cola crece?         Backpressure + escala + alertas
+
+    ¿Qué pasa si un Pod muere?            Reejecución segura + ACK/idempotencia
+
+
+
+
+Microservicios (73.40)                                                              23
+
+===== PAGINA 24 =====
+
+ Políticas de reintentos
+ Criterios para reintentos seguros según el tipo de error.
+
+    Situación                                           Decisión
+
+    HTTP 503 transitorio                                Retry acotado en cliente si es seguro.
+
+    Deadlock local irrecuperable                        Liveness + restart.
+
+    Arranque incompleto                                 Startup / readiness.
+
+    Config inválida                                     Fail fast + diagnóstico + alerta.
+
+    Pago potencialmente duplicado                       Idempotencia antes del retry.
+
+
+
+
+Microservicios (73.40)                                                                           24
+
+===== PAGINA 25 =====
+
+5 · Patrones de apoyo y
+seguridad
+
+
+                    Contenedores auxiliares y privilegios.
+
+===== PAGINA 26 =====
+
+ Init containers y sidecars
+ Preparación inicial y servicios auxiliares.
+
+ Init Container                                Sidecar / Ambassador
+     Preparación finita y previa.               Función transversal común.
+     No migraciones globales por réplica sin    Proxy de transporte, no semántica de pagos.
+     coordinación.                              Costo, recursos y fallos adicionales.
+     No waits infinitos a dependencias.
+
+
+
+
+Microservicios (73.40)                                                                        26
+
+===== PAGINA 27 =====
+
+ Seguridad y privilegios del contenedor
+ Ejecución con privilegios mínimos.
+
+ Evitar                                    Preferir
+     Ejecutar como root por costumbre.       runAsNonRoot + privilegios mínimos.
+     Modificar /etc o /var/log.              readOnlyRootFilesystem (cuando viable).
+     Secretos dentro de imagen.              Secret / external secret store.
+     Usar Docker socket o permisos host.     RBAC mínimo y no API access si no hace falta.
+
+
+
+
+Microservicios (73.40)                                                                       27
+
+===== PAGINA 28 =====
+
+ Antipatrones operativos en Kubernetes
+ Señales de responsabilidades duplicadas.
+
+    Señal de alerta                         Mejor enfoque
+
+    Entrypoint con 200 líneas de waits      Init finito + probes + fail fast
+
+    Cada servicio descubre IPs de Pods      Service + DNS
+
+    Liveness consulta 3 sistemas externos   Liveness local + degraded readiness
+
+    Job implementado como while(true)       Job/CronJob
+
+    Caché local es fuente de verdad         Estado externo / sincronización explícita
+
+    Retries automáticos a POST de pagos     Contrato idempotente antes de retry
+
+
+
+
+Microservicios (73.40)                                                                  28
+
+===== PAGINA 29 =====
+
+6 · Ejercicio de diseño
+
+
+                          Diseño de una API de pagos.
+
+===== PAGINA 30 =====
+
+ Flujo de órdenes de pago
+ Responsabilidades de la aplicación y Kubernetes.
+
+ Flujo                                              Problemas intencionales
+                          →
+ Cliente POST /payments API validación +             Sesión en memoria.
+                    →
+ persistencia Broker PaymentRequested       →        ACK antes del commit.
+                          →
+ Worker proceso de pago DB resultado                 Worker sin SIGTERM.
+ idempotente.                                        Retry infinito + logs a archivos.
+
+
+
+
+Microservicios (73.40)                                                                   30
+
+===== PAGINA 31 =====
+
+ Revisión técnica de una aplicación Kubernetes
+ Preguntas para evaluar su preparación operativa.
+
+    N.º                  Pregunta
+
+    01                   ¿Termina por SIGTERM sin perder trabajo crítico?
+
+    02                   ¿Sigue siendo correcto con 3 réplicas?
+
+    03                   ¿Tiene readiness/liveness con semántica distinta?
+
+    04                   ¿Tiene límites de concurrencia y memoria?
+
+    05                   ¿Sus reintentos preservan idempotencia?
+
+    06                   ¿Logs, configuración y secretos están externalizados?
+
+
+
+
+Microservicios (73.40)                                                           31
+
+===== PAGINA 32 =====
+
+ Responsabilidades de la aplicación y la plataforma
+ Criterios para asignar funciones al código y a Kubernetes.
+
+    Antes de implementar un mecanismo operacional en código, preguntá qué abstracción ya ofrece Kubernetes.
+
+
+    La plataforma administra procesos. El código protege la semántica del negocio.
+
+
+
+
+Microservicios (73.40)                                                                                        32
+
+===== PAGINA 33 =====
+
+ Referencias de Kubernetes y KEDA
+ Documentación oficial y patrones relacionados.
+ Fuente: Kubernetes · Pod lifecycle
+ Fuente: Kubernetes · Probes
+ Fuente: Kubernetes · Deployment
+ Fuente: Kubernetes · Job
+ Fuente: Kubernetes · CronJob
+ Fuente: Kubernetes · Service
+ Fuente: Kubernetes · Resource management
+ Fuente: Kubernetes · Pod Security Standards
+ Fuente: KEDA · documentation
+
+
+
+
+Microservicios (73.40)                            33
+

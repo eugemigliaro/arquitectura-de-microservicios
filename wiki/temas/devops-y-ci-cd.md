@@ -74,6 +74,8 @@ La descripción de unit test de esta unidad no coincide con la de [Testing](test
 | Blue/Green | Se arma un ambiente paralelo y un distribuidor de tráfico decide a cuál enviar | Muy usado en ambientes de contenedores simples [T13, p. 41] |
 | Canary | La nueva versión recibe primero un grupo de usuarios y se amplía progresivamente | Progresivo, de bajo impacto ante fallas y con rollback rápido [T13, p. 42] |
 
+La unidad de resiliencia retoma rolling, blue/green y canary en Kubernetes y agrega Argo Rollouts o Flagger para automatizar el canary con rollback según SLO; desplegar no es lo mismo que liberar. [T21, p. 29] Ver [Resiliencia y escalabilidad](resiliencia-y-escalabilidad.md). Cómo llega el estado deseado al clúster, por push desde el CI o por pull con un agente GitOps, se desarrolla en [GitOps y entrega continua](gitops-y-entrega-continua.md). [T20, p. 10]
+
 La estrategia depende del riesgo aceptable y del impacto de negocio de un error —no se despliega igual el firmware de un respirador que un videojuego—, y como cada una tiene costos, forma parte del diseño de la arquitectura y del CI/CD. [T13, p. 43]
 
 ## Seguridad y shift-left
@@ -98,7 +100,7 @@ La seguridad es tan crítica como la disponibilidad: sus controles pueden integr
 
 Cada servicio tiene sus jobs, que heredan de las plantillas con `extends` y se parametrizan con `SERVICE_NAME`; `release` y `deploy` declaran `needs` sobre el `package` de su servicio. Un commit en `main` corre el ciclo completo; en otra rama, solo test y build; un tag `vX.Y.Z`, build, release con ese tag y deploy. [G03]
 
-*Inferencia:* `E05` pide despliegue automático a staging, tests de integración allí como gate y promoción a producción solo si pasan. [E05] El pipeline del laboratorio no tiene ambiente de staging ni gate, y su release y deploy son simulados: sirve como modelo de estructura (plantillas, `rules`, `needs`), no como pipeline completo del TP.
+*Inferencia:* `E05` pide despliegue automático a staging, tests de integración allí como gate y promoción a producción solo si pasan. [E05] El pipeline del laboratorio no tiene ambiente de staging ni gate, y su release y deploy son simulados: sirve como modelo de estructura (plantillas, `rules`, `needs`), no como pipeline completo del TP. La [tercera entrega](tercera-entrega-album-cicd-aks.md) va más lejos: prohíbe que el pipeline aplique cambios al cluster, así que el `kubectl set image` simulado se reemplaza por un commit del nuevo digest en el repositorio de estado deseado que lee ArgoCD. [E06] [G03]
 
 ### Monorepo con CI por servicio
 

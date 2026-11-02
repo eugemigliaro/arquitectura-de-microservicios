@@ -185,6 +185,7 @@ Entregables adicionales: NFRs, hot spots, estrategia del camino de lectura, part
 | Estado fuera de la instancia, locks con fencing, cache e idempotencia | [Estado distribuido](estado-distribuido.md) |
 | Particiones, orden por key, consumer lag, outbox, inbox y evolución de esquema | [Kafka](comunicacion-asincrona-y-kafka.md) |
 | Rolling, blue/green y canary | [DevOps y CI/CD](devops-y-ci-cd.md) |
+| Timeouts, circuit breakers, backpressure, SLOs, autoscaling, multi-región y prueba de carga | [Resiliencia y escalabilidad](resiliencia-y-escalabilidad.md) |
 
 Hay una tensión interna en `E03`: excluye del alcance la alta disponibilidad, el autoscaling y los acuerdos de latencia, pero después pide SLOs, latencia p99 y disponibilidad mínima como parte del diseño. [E03, p. 8] [E03, p. 12] [E03, p. 13] **Lectura razonable:** la exclusión alcanza a lo que hay que implementar y garantizar en la demo, mientras que las consideraciones de escala se exigen en el documento. El conflicto quedó registrado.
 

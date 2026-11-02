@@ -62,3 +62,8 @@ G07	guia	Laboratorio: orquestación con 2PC sobre Kafka (clase 7)	material/cated
 G08	guia	Guía: fundamentos de Kubernetes con Minikube (clase 10)	material/catedra/practica/guias-2026s2/guias/k8s-fundamentos/README.md		2026	vigente	README.md
 G09	guia	Guía: Kubernetes en la nube, cluster AKS (clase 11)	material/catedra/practica/guias-2026s2/guias/k8s-aks/README.md		2026	vigente	README.md
 G10	demo	Demo: capacidad sincrónica vs. cola (clase 6)	material/catedra/practica/guias-2026s2/demos/capacidad-sync-async/README.md		2026	vigente	README.md
+T18	teoria	Programar microservicios para Kubernetes	material/catedra/teoria/Programar microservicios para Kubernetes - Slidev.pdf	33	2026	vigente	Programar microservicios para Kubernetes - Slidev.pdf
+T19	teoria	Helm	material/catedra/teoria/Helm - Slidev.pdf	11	2026	vigente	Helm - Slidev.pdf
+T20	teoria	GitOps y entrega continua	material/catedra/teoria/GitOps y Entrega Continua - Slidev.pdf	27	2026	vigente	GitOps y Entrega Continua - Slidev.pdf
+T21	teoria	Resiliencia y escalabilidad en Kubernetes	material/catedra/teoria/Resiliencia y Escalabilidad en Kubernetes - Slidev.pdf	55	2026	vigente	Resiliencia y Escalabilidad en Kubernetes - Slidev.pdf
+E06	consigna	Tercera entrega TP1: CI/CD y despliegue en AKS del Álbum 2026, versión 1.1	material/catedra/practica/consigna-entrega-3.md		2026	vigente-v1.1	consigna-entrega-3.md

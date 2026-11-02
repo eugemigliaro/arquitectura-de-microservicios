@@ -20,7 +20,7 @@ practica:
 
 laboratorio:
   herramienta: "Docker, Docker Compose y Kubernetes"
-  dialecto_o_runtime: "Docker Compose v2; kubectl con Minikube y AKS (Kubernetes 1.36); Azure CLI, Terraform >= 1.6 y Helm 3"
+  dialecto_o_runtime: "Docker Compose v2; kubectl con Minikube y AKS (Kubernetes 1.36); Azure CLI, Terraform >= 1.6, Helm 3 y ArgoCD (GitOps pull, tercera entrega)"
 
 fuentes:
   prioridad: ["catedra", "notas", "externo", "conocimiento_general"]

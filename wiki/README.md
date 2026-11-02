@@ -30,11 +30,16 @@
 - [Kubernetes — Parte 1](temas/kubernetes-parte-1.md): arquitectura del clúster, Pods, recursos y probes, controladores de workloads, reconciliación, API, ServiceAccounts y Namespaces.
 - [Kubernetes — Parte 2](temas/kubernetes-parte-2.md): red del clúster, Services, kube-proxy, DNS, Ingress, Gateway API, NetworkPolicy, PV/PVC/StorageClass, Operators, ConfigMaps y Secrets.
 - [Kubernetes en AKS: el cluster del TP](temas/kubernetes-en-aks.md): costo, creación del cluster, control plane gestionado, LoadBalancer, Secret, PVC con Azure Disk, NetworkPolicy, Envoy Gateway y scripts `up.sh`/`down.sh`.
+- [Programar microservicios para Kubernetes](temas/programar-microservicios-para-kubernetes.md): responsabilidades de la aplicación y la plataforma, contrato del contenedor, terminación gradual, estado local, requests y concurrencia, semántica de las probes, workers con ACK e idempotencia, y antipatrones operativos.
+- [Helm](temas/helm.md): charts, releases y repositorios, instalación de un chart de PostgreSQL, estructura de un chart propio y su lugar en GitOps.
+- [GitOps y entrega continua](temas/gitops-y-entrega-continua.md): principios de OpenGitOps, declarativo frente a imperativo, tags y digests, push frente a pull, reconciliación y drift, antipatrones, ArgoCD y Flux.
+- [Resiliencia y escalabilidad en Kubernetes](temas/resiliencia-y-escalabilidad.md): fallas en cascada, SLOs y error budget, timeouts, retries, circuit breaker, bulkhead, rate limiting, PDB y distribución de réplicas, HPA, VPA, KEDA, multi-región, RTO/RPO, chaos engineering y costo.
 - [Laboratorios de la cátedra](temas/laboratorios-de-la-catedra.md): mapa de guías y demos del repositorio de GitLab, herramientas, advertencias y diferencias entre documentos y código.
 - [Consigna general del trabajo práctico: Álbum 2026](temas/consigna-general-album-2026.md): relato del producto, alcance implementable y de solo diseño, invariante de oro, escenarios mínimos, CI/CD, escala y comparación con la consigna funcional.
 - [Requerimientos funcionales del Álbum 2026 (v1.1)](temas/entrega-album-2026.md): invariantes, RF/RNF, escenarios y rúbrica.
 - [Primera entrega TP1: análisis DDD del Álbum](temas/primera-entrega-album-ddd.md): alcance, estructura obligatoria, trazabilidad y rúbrica del primer avance.
 - [Segunda entrega TP1: arquitectura del Álbum](temas/segunda-entrega-album-arquitectura.md): documento de arquitectura en once secciones según la versión 1.2, despliegue en contenedores, ADRs obligatorios, reglas de calidad, rúbrica, cambios entre versiones y puntos a resolver.
+- [Tercera entrega TP1: CI/CD y despliegue en AKS](temas/tercera-entrega-album-cicd-aks.md): cluster con tres namespaces, GitOps con ArgoCD, dos servicios reales y el resto mocks, CI con cobertura mayor al 80 %, promoción `dev → staging → prod` con gates, rollback por Git, catálogo IT-01 a IT-39 y rúbrica.
 - [DDD moderno: lectura complementaria](temas/ddd-complementario.md): Event Modeling, arquitectura hexagonal, outbox, idempotencia y Data Mesh desde una fuente externa.
 
 ## Fuentes incorporadas
@@ -58,6 +63,10 @@
 | `T15` | *Del monolito a microservicios* — oficial | 58 | Decisión de migrar, seams, patrones incrementales, partición de la base, organización, métricas y taller MegaShop |
 | `T16` | *Kubernetes — Parte 1* — oficial | 57 | Plano de control y nodos, Pods, workloads, reconciliación, identidad, admisión y ámbito de recursos |
 | `T17` | *Kubernetes — Parte 2* — oficial | 54 | Networking, Services y descubrimiento, entrada al clúster, NetworkPolicy, almacenamiento persistente, Operators, ConfigMaps y Secrets |
+| `T18` | *Programar microservicios para Kubernetes* — oficial | 33 | Contrato del contenedor, cierre gradual, réplicas reemplazables, recursos, probes, workers y jobs, reintentos, seguridad y ejercicio de pagos |
+| `T19` | *Helm* — oficial | 11 | Problema que resuelve, charts, releases, repositorios, instalación y chart propio |
+| `T20` | *GitOps y entrega continua* — oficial | 27 | Principios de GitOps, inmutabilidad, push y pull, reconciliación y drift, ArgoCD y Flux |
+| `T21` | *Resiliencia y escalabilidad en Kubernetes* — oficial | 55 | Patrones de resiliencia, alta disponibilidad y autoscaling en Kubernetes, multi-región, DR, validación y costo |
 | `P01` | *Ejercicio DDD: Pedidos — resolución* — oficial, ciclo 2025 | 16 | Fronteras, EventStorming y detalle por dominio |
 | `P02` | *Ejercicio de DDD: Huella* — oficial | 10 | Taller sin solución, entregables y rúbrica |
 | `E01` | *Requerimientos funcionales: Álbum de Figuritas Mundial 2026* — oficial, v1.1 | 7 | Consigna evaluada, invariantes, escenarios y condiciones de entrega |
@@ -65,6 +74,7 @@
 | `E03` | *Consigna general del trabajo práctico: El álbum que se completa en comunidad* — oficial, v1.2 según el nombre del archivo | 13 | Relato del producto, alcance, preguntas de diseño, escenarios mínimos, CI/CD, un millón de usuarios y rúbrica |
 | `E04` | *Segunda entrega TP1: documentación de arquitectura del Álbum 2026* — oficial, sin número de versión; reemplazada por `E05` | — | Versión anterior: doce secciones, Kubernetes en AKS y observabilidad |
 | `E05` | *Segunda entrega TP1: documentación de arquitectura del Álbum 2026* — oficial, v1.2 | — | Estructura vigente de `docs/arquitectura.md`, despliegue en contenedores, ADRs, reglas de calidad, rúbrica y changelog |
+| `E06` | *Tercera entrega TP1: CI/CD y despliegue en AKS del Álbum 2026* — oficial, v1.1 | — | Cluster AKS con `dev`, `staging` y `prod`, GitOps con ArgoCD, CI de dos servicios reales, gates, rollback por Git, tests de integración IT-01 a IT-39 y rúbrica |
 | `B01` | *Modern Domain-Driven Design Guide* — externa | 17 | Extensiones y patrones complementarios de DDD |
 | `G00` | *Repositorio de guías prácticas 2026 S2: índice* — oficial | — | Organización por tema, mapa clase → guía y prerrequisitos |
 | `G01`, `G01-S01`…`G01-S21` | *Construir contenedores paso a paso con Linux* — oficial, guía de la clase 3 | — | Índice y 21 pasos: namespaces, cgroups v2, capabilities, seccomp, OverlayFS, OCI y ciclo de vida |

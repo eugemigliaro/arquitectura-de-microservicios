@@ -130,6 +130,10 @@ No implementar alta disponibilidad ni autoscaling no resta puntos; no justificar
 
 La entrega es grupal y se versiona en el repositorio del equipo; se espera que todo el equipo haya discutido las decisiones. La fecha límite y el canal se informan en el Campus. [E05]
 
+## Devolución recibida
+
+La cátedra calificó la entrega del grupo con 91/100, sin descuentos graves. El criterio con menos margen fue Despliegue y CI/CD (17,5/20). Las diez observaciones abarcan la numeración de los QA, el volumen del documento, el PostgreSQL único, los healthchecks que no reinician, el código `201` de una aceptación no concretada y la falta de un presupuesto de latencia. [D02] Su detalle y su relación con la tercera entrega están en [Devolución de la segunda entrega](devolucion-segunda-entrega.md).
+
 ## Unidades de la materia que alimentan cada sección
 
 **Inferencia de estudio:** la consigna no asigna unidades a cada sección. Esta tabla relaciona lo pedido con el material ya incorporado.

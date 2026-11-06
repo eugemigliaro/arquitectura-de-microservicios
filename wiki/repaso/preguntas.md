@@ -333,6 +333,15 @@ Preguntas recuperables por tema. Mantener las respuestas separadas o plegadas cu
 243. ¿Cómo se hace y se demuestra un rollback en esta entrega? ¿Qué no cuenta?
 244. ¿Qué hace que la tercera entrega no se evalúe y qué defectos solo bajan la nota?
 
+## Devolución de la segunda entrega
+
+245. ¿Por qué la devolución de la segunda entrega es insumo de la tercera? ¿Dónde se registran los cambios de contrato que surjan de ella?
+246. "Un healthcheck del que nadie depende para actuar es información, no protección." ¿Por qué el healthcheck de Compose del TP no protegía ante un proceso colgado? ¿Cómo lo resuelven la liveness y la readiness en Kubernetes sin que la liveness dependa de PostgreSQL?
+247. La aceptación de una oferta hace hasta 4 llamadas gRPC en secuencia, con un deadline de 2 s y reintentos en cada una. ¿Por qué un p99 de 1.500 ms no es coherente? ¿Cómo se arma un presupuesto de latencia con deadline propagado y retry budget?
+248. ¿Qué problema tiene devolver `201` en una aceptación que terminó `NO_CONCRETADA`? ¿Qué alternativas propone la cátedra y qué impacto tiene cambiarlo en la tercera entrega?
+249. ¿Qué riesgos tiene un único contenedor PostgreSQL con cinco bases, aunque cada servicio tenga base y usuario propios? ¿Qué propuso la cátedra y qué exige la tercera entrega sobre los datos por ambiente?
+250. ¿Cómo puede reformularse la política de hotfix durante los partidos en la tercera entrega sin saltear el gate de `staging`?
+
 <details>
 <summary>Respuestas orientativas</summary>
 
@@ -582,6 +591,12 @@ Preguntas recuperables por tema. Mantener las respuestas separadas o plegadas cu
 242. Con un mecanismo versionado y acotado a `staging`: un mock cuya confirmación el test puede retener, un proxy de fallas desplegado por ArgoCD o un Job de ArgoCD con permiso solo para borrar Pods de ese namespace, documentado con su limpieza en `docs/cicd.md`. [E06]
 243. Con `git revert` del cambio de versión en el estado deseado, o fijando la versión anterior, para que ArgoCD converja; se muestran el commit, la sincronización y el resultado. Un rollback con `kubectl` o `helm` contra el cluster no cuenta. [E06] [T20, p. 7]
 244. No se evalúa si no puede reproducirse un despliegue en AKS vía pipeline con promoción `staging` → `prod` (RNF-04 y RNF-05). La falta del gate de integración, el incumplimiento de RNF-06 y otros defectos bajan la nota en esta entrega, pero en la final rigen RNF-01 a RNF-06 completos. [E06] [E01, p. 6]
+245. Porque `E06` toma `docs/arquitectura.md` y los ADRs, "con las correcciones que surjan de la devolución", como fuente de verdad de los servicios, su comunicación y sus contratos. Los mocks tienen que respetar esos contratos. Los cambios de nombres, endpoints o códigos se registran en `docs/cicd.md`. [E06] [D02]
+246. El healthcheck de Compose se parece a una readiness y no reinicia el contenedor. [T07, p. 18] Por eso un proceso colgado pero vivo quedaba `unhealthy` hasta que alguien lo reiniciara a mano. [D02] En Kubernetes, si falla la liveness, el kubelet reinicia el contenedor; si falla la readiness, el Pod sale de los endpoints. [T18, p. 15] La liveness detecta un bloqueo local y no depende de PostgreSQL; la readiness representa capacidad real. [T18, p. 16]
+247. Un solo paso que agote su deadline de 2 s ya supera los 1.500 ms, y la devolución señala que no hay presupuesto por paso. [D02] El presupuesto reparte el total entre las llamadas y lo hace cumplir con un deadline propagado que baja en cada salto (2 → 1,5 → 1 → 0,5 s). [T21, p. 10] Se reintentan solo errores transitorios, en un único nivel de la cadena y con un retry budget de alrededor del 10 %. [T21, p. 11]
+248. Mezcla "recurso creado" con un resultado de negocio negativo y contradice la regla del propio documento de no esconder errores en un éxito. [D02] La teoría pide códigos correctos y señala como antipatrón el `200` con error en el cuerpo. [T09, p. 9] [T09, p. 10] Alternativas: `200` o `409` con motivo, o `201` con estado explícito. [D02] Cambiarlo modifica el contrato que implementan el servicio real y los mocks y que verifican los tests; se registra en `docs/cicd.md`. [E06]
+249. Las bases no son escribibles en común, pero el fallo y la saturación son comunes y la restauración es conjunta. Además, los NFR suponían un host propio de PostgreSQL y unas 5 réplicas que ningún ambiente tenía. [D02] La cátedra propuso dos instancias, núcleo y vistas, si el presupuesto lo permite. [D02] La tercera entrega exige que los ambientes no compartan datos y que al menos un servicio real tenga base propia. [E06]
+250. *Inferencia:* un rolling update con `maxUnavailable: 0` y drenado no necesita ventana de mantenimiento. [T18, p. 18] El hotfix recorre el mismo flujo `dev → staging → prod`, gate de integración incluido; la política define quién aprueba el cambio a `prod` y con qué urgencia. [E06]
 
 </details>
 

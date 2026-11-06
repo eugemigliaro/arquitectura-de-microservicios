@@ -39,6 +39,7 @@
 - [Requerimientos funcionales del Álbum 2026 (v1.1)](temas/entrega-album-2026.md): invariantes, RF/RNF, escenarios y rúbrica.
 - [Primera entrega TP1: análisis DDD del Álbum](temas/primera-entrega-album-ddd.md): alcance, estructura obligatoria, trazabilidad y rúbrica del primer avance.
 - [Segunda entrega TP1: arquitectura del Álbum](temas/segunda-entrega-album-arquitectura.md): documento de arquitectura en once secciones según la versión 1.2, despliegue en contenedores, ADRs obligatorios, reglas de calidad, rúbrica, cambios entre versiones y puntos a resolver.
+- [Devolución de la segunda entrega](temas/devolucion-segunda-entrega.md): nota 91/100 por criterio, fortalezas que conviene conservar y diez observaciones, cada una con su efecto en la tercera entrega.
 - [Tercera entrega TP1: CI/CD y despliegue en AKS](temas/tercera-entrega-album-cicd-aks.md): cluster con tres namespaces, GitOps con ArgoCD, dos servicios reales y el resto mocks, CI con cobertura mayor al 80 %, promoción `dev → staging → prod` con gates, rollback por Git, catálogo IT-01 a IT-39 y rúbrica.
 - [DDD moderno: lectura complementaria](temas/ddd-complementario.md): Event Modeling, arquitectura hexagonal, outbox, idempotencia y Data Mesh desde una fuente externa.
 
@@ -75,6 +76,7 @@
 | `E04` | *Segunda entrega TP1: documentación de arquitectura del Álbum 2026* — oficial, sin número de versión; reemplazada por `E05` | — | Versión anterior: doce secciones, Kubernetes en AKS y observabilidad |
 | `E05` | *Segunda entrega TP1: documentación de arquitectura del Álbum 2026* — oficial, v1.2 | — | Estructura vigente de `docs/arquitectura.md`, despliegue en contenedores, ADRs, reglas de calidad, rúbrica y changelog |
 | `E06` | *Tercera entrega TP1: CI/CD y despliegue en AKS del Álbum 2026* — oficial, v1.1 | — | Cluster AKS con `dev`, `staging` y `prod`, GitOps con ArgoCD, CI de dos servicios reales, gates, rollback por Git, tests de integración IT-01 a IT-39 y rúbrica |
+| `D02` | *Devolución de la segunda entrega TP1: grupo 10* — oficial; el número sigue al de la entrega | — | Nota por criterio, fortalezas, diez observaciones y sugerencias sobre `docs/arquitectura.md` y los ADRs |
 | `B01` | *Modern Domain-Driven Design Guide* — externa | 17 | Extensiones y patrones complementarios de DDD |
 | `G00` | *Repositorio de guías prácticas 2026 S2: índice* — oficial | — | Organización por tema, mapa clase → guía y prerrequisitos |
 | `G01`, `G01-S01`…`G01-S21` | *Construir contenedores paso a paso con Linux* — oficial, guía de la clase 3 | — | Índice y 21 pasos: namespaces, cgroups v2, capabilities, seccomp, OverlayFS, OCI y ciclo de vida |

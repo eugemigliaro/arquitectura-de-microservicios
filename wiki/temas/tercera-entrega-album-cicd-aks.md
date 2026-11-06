@@ -9,7 +9,7 @@ Rige la versión 1.1 de la consigna (`E06`). La versión anterior no está incor
 Los insumos son: [E06]
 
 1. `consigna-funcional.md` v1.1 ([`E01`](entrega-album-2026.md)): requerimientos, los 16 escenarios de aceptación de la sección 7 y RNF-01 a RNF-06. [E01, p. 6]
-2. `docs/arquitectura.md` y `docs/adr/` de la segunda entrega, con las correcciones de la devolución. Son la fuente de verdad de **qué servicios existen**, cómo se comunican y qué contratos tienen.
+2. `docs/arquitectura.md` y `docs/adr/` de la segunda entrega, con las correcciones de la devolución. Son la fuente de verdad de **qué servicios existen**, cómo se comunican y qué contratos tienen. [E06] Las correcciones del grupo y su efecto en esta entrega están en [Devolución de la segunda entrega](devolucion-segunda-entrega.md). [D02]
 3. Las guías de AKS, contenedores y CI/CD de las clases. Ver [Kubernetes en AKS](kubernetes-en-aks.md), [Imágenes](imagenes-de-contenedores.md) y [DevOps y CI/CD](devops-y-ci-cd.md). [G09] [G02] [G03]
 
 **Ambientes.** `E01` habla de *staging* y *producción*; esta entrega usa tres: `dev`, `staging` y `prod`. `staging` es el ambiente de RNF-02 y RNF-03 (despliegue previo y gate de integración), `dev` es un ambiente previo adicional y `prod` es la producción de `E01`. [E06] [E01, p. 6]
@@ -279,5 +279,6 @@ Solo está incorporada la versión 1.1. Su changelog registra: [E06]
 
 - **AKS en lugar de Compose.** Resuelto: esta entrega se despliega en AKS y sus decisiones prevalecen sobre las secciones 8 y 9 de la segunda entrega. [E06]
 - **La guía de AKS frente a esta consigna.** `G09` usa el registry de GitLab con un deploy token, crea el Secret de Postgres con `kubectl create secret` y comparte un kubeconfig de administrador entre integrantes. `E06` pide ACR, prohíbe `kubectl create secret` y deja al pipeline sin credenciales de administración. [G09] [E06] *Inferencia:* la guía sirve como base del cluster (Terraform, Gateway, NetworkPolicy, costos), pero para la entrega rige `E06`. Ver [Dudas y conflictos](../dudas-y-conflictos.md).
-- **`criterios-evaluacion.md`.** `E06` lo menciona para decir que no se aplica; no está incorporado. [E06]
+- **`criterios-evaluacion.md`.** `E06` lo menciona para decir que no se aplica; no está incorporado. [E06] La devolución de la segunda entrega dice que corrigió con ese archivo. [D02]
+- **Correcciones de la devolución.** Sondas, estrategia de despliegue, PostgreSQL por ambiente, códigos de la aceptación, presupuesto de latencia y extensión de `docs/cicd.md`: ver [Devolución de la segunda entrega](devolucion-segunda-entrega.md#cómo-aplicarla-en-la-tercera-entrega). [D02]
 - **Testing terminológico.** "Funcional" e "integración" son niveles distintos en `E06`. Ver la fila de [Dudas y conflictos](../dudas-y-conflictos.md) sobre la equivalencia oral. [E06] [N-2026-09-11-integration-test-functional-testing]

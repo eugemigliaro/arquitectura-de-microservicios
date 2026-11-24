@@ -1,0 +1,644 @@
+FUENTE: T24
+TITULO: API Gateway
+ORIGINAL: material/catedra/teoria/API Gateway - Slidev.pdf
+PAGINAS: 28
+
+===== PAGINA 1 =====
+
+Microservicios · 73.40
+
+
+API Gateway
+El borde de un sistema de microservicios
+
+===== PAGINA 2 =====
+
+ La tienda de pedidos: una pantalla, tres servicios
+ La tienda de pedidos · Ana abre su pedido en la app
+          App móvil · Ana                       Internet                                                            Interior del sistema
+       Pedido 42                          el dato sale de
+                                                                                                                Pedidos
+       2 productos · en preparación
+
+       Factura
+                                                                                                                Facturación
+       A-0001 · $ 84.000
+
+       Envío
+                                                                                                                Envíos
+       en camino · llega el jueves
+
+
+
+
+    Cada dato tiene un servicio dueño.
+    ¿Qué tiene que saber la app para mostrar esta pantalla?
+
+Microservicios (73.40)               Punto de partida   el caso   acceso directo   el gateway   en Kubernetes                              2
+
+===== PAGINA 3 =====
+
+ Acceso directo: el cliente conoce cada servicio
+ Seis meses después · la app instalada es la misma
+          App móvil · Ana                   Internet                                                            Interior del sistema
+       Pedido 42                      GET /pedidos/42                                                       Pedidos
+       pedidos.tienda.example                                                  token                   verifica el token
+
+       Factura                        GET /facturas/42                                                      Facturación
+       facturas.tienda.example                                                 token                   verifica el token
+
+       Envío                          GET /envios/42                                                        Envíos
+       envios.tienda.example                                                   token                   verifica el token
+
+                                                                                                            Seguimiento
+       Conoce 3 direcciones                                                                            verifica el token
+
+
+    El equipo de Envíos separó Seguimiento en un servicio nuevo.
+    ¿Qué ve Ana en su app, y quién lo puede arreglar?
+
+Microservicios (73.40)           Punto de partida   el caso   acceso directo   el gateway   en Kubernetes                              3
+
+===== PAGINA 4 =====
+
+ API Gateway: un único punto de entrada
+ Seis meses después · la app instalada es la misma
+          App móvil · Ana              Internet                      API gateway                           Interior del sistema
+       Pedido 42                 GET /pedidos/42
+                                                                                                       Pedidos
+       api.tienda.example
+                                                               1     a dónde va
+       Factura                   GET /facturas/42
+                                                                                                       Facturación
+       api.tienda.example
+                                                               2     quién es
+       Envío                     GET /envios/42
+                                                                                                       Envíos
+       api.tienda.example
+                                                               3     cuánto puede pedir
+
+       Conoce 1 dirección                                                                              Seguimiento
+                                                               4     qué queda registrado
+
+    Sobre cada request, el gateway toma cuatro decisiones.
+
+
+
+Microservicios (73.40)      Punto de partida   el caso   acceso directo   el gateway   en Kubernetes                              4
+
+===== PAGINA 5 =====
+
+ En Kubernetes: Service, Ingress y Gateway API
+ Kubernetes parte 2 · Gateway API
+                                        Internet                      API gateway                       Clúster de Kubernetes
+                                  tráfico norte-sur                  configura    Gateway
+          App móvil · Ana
+                                                                                  HTTPS · puerto 443
+
+
+                                                  quién es      2                                             Service
+                                                                                  HTTPRoute             1
+
+                                     cuánto puede pedir         3
+                                                                                  /pedidos                        pedidos
+
+                                                                                  /facturas                       facturas
+                                   qué queda registrado         4
+                                                                                  /envios                         envios
+
+
+    Identidad, límites y registro son políticas que agrega cada implementación.
+
+
+
+Microservicios (73.40)       Punto de partida   el caso   acceso directo   el gateway   en Kubernetes                           5
+
+===== PAGINA 6 =====
+
+ Primera decisión: a dónde va el request
+     1 A dónde va         2 Quién es              3 Cuánto puede pedir   4 Qué queda registrado
+
+
+
+     ¿Qué regla manda este request a qué servicio?
+
+     ¿Y si hay dos versiones del mismo servicio?
+
+     ¿Y si el servicio habla otro protocolo?
+
+     ¿Y si la pantalla necesita tres servicios?
+
+     ¿Y si cada tipo de cliente necesita otra respuesta?
+
+
+
+
+Microservicios (73.40)                                                                            6
+
+===== PAGINA 7 =====
+
+ Ruteo: del path al Service
+ El HTTPRoute de la tienda · reglas por prefijo de path
+                                              Internet                      API gateway                           Interior del sistema
+          App móvil · Ana                                                         HTTPRoute
+                                                                                  api.tienda.example
+       GET /envios/estado/42
+       api.tienda.example                                                         /pedidos                             Pedidos
+
+                                                                                  /facturas                            Facturación
+
+                                                                                  /envios                              Envíos
+
+                                                   a dónde va         1           /envios/estado                       Seguimiento
+
+
+    Con este request coinciden dos reglas.
+    Llega GET /envios/estado/42 y coinciden dos reglas: ¿cuál se aplica?
+
+Microservicios (73.40)         1 A dónde va    ruteo     canary y Strangler Fig    protocolo   agregación   BFF                          7
+
+===== PAGINA 8 =====
+
+ Ruteo por header y por peso: canary y Strangler Fig
+ Caso 3 de 3 · Strangler Fig
+                                            Internet                      API gateway                             Interior del sistema
+          App móvil · Ana                                                       HTTPRoute
+                                                                                api.tienda.example
+       GET /pedidos/42
+       api.tienda.example
+
+
+                                                                                /pedidos                               Pedidos
+
+                                                                                / (el resto)                           Monolito
+
+
+
+
+    Strangler Fig: lo ya extraído va al servicio nuevo; el resto, al monolito.
+
+
+
+Microservicios (73.40)       1 A dónde va    ruteo     canary y Strangler Fig     protocolo    agregación   BFF                          8
+
+===== PAGINA 9 =====
+
+ Traducción de protocolo: REST afuera, gRPC adentro
+ La app de Ana pide el pedido 42
+                                           Internet                      API gateway                           Interior del sistema
+
+
+
+
+          App móvil · Ana
+                                   GET /pedidos/42                        ObtenerPedido(42)                Pedidos
+       habla HTTP + JSON           HTTP + JSON                            gRPC                          habla gRPC
+
+
+
+
+    El gateway traduce en el borde: ninguno de los dos cambia de protocolo.
+
+
+
+Microservicios (73.40)      1 A dónde va    ruteo     canary y Strangler Fig   protocolo   agregación   BFF                           9
+
+===== PAGINA 10 =====
+
+ Agregación: una respuesta a partir de tres llamadas
+ Otro día · Seguimiento está lento
+          App móvil · Ana                  Internet                      API gateway                            Interior del sistema
+       Pedido 42                                                               200 · 40 ms
+                                                                                                            Pedidos
+       esperando
+
+       Factura                     GET /mi-pedido/42                           200 · 60 ms
+                                                                                                            Facturación
+       esperando
+
+       Envío
+                                                                                                            Envíos
+       esperando
+
+                                                                               sin respuesta
+       esperando hace 2 s                                                                                   Seguimiento
+
+
+    Seguimiento no responde y la pantalla entera espera.
+    Seguimiento tarda 2 s: ¿qué responde el gateway y cuándo?
+
+Microservicios (73.40)      1 A dónde va    ruteo     canary y Strangler Fig    protocolo    agregación   BFF                          10
+
+===== PAGINA 11 =====
+
+ BFF: un gateway por tipo de cliente
+ La tienda suma una web y una API para socios
+                                               Internet                                                              Interior del sistema
+
+          App móvil                                                          BFF móvil                            Servicios
+     necesita pocos campos                                                   equipo móvil
+                                                                                                                       Pedidos
+
+          Web                                                                BFF web
+     necesita todo el detalle                                                                                          Facturación
+                                                                             equipo web
+
+
+          Socios                                                             API de socios                             Seguimiento
+     necesita contrato versionado                                            equipo de integraciones
+
+    Cada BFF es del equipo que hace ese cliente.
+
+
+
+Microservicios (73.40)          1 A dónde va    ruteo     canary y Strangler Fig   protocolo   agregación   BFF                             11
+
+===== PAGINA 12 =====
+
+ Segunda decisión: quién hace el request
+     1 A dónde va        2 Quién es             3 Cuánto puede pedir   4 Qué queda registrado
+
+
+
+     ¿Quién es, y puede hacer esto?
+
+     ¿De dónde sale el token?
+
+     ¿Qué tiene adentro para poder confiar en él?
+
+     ¿Cómo se valida: solo, o preguntando al proveedor?
+
+     ¿Cómo se entera el servicio de quién es?
+
+     ¿Quién decide si puede ver ese pedido?
+
+
+Microservicios (73.40)                                                                          12
+
+===== PAGINA 13 =====
+
+ Autenticación y autorización en el borde
+ Tres requests llegan al borde de la tienda
+          Tres requests                            Internet                       API gateway                              Interior del sistema
+       GET /pedidos/42                                                                                              Pedidos
+       sin token                                        401
+
+       DELETE /pedidos/42
+       token de Ana                                     403
+
+       GET /pedidos/42                                                                 200
+       token de Ana
+
+
+                                                             quién es        2
+
+
+    Autorización: ¿puede hacer esto? Si no puede, 403.
+
+
+
+Microservicios (73.40)   2 Quién es   autenticación y autorización   token       JWT    validación   propagación   scope y recurso                13
+
+===== PAGINA 14 =====
+
+ OAuth 2.0 y OIDC: de dónde sale el token
+ Ana inicia sesión en la app · OAuth 2.0 + OIDC
+                                                   Internet                   API gateway                             Interior del sistema
+          App móvil · Ana
+     GET /pedidos/42                                                                                            Pedidos
+     con access token                              token
+
+
+
+
+            Proveedor de identidad
+            IdP · por ejemplo, Google
+
+
+    El gateway solo ve el resultado: un request con un token.
+
+
+
+Microservicios (73.40)   2 Quién es   autenticación y autorización   token   JWT   validación   propagación   scope y recurso                14
+
+===== PAGINA 15 =====
+
+ JWT: un token que se verifica con una firma
+ Alguien modifica el token en el camino
+
+         encabezado                      contenido                               firma
+         eyJhbGciOiJSUzI1NiJ9          . eyJpc3MiOiJpZHAudGllbmRhLmV4YW1wbGUi… . kX9vT2bLq8…Qw
+
+                                                                                                                               firma
+
+                                           iss        idp.tienda.example           quién lo emitió              Proveedor de identidad
+                                           sub        ana                                quién es
+                                                                                                                clave pública (JWKS)
+                                           scope pedidos:write                        modificado
+
+                                           exp        18:15                  hasta cuándo vale                    API gateway
+                                                                                                                      401 · firma inválida
+
+
+    Si alguien cambia un claim, la firma deja de coincidir: 401.
+
+
+
+Microservicios (73.40)   2 Quién es   autenticación y autorización   token   JWT     validación   propagación     scope y recurso            15
+
+===== PAGINA 16 =====
+
+ Validación del token: local o por introspección
+ 18:05 · el token de Ana vencía a las 18:15
+                                                   Internet                    API gateway                            Interior del sistema
+          App móvil · Ana
+     GET /pedidos/42                                                                                           Pedidos
+     token · vence 18:15                           token
+
+
+
+
+            Proveedor de identidad
+            token de Ana: revocado
+
+
+    A las 18:05 el proveedor revoca el token de Ana.
+    Se revoca un token al que le quedan 10 min: ¿hasta cuándo lo acepta cada variante?
+
+Microservicios (73.40)   2 Quién es   autenticación y autorización   token   JWT   validación   propagación   scope y recurso                16
+
+===== PAGINA 17 =====
+
+ Propagación de identidad: del token al servicio
+ Otro request · Beto tiene un token válido, el suyo
+                                                   Internet                    API gateway                             Interior del sistema
+          App móvil · Ana
+                                                                               X-User-Id: ana                    Pedidos
+     GET /pedidos/42
+                                                                                                              lee X-User-Id
+     token de Ana
+
+
+
+          App móvil · Beto
+     GET /pedidos/42
+     token de Beto
+     X-User-Id: ana
+                                                                                                                 Otro servicio
+
+
+    Beto agrega por su cuenta un header con la identidad de Ana.
+    Beto envía X-User-Id: ana desde Internet: ¿qué debe hacer el gateway con ese header?
+
+Microservicios (73.40)   2 Quién es   autenticación y autorización   token   JWT   validación   propagación    scope y recurso                17
+
+===== PAGINA 18 =====
+
+ Autorización: por scope y por recurso
+ Ana, con un token válido y scope pedidos:read
+                                                   Internet                    API gateway                              Interior del sistema
+          App móvil · Ana
+     GET /pedidos/43                                                                                                      Pedidos
+     scope: pedidos:read
+
+
+
+
+                                                                                   Política de la ruta                pedido 42 · de ana
+
+                                                                                   GET → pedidos:read                 pedido 43 · de beto
+
+                                                                                   DELETE → pedidos:write
+                                                                                                                         datos de Pedidos
+
+    Ana pide el pedido 43. El scope alcanza: el gateway lo deja pasar.
+    El pedido 43 es de Beto: ¿quién rechaza el request de Ana, y con qué dato?
+
+Microservicios (73.40)   2 Quién es   autenticación y autorización   token   JWT     validación   propagación   scope y recurso                18
+
+===== PAGINA 19 =====
+
+ Tercera y cuarta decisión: límites y registro
+     1 A dónde va        2 Quién es          3 Cuánto puede pedir   4 Qué queda registrado
+
+
+
+     ¿Cuánto puede pedir cada cliente?
+
+     ¿Qué queda anotado de cada request?
+
+     ¿Qué más repetiría cada servicio si no estuviera el gateway?
+
+
+
+
+Microservicios (73.40)                                                                       19
+
+===== PAGINA 20 =====
+
+ Rate limiting en el borde: un límite por cliente
+ El gateway corre en tres réplicas · límite: 100 requests por minuto
+                                         Internet                        API gateway                           Interior del sistema
+          App móvil · Ana
+     GET /pedidos/42
+     request 101 del minuto                    429                         réplica 1: ana 100, beto 0
+
+
+                                      cuánto puede pedir           3
+                                                                           réplica 2: ana 0, beto 0
+          App móvil · Beto
+                                                                                200
+     GET /pedidos/43                                                                                                Pedidos
+     request 13 del minuto                                                 réplica 3: ana 0, beto 12
+
+    Con tres réplicas, cada una lleva su propia cuenta.
+    Con 3 réplicas y un contador local de 100 por minuto en cada una, ¿cuánto puede pedir Ana?
+
+Microservicios (73.40)          3   4 Límites y registro   límite por cliente     registro   otras políticas                          20
+
+===== PAGINA 21 =====
+
+ Lo que registra el borde: access log, métricas y traza
+ El request de Ana, visto desde el borde · valores ilustrativos
+                                          Internet                        API gateway                             Interior del sistema
+          App móvil · Ana
+                                                                          + traceparent
+     GET /pedidos/42                                                                                          Pedidos
+     token de Ana
+
+
+                                                                            access log      ana · GET /pedidos/42 · 200 · 43 ms
+
+
+                                                                            métricas        /pedidos · 120 req/s · p99 180 ms
+
+
+                                     qué queda registrado           4       traza           4bf9… · gateway → pedidos 40 ms
+
+
+    Traza: si el request llega sin traceparent, el gateway la inicia y la propaga.
+
+
+
+Microservicios (73.40)           3   4 Límites y registro   límite por cliente   registro   otras políticas                              21
+
+===== PAGINA 22 =====
+
+ Otras políticas del borde: TLS, CORS y esquemas
+ Caso 3 de 3 · validación de esquema
+                                         Internet                        API gateway                             Interior del sistema
+          Web · Ana
+                                    body inválido
+     POST /pedidos                                                                                           Pedidos
+     { "cantidad": "muchas" }                  400
+
+
+
+
+    Validación de esquema: un body mal formado recibe 400 sin llegar al servicio.
+
+
+
+Microservicios (73.40)          3   4 Límites y registro   límite por cliente   registro   otras políticas                              22
+
+===== PAGINA 23 =====
+
+ Riesgos y límites del gateway
+     1 A dónde va          2 Quién es      3 Cuánto puede pedir   4 Qué queda registrado
+
+
+
+     ¿Qué pasa si el gateway se cae?
+
+     ¿Qué pasa si le agregamos una regla más?
+
+     ¿Qué tráfico no ve?
+
+
+
+
+Microservicios (73.40)                                                                     23
+
+===== PAGINA 24 =====
+
+ Disponibilidad: el gateway como punto único de falla
+ El mismo gateway, en tres réplicas · cae la réplica 2
+                                       Internet                        API gateway                     Interior del sistema
+                                                                                                    Servicios
+
+                                                                                                         Pedidos
+
+          App móvil · Ana
+     GET /pedidos/42                                                   caída        contador             Facturación
+                                                                                   compartido
+                                 balanceador
+
+                                                                                                         Seguimiento
+
+
+
+    Se puede replicar porque no guarda estado propio: el contador vive afuera, compartido.
+    El contador compartido deja de responder: ¿el gateway deja pasar todo o rechaza todo?
+
+Microservicios (73.40)            Riesgos y límites   disponibilidad    lógica de negocio   malla                             24
+
+===== PAGINA 25 =====
+
+ Lógica de negocio: lo que no va en el gateway
+ Tres reglas que alguien propone agregar
+                                        Internet                        API gateway                         Interior del sistema
+          App móvil · Ana
+     POST /pedidos                                                                                   Pedidos
+     token de Ana
+
+
+
+
+                                                                          Tres reglas candidatas
+                                                                          a · rechazar bodies de más de 1 MB
+                                                                          b · no enviar a direcciones bloqueadas por fraude
+                                                                          c · envío gratis desde $ 50.000
+
+
+    Si necesita datos del negocio, va en un servicio.
+    ¿Cuál de estas tres reglas va en el gateway?
+
+Microservicios (73.40)             Riesgos y límites   disponibilidad   lógica de negocio   malla                                  25
+
+===== PAGINA 26 =====
+
+ Gateway y malla: tráfico norte-sur y este-oeste
+ Pedidos necesita a Facturación para responder
+                                       Internet                        API gateway                     Interior del sistema
+          App móvil · Ana
+                                 norte-sur
+     GET /pedidos/42                                                                               Pedidos
+     token de Ana
+                                                                                                                 este-oeste
+
+                                                                       Entre servicios
+                                                                                                   Facturación
+                                                                       ¿quién llama?
+                                                                       ¿va cifrado?
+                                                                       ¿cuántos reintentos?
+                                                                                                   Seguimiento
+
+
+    Las mismas preguntas, entre servicios, las responde la malla de servicios (service mesh).
+
+
+
+Microservicios (73.40)            Riesgos y límites   disponibilidad   lógica de negocio   malla                              26
+
+===== PAGINA 27 =====
+
+ El request completo: de la app a Pedidos
+ ¿Qué tiene que saber la app para mostrar esta pantalla?
+          App móvil · Ana               Internet                     API gateway                      Interior del sistema
+       Pedido 42                                                                            200
+                                                                                                  Pedidos
+       recibido
+                                                                1    regla de ruteo
+       Factura                     GET /mi-pedido/42                                        200
+                                                                                                  Facturación
+       recibido                         token
+                                                                2    token → X-User-Id
+       Envío
+                                                                                                  Envíos
+       recibido
+                                                                3    ana: 14 de 100
+                                                                                            200
+       1 dirección · 1 token                                                                      Seguimiento
+                                                                4    log, métricas, traza
+
+    4 · Qué queda registrado: access log, métricas y el inicio de la traza.
+
+
+
+Microservicios (73.40)                   Cierre    el request completo   mapa de la clase                                    27
+
+===== PAGINA 28 =====
+
+ Mapa de la clase
+ Los números son las diapositivas de esta clase
+
+        Acceso directo: el cliente conoce el interior · 3                          API gateway · 4            No va: lógica de negocio · 25
+                                                                                               decide
+
+         1 A dónde va                     2 Quién es                              3 Cuánto puede pedir           4 Qué se registra
+
+
+        HTTPRoute                 7      OAuth/OIDC, token           14           límite por cliente     20     access log              21
+        canary, Strangler         8      JWT y firma            15–16             réplicas, contador     24     métricas RED            21
+        agregación, BFF     10–11        scope y recurso             18                                         traza                   21
+
+
+       de Kubernetes y Migración            sigue en Data plane                         de Resiliencia              de Observabilidad
+
+
+    El gateway decide cuatro cosas sobre cada request; lo que necesita datos del negocio queda en los servicios.
+
+
+
+Microservicios (73.40)                           Cierre     el request completo      mapa de la clase                                         28
+

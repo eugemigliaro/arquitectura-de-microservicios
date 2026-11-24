@@ -119,7 +119,7 @@ Ambos agregan comportamiento nuevo sin modificar el monolito: lo nuevo se enganc
 
 ### Feature toggles y canary releases
 
-La idea es separar el deploy del release. Con un feature toggle el código nuevo se despliega apagado y se prende por configuración; con un canary el servicio nuevo recibe primero el 1 %, después el 10 %, el 50 %… y si empeoran errores o latencia se vuelve al 0 %, con rollback en segundos y sin deploy. [T15, p. 28] El canary es la estrategia de despliegue de [DevOps y CI/CD](devops-y-ci-cd.md), aplicada aquí a la migración. [T13, p. 42]
+La idea es separar el deploy del release. Con un feature toggle el código nuevo se despliega apagado y se prende por configuración; con un canary el servicio nuevo recibe primero el 1 %, después el 10 %, el 50 %… y si empeoran errores o latencia se vuelve al 0 %, con rollback en segundos y sin deploy. [T15, p. 28] El canary es la estrategia de despliegue de [DevOps y CI/CD](devops-y-ci-cd.md), aplicada aquí a la migración. [T13, p. 42] La diferencia entre un canary de versión y un release con flag, y lo que hace falta cuando la decisión cruza varios servicios, está en [Feature flagging](feature-flagging.md). [T22, p. 16]
 
 El trabajo en curso no se migra a mitad de camino: un pedido que empezó en el monolito termina en el monolito, solo el tráfico nuevo va al servicio y se drena. [T15, p. 28]
 
@@ -209,7 +209,7 @@ El reporte que hacía un `JOIN` de seis tablas ahora cruza cuatro servicios. Se 
 
 **Conway inverso:** la ley de Conway dice que la arquitectura copia la organización; el *Inverse Conway Maneuver* la usa a favor y diseña los equipos con la forma que se quiere para la arquitectura. Team Topologies distingue *stream-aligned teams*, dueños de un flujo de negocio de punta a punta; *platform team*, que provee CI/CD, observabilidad e infraestructura como producto interno; y *enabling teams*, que ayudan a adoptar prácticas nuevas. Si nueve servicios los mantiene un equipo que coordina todos los deploys, la arquitectura dice "microservicios" pero la organización dice "monolito", y gana la organización. [T15, p. 44] Ver la ley de Conway en [Diseño de servicios](diseno-de-servicios.md). [T02, p. 24]
 
-**Lo que se complica en operación:** un bug que antes era un stack trace ahora cruza cuatro servicios y dos brokers. Hacen falta tracing distribuido y correlation IDs, que se retoman en la clase de observabilidad; contract testing, porque monolito y servicios cambian a ritmos distintos y el monolito es el primer consumidor del contrato; service mesh para mTLS, retries, timeouts y mirroring sin tocar el código; manejo de fallas parciales con timeouts, circuit breakers y degradación elegante; y on-call, porque cada equipo es dueño de su servicio también a las 3 de la mañana. [T15, p. 45]
+**Lo que se complica en operación:** un bug que antes era un stack trace ahora cruza cuatro servicios y dos brokers. Hacen falta tracing distribuido y correlation IDs, que se retoman en la clase de observabilidad; contract testing, porque monolito y servicios cambian a ritmos distintos y el monolito es el primer consumidor del contrato; service mesh para mTLS, retries, timeouts y mirroring sin tocar el código; manejo de fallas parciales con timeouts, circuit breakers y degradación elegante; y on-call, porque cada equipo es dueño de su servicio también a las 3 de la mañana. [T15, p. 45] Ver [Observabilidad](observabilidad.md) y [Service mesh](service-mesh.md).
 
 ### ¿Cómo sé que la migración funciona?
 
@@ -264,7 +264,7 @@ Para seguir leyendo, la cátedra recomienda *Monolith to Microservices* de Newma
 
 ## Material referenciado no incorporado
 
-`T15` da por vistos los decks `api-gateway` y `data-plane`, y remite a la clase 11 de observabilidad. [T15, p. 5] [T15, p. 45] Ninguno de esos materiales está en este repositorio; el programa ubica los API gateways en el módulo de Kubernetes y el service mesh y la observabilidad en el de operaciones. [T01, p. 12] [T01, p. 13] El caso queda registrado en [Dudas y conflictos](../dudas-y-conflictos.md).
+`T15` da por vistos los decks `api-gateway` y `data-plane`, y remite a la clase 11 de observabilidad. [T15, p. 5] [T15, p. 45] El programa ubica los API gateways en el módulo de Kubernetes y el service mesh y la observabilidad en el de operaciones. [T01, p. 12] [T01, p. 13] Esos materiales se incorporaron después: [API Gateway](api-gateway.md) (`T24`), [Service mesh](service-mesh.md) (`T25`, cuyo archivo se titula "Service Mesh: el data plane") y [Observabilidad](observabilidad.md) (`T23`). [T24] [T25] [T23] Los tres PDF se crearon en noviembre de 2026, después que el de `T15`, así que pueden no ser la versión que esta clase daba por vista. El caso queda registrado en [Dudas y conflictos](../dudas-y-conflictos.md).
 
 ## Relación con el Álbum 2026
 

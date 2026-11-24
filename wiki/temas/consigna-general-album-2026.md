@@ -145,7 +145,7 @@ La demostración debe:
 - incluir un README que explique cómo reproducir cada escenario implementable;
 - mostrar un mismo `correlationId` o `traceId` recorriendo los servicios en una apertura, un intercambio exitoso y un intercambio con fallo y compensación. [E03, p. 11]
 
-Para esa evidencia alcanza con logs estructurados o con un backend de tracing: no se exige service mesh ni cluster. [E03, p. 11]
+Para esa evidencia alcanza con logs estructurados o con un backend de tracing: no se exige service mesh ni cluster. [E03, p. 11] La clase de observabilidad muestra cómo se ve para el intercambio, con una traza que cruza la cola. [T23, p. 32] Ver [Observabilidad](observabilidad.md#una-traza-que-cruza-la-cola-el-caso-del-tp).
 
 ## CI/CD: condición de entrega
 

@@ -1,0 +1,694 @@
+FUENTE: T23
+TITULO: Observabilidad
+ORIGINAL: material/catedra/teoria/observabilidad.pdf
+PAGINAS: 36
+
+===== PAGINA 1 =====
+
+Arquitectura de Microservicios
+con Contenedores
+— Ing. Federico Castañeda
+— Ing. Carlos Maceira
+— Ing. Franco Rupnik
+
+
+
+
+                             Docentes:
+
+===== PAGINA 2 =====
+
+Observabilidad
+
+===== PAGINA 3 =====
+
+                   "You can't manage what you don't measure."
+                            — atribuida a Peter Drucker, que nunca la dijo
+
+
+
+
+Microservicios (73.40)                                                       3
+
+===== PAGINA 4 =====
+
+ Monitoreo de microservicios - El Problema
+ Silos de datos: Múltiples herramientas para               Rastrear Requests Distribuidas: Una solicitud de
+ infraestructura, logs y APM crean datos aislados. La      usuario puede generar docenas de llamadas a través
+ correlación de incidentes se vuelve un proceso manual,    de múltiples servicios. Sin el rastreo distribuido
+ lento y propenso a errores.                               (distributed tracing), es casi imposible encontrar el
+ Falta de Contexto: Las métricas de infraestructura (ej.   origen de la latencia o los fallos en la cadena.
+ pico de CPU) son insuficientes sin vincularlas al         Infraestructura Efímera: Los contenedores tienen
+ microservicio, transacción o usuario específico que las   ciclos de vida muy cortos (segundos). El acceso a logs
+ causó. Sin visibilidad a nivel de código, los equipos     y métricas locales para análisis post-mortem es
+ carecen de contexto para un diagnóstico real.             extremadamente difícil. El monitoreo debe ser
+                                                           centralizado y continuo.
+
+
+
+
+Microservicios (73.40)                                                                                              4
+
+===== PAGINA 5 =====
+
+ Observabilidad
+ "A measure of how well the
+ internal states of a system can
+ be inferred from knowledge of
+ its external outputs"
+ — Rudolf Kálmán, teoría de control (años 60)
+
+ Nunca vemos el estado interno: solo sus salidas. En
+ microservicios, esas salidas son logs, métricas y trazas.
+
+
+
+
+Microservicios (73.40)                                       5
+
+===== PAGINA 6 =====
+
+ Pilares de la observabilidad
+                         Logs               Métricas                                       Tracing
+
+
+
+
+                     Qué pasó            Cuándo y cuánto                                    Dónde
+                (la historia clínica)   (los signos vitales)                           (la tomografía)
+
+
+
+                                                               Fuente: https://www.oreilly.com/library/view/distributed-systems-
+                                                                                      observability/9781492033431/ch04.html
+
+Microservicios (73.40)                                                                                                        6
+
+===== PAGINA 7 =====
+
+ Event Logs
+ El registro de un evento es un elemento inmutable, con un timestamp, asociado a un evento discreto.
+
+ Texto plano: Forma más común de logueo. Syslog, CEF      Estructurado: Más complejos en su forma, como JSON
+ y otros estándares son los más usados en el pasado.      o XML, ganaron popularidad por ser más simples de
+                                                          interpretar entre sistemas. El mismo evento:
+
+                                                           {
+                                                               "timestamp": "Oct 10 15:09:23.538",
+                                                               "facility": "LINK",
+                                                               "severity": 3,
+                                                               "mnemonic": "UPDOWN",
+                                                               "description":
+                                                                 "Interface FastEthernet0/1, changed state to up"
+                                                           }
+
+
+
+
+                                                                             Fuente: https://www.oreilly.com/library/view/distributed-systems-
+                                                                                                    observability/9781492033431/ch04.html
+
+Microservicios (73.40)                                                                                                                      7
+
+===== PAGINA 8 =====
+
+ El Problema de los Logs
+ Aunque son una herramienta a la hora de hacer debugging de una aplicación, el abuso de los mismos trae estos
+ problemas:
+     Volumen alto → difícil de usar
+     Reconstruir acciones entre servicios → muy costoso
+     Sin correlación → silos de información por servicio
+     Logs de texto → grep no escala en producción
+
+
+
+
+Microservicios (73.40)                                                                                          8
+
+===== PAGINA 9 =====
+
+ Structured Logging
+   {                                          Campos mínimos:
+       "timestamp": "2025-06-06T10:23:41Z",
+       "level":     "INFO",                     timestamp con zona horaria (UTC)
+       "service":   "orders",                   level: DEBUG, INFO, WARN, ERROR
+       "traceId":   "abc-123-def-456",
+       "message":   "Order created",            service: de qué servicio viene
+       "data": {
+         "orderId": "ord-789",                  traceId: conecta el log con la traza
+         "userId": "u-456",                     message: texto fijo, sin variables
+         "amount": 1250.00
+       }                                        data: las variables de negocio
+   }
+
+
+
+
+Microservicios (73.40)                                                                 9
+
+===== PAGINA 10 =====
+
+ Wide Events
+ Log tradicional (narrow): muchos eventos pequeños       Wide event: un solo evento rico con todo el contexto
+ por request
+                                                          {
+                                                              "traceId": "abc-123",
+   INFO User 789 authenticated
+                                                              "userId": "789",
+   DEBUG Query: SELECT * FROM orders WHERE user_id=789
+                                                              "endpoint": "POST /orders",
+   INFO Cache hit: user:789:preferences
+                                                              "duration_ms": 234,
+   INFO Kafka message sent to orders.created
+                                                              "dbQueries": 3,
+   INFO Order 456 created for user 789
+                                                              "cacheHits": 1,
+                                                              "kafkaMessages": 1,
+ ← 5 logs, 1 operación
+                                                              "status": 201,
+                                                              "tenant": "acme-corp",
+                                                              "featureFlag.newCheckout": true
+                                                          }
+
+                                                         Idea de Charity Majors (Honeycomb)
+
+
+
+
+Microservicios (73.40)                                                                                          10
+
+===== PAGINA 11 =====
+
+ Wide Events: el beneficio real
+ Narrow logs: reconstruir requiere joins entre servicios
+ Wide events:
+     Un evento por operación → sin joins
+     Todo el contexto disponible → filtrable por cualquier dimensión
+     tenant, user_type, feature_flag → siempre presentes
+     Debugging sin reproducir el problema
+     En OpenTelemetry, los atributos de un span son un wide event
+
+ "Está lento para usuarios premium en mobile" → un filtro sobre los campos, no horas cruzando logs.
+
+
+
+
+Microservicios (73.40)                                                                                11
+
+===== PAGINA 12 =====
+
+ Métricas
+ Medición numérica que se agrega en el tiempo: no
+ guarda cada request, guarda contadores.
+     Counter: solo sube (requests, errores). Se mira su
+     ritmo con rate().
+     Gauge: sube y baja (memoria, conexiones abiertas,
+     mensajes en cola).
+     Histogram: cuenta valores por rangos (latencia). De
+     ahí salen los percentiles.
+                                                           Nombre + labels identifican la serie.
+                                                           Cada muestra es timestamp + valor.
+
+
+
+
+                                                                Fuente: https://www.oreilly.com/library/view/distributed-systems-
+                                                                                       observability/9781492033431/ch04.html
+
+Microservicios (73.40)                                                                                                        12
+
+===== PAGINA 13 =====
+
+ Cardinalidad: cuidado con los labels
+ Cada combinación de valores de labels es una serie nueva en Prometheus.
+
+   http_requests_total{service="orders", status="500"}     # decenas de series
+   http_requests_total{service="orders", userId="u-456"}   # una serie por usuario
+
+     Labels con pocos valores posibles: servicio, endpoint, status, región
+     userId, orderId, traceId → millones de series: Prometheus se queda sin memoria
+     Ese detalle va en el wide event o en la traza, no en la métrica
+     Por eso conviven: la métrica es barata y agregada; el evento tiene todo el detalle
+
+
+
+
+Microservicios (73.40)                                                                    13
+
+===== PAGINA 14 =====
+
+ Resolución: cada cuánto medir
+
+
+
+
+ Alta frecuencia → Alto costo                                       Baja frecuencia → Poca precisión
+ captura todos los picos                                            pierde anomalías
+  Ejemplo: Prometheus scrapea cada scrape_interval: 1 min por default, en la práctica se configura entre 15 y
+                                                               30 s
+                         Alcanza para tendencias y alertas; los picos de milisegundos se ven en las trazas.
+
+
+Microservicios (73.40)                                                                                          14
+
+===== PAGINA 15 =====
+
+ La mentira del promedio
+
+
+
+
+       CPU entre 0% y 100%, promedio 50%: el dashboard en verde y el servicio saturado la mitad del
+                                               tiempo.
+
+
+Microservicios (73.40)                                                                                15
+
+===== PAGINA 16 =====
+
+ Percentil vs Promedio
+
+
+
+
+     P50 = mediana: la mitad de los requests tarda menos que esto
+     P95 = el 95% de requests en ≤ X ms
+     P99 = los peores 1% de experiencias → con 1M de usuarios diarios, 10.000 personas
+     El SLI que vieron en Resiliencia es un percentil
+
+
+
+Microservicios (73.40)                                                                   16
+
+===== PAGINA 17 =====
+
+ RED Model y USE Metrics
+ RED Model — por servicio: ¿cómo lo ve el usuario?    USE Metrics — por recurso: CPU, memoria, disco, red,
+     Rate: Cantidad de requerimientos por unidad de   pools
+     tiempo                                             Utilization: Porcentaje del tiempo que el recurso
+     Errors: Cantidad de requerimientos con errores     estuvo ocupado (CPU gastada por un contenedor)
+     Duration: Duración de cada uno de los              Saturation: Trabajo que el recurso no da abasto a
+     requerimientos                                     atender y queda esperando en cola (threads,
+                                                        conexiones del pool)
+                                                        Errors: Errores del propio recurso (disco, red,
+                                                        contenedores reiniciados por memoria)
+
+                                                      La alerta salta por RED; se investiga con USE.
+
+
+
+
+Microservicios (73.40)                                                                                       17
+
+===== PAGINA 18 =====
+
+ Prometheus: el modelo de scraping
+ Pull: Prometheus va a buscar /metrics; el servicio no sabe que existe.
+         Servicios
+
+                                   Prometheus
+         Service A
+                         PULL                                   Visualización
+          /metrics
+
+                                                                 Grafana
+                                                       PromQL
+                                                                dashboards
+
+         Service B                  Prometheus
+                         PULL
+          /metrics              scrape_interval: 15s
+
+                                                                Alertmanager
+                                                                                Slack / PagerDuty   Oncall
+                                                                   alertas
+
+        Service C
+                         PULL
+         /metrics
+
+
+
+
+   # Tasa de errores HTTP en 5 minutos
+   rate(http_requests_total{status=~"5.."}[5m])
+
+   # Latencia P99
+   histogram_quantile(0.99, rate(http_request_duration_seconds_bucket[5m]))
+
+
+Microservicios (73.40)                                                                                       18
+
+===== PAGINA 19 =====
+
+ Grafana: el observatorio
+     Conecta a Prometheus, Loki, Tempo, Jaeger,
+     InfluxDB
+     No guarda datos: los visualiza desde cada backend
+     Dashboards como código (JSON exportable)
+     Alertas con notificaciones a Slack/PagerDuty
+     Un solo pane of glass para los 3 pilares
+     Stack típico: Prometheus + Loki + Grafana, y Jaeger
+     o Tempo para trazas
+
+
+
+
+Microservicios (73.40)                                     19
+
+===== PAGINA 20 =====
+
+ Tracing distribuido
+ El tracing se refiere a la capacidad de rastrear una solicitud a través de múltiples servicios.
+     Trace: vista de end-to-end de una solicitud a medida que pasa por varios servicios.
+     Span: unidad individual de trabajo realizada dentro de un solo servicio
+     Múltiples spans forman parte de un trace.
+     Spans tienen parent → Árbol causal de la request
+
+
+
+
+Microservicios (73.40)                                                                             20
+
+===== PAGINA 21 =====
+
+ Trace y Span
+
+
+
+
+     Span raíz o root = request del usuario   Ancho = duración; Profundidad = dependencias
+     Cada servicio agrega su span             Span más ancho = dónde está el bottleneck
+
+
+
+Microservicios (73.40)                                                                       21
+
+===== PAGINA 22 =====
+
+ Propagación del Contexto
+ Cada servicio recibe y envía el Trace ID en header HTTP:
+
+
+
+
+   traceparent: 00-4bf92f3577b34da6a3ce929d0e0e4736-00f067aa0ba902b7-01
+                │ └──────────── trace-id ────────┘ └─ parent-id ──┘ └ flags
+                └ versión
+
+     Estándar W3C Trace Context (W3C Recommendation, 2020)
+     En colas y Kafka viaja igual, en los headers del mensaje
+     Un servicio sin instrumentar corta la traza
+     El SDK lee el header al recibir y lo escribe al llamar: el código de negocio no se entera
+
+
+
+Microservicios (73.40)                                                                           22
+
+===== PAGINA 23 =====
+
+ Tracing efectivo
+
+                         Event Log + Trace ID = Tracing
+     Trace ID propagado en cada request (header HTTP)
+     Trace ID incluido en cada log estructurado
+     El backend correlaciona trazas y logs automáticamente
+
+
+
+
+Microservicios (73.40)                                       23
+
+===== PAGINA 24 =====
+
+ Open Telemetry
+ 1. Estandarizando la observabilidad y telemetría:
+    instrumentás una vez y cambiás de backend por
+    configuración.
+ 2. Trace context propagation automático.
+ 3. Instrumentation: SDK + auto-agente.
+ 4. OTLP: Protocolo de transporte universal.
+
+
+
+
+Microservicios (73.40)                               24
+
+===== PAGINA 25 =====
+
+ OTel: Auto vs Manual instrumentation
+ Auto-instrumentation (cero cambios en código):
+
+   # Java — el agente intercepta HTTP, JDBC, Kafka automáticamente
+   java -javaagent:opentelemetry-javaagent.jar -jar app.jar
+
+ Manual instrumentation (contexto de negocio):
+
+   with tracer.start_as_current_span("process-order") as span:
+       span.set_attribute("order.id", order_id)
+       span.set_attribute("order.amount", amount)
+       span.set_attribute("user.tier", "premium")
+
+ Auto da la estructura; manual agrega el contexto de negocio. Lo ideal: combinar las dos.
+
+
+
+
+Microservicios (73.40)                                                                      25
+
+===== PAGINA 26 =====
+
+ OTel Collector: el router de la telemetría
+                                                   OTel Collector
+                                                                                          Observability Backends
+
+    Servicios (OTel SDK)                                                                         Jaeger
+                                                                                                 trazas
+         Service A         OTLP
+
+
+
+
+                                      Receive              Process                             Prometheus
+                                                                                 Export
+         Service B         OTLP   OTLP gRPC/HTTP    sampling · enrich · filter                  métricas
+
+
+
+
+         Service C         OTLP                                                                    Loki
+                                                                                                   logs
+
+
+
+
+     Receive: OTLP, Jaeger, Zipkin, StatsD, etc.
+     Process: sampling (no se guarda el 100% de las trazas), enrichment, filtering, batching
+     Export: múltiples backends simultáneos
+     Desacopla: los servicios solo hablan OTLP con el Collector; cambiar de backend no los toca
+
+
+Microservicios (73.40)                                                                                             26
+
+===== PAGINA 27 =====
+
+ Backends para tracing
+    Backend              Fortaleza                 Nota
+
+    Jaeger               Tracing puro, liviano     Ideal para empezar
+
+    SigNoz               3 pilares integrados      OSS alternativa a Datadog
+
+    ELK                  Logs + full-text search   Ecosistema establecido y maduro
+
+
+
+
+Microservicios (73.40)                                                               27
+
+===== PAGINA 28 =====
+
+ Síntoma vs Causa
+                                                                   Las métricas detectan el síntoma (qué)
+    Symptom               Cause
+                                                                   Los traces revelan la cadena causal (dónde)
+    I’m serving HTTP      Database servers are refusing
+    500s or 404s          connections
+                                                                   Los logs explican el detalle (por qué)
+                                                                   Sin los 3: diagnóstico siempre parcial
+                          CPUs are overloaded by a bogosort, or
+    My responses are
+                          an Ethernet cable is crimped under a
+    slow
+                          rack, visible as partial packet loss
+
+    Users in Antarctica   Your Content Distribution Network
+    aren’t receiving      hates scientists and felines, and thus
+    animated cat GIFs     blacklisted some client IPs
+
+    Private content is    A new software push caused ACLs to
+    world-readable        be forgotten and allowed all requests
+
+
+
+
+                                                                               Fuente: https://sre.google/sre-book/monitoring-distributed-systems/
+
+Microservicios (73.40)                                                                                                                         28
+
+===== PAGINA 29 =====
+
+ Los 3 Pilares conectados
+     La alerta en Grafana tiene el trace ID del request                 Grafana
+                                                              error_rate spike @ 10:23:41
+     culpable                                                  exemplar → trace_id=abc-
+                                                                          123
+     Jaeger muestra exactamente qué span falló y en
+     qué servicio                                                  click en exemplar
+
+
+
+     Los logs filtrados por ese trace ID dan el detalle del             Jaeger
+                                                                 trace_id = abc-123
+     error                                                    span 'db-lookup' → 3.200
+                                                                          ms
+     Exemplar: el trace ID que Prometheus guarda junto
+     a una muestra de la métrica                                    mismo trace_id
+
+
+
+                                                                         Logs
+                                                                  trace_id = abc-123
+                                                                   'Connection pool
+                                                                 exhausted: max=10'
+
+
+
+
+                                                                     Causa raíz
+                                                                 Pool de conexiones
+                                                                     insuficiente
+
+
+
+
+Microservicios (73.40)                                                                      29
+
+===== PAGINA 30 =====
+
+ El flujo de investigación
+               Alerta                 Métrica          Trace             Span            Log
+                                                                                                    Causa raíz
+      Grafana: error_rate spike    ¿Qué servicio?   ¿Qué request?   ¿Qué operación?   ¿Qué error?
+
+
+
+                                  Métricas → Traces → Spans → Logs → Causa
+
+
+
+
+Microservicios (73.40)                                                                                           30
+
+===== PAGINA 31 =====
+
+ Así se ve producción real
+ play.uptrace.dev - e-commerce con 10+ servicios, tráfico en vivo
+
+
+
+
+                                                                    Fuente: https://play.uptrace.dev
+
+Microservicios (73.40)                                                                           31
+
+===== PAGINA 32 =====
+
+ Una traza que cruza la cola
+ Beto acepta una oferta de Ana: del cliente a las dos bases, pasando por NATS.
+
+                                                                                                       Valkey
+
+
+   Cliente   HTTP        gateway   HTTP   intercambio               Postgres
+                                                                  intercambio
+
+
+
+
+                                                        eventos     NATS        eventos   coleccion
+                                                                                                      Postgres
+                                                                                                      coleccion
+
+
+
+
+     El cliente recibe un 202; la traza sigue después
+     Un traceId para la aceptación, la confirmación y la compensación: la evidencia del TP (27/11)
+     El SQL y los comandos de Valkey quedan en los spans
+
+
+
+
+Microservicios (73.40)                                                                                            32
+
+===== PAGINA 33 =====
+
+ Propagar a mano: NATS
+   // Al publicar: el contexto va al header           HTTP, Postgres y Valkey: automáticos
+   const h = headers();
+   propagation.inject(context.active(), h, setter);
+                                                      NATS en Node: sin auto-instrumentación
+   nc.publish(subject, data, { headers: h });         Mismo traceparent, en headers del mensaje
+   // Al consumir: el span nuevo es hijo              Sin estas líneas: 3 trazas sueltas
+   const padre = propagation.extract(                 En Kafka o RabbitMQ lo hace el agente
+     ROOT_CONTEXT, msg.headers, getter);
+   tracer.startActiveSpan(`process ${subject}`,
+     { kind: SpanKind.CONSUMER }, padre, ...);
+
+
+
+
+Microservicios (73.40)                                                                            33
+
+===== PAGINA 34 =====
+
+ traceId vs correlationId
+ traceId                       correlationid
+     Una ejecución técnica       Una operación de negocio: el intercambio
+     Nace con el request         Vive días, sobrevive reintentos
+     Viaja en traceparent        Viaja en el CloudEvent (extensión)
+     Lo genera OpenTelemetry     Lo genera tu dominio
+
+                               ¿Y si la compensación la dispara un vencimiento?
+                               Un job no tiene request de origen: arranca otra traza. Se une
+                                por el correlationid como atributo del span, o con un
+                                       span link (un span que apunta a otra traza).
+
+
+
+
+Microservicios (73.40)                                                                         34
+
+===== PAGINA 35 =====
+
+ Demo
+   cd demo-intercambio-async && ./demo.sh up   # Jaeger en http://localhost:16686
+
+ 1. Min Duration 100ms: el span ancho es la reputación
+ 2. El 202 sale antes; la traza cruza NATS
+ 3. Atributos app.*: el wide event
+ 4. Compensada: ROLLBACK y del lock:oferta:N
+ 5. ./demo.sh logs: un traceId en 3 servicios
+ 6. ./demo.sh cortar: la misma operación, 3 trazas
+ 7. ¿El lock aguanta si Valkey se cae? No es la reserva del TP: esa va durable en Colección
+
+
+
+
+Microservicios (73.40)                                                                        35
+
+===== PAGINA 36 =====
+
+Fin!!
+

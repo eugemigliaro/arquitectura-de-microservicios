@@ -190,7 +190,7 @@ En Kafka, reintentar para siempre es peor de lo que parece: un consumer que no a
 
 ### Correlación y evolución de esquema
 
-La trazabilidad async se resuelve en el contrato del evento, no solo con un APM. `correlationId` identifica el flujo de negocio entero, como el `orderId` o el id de la Saga, y lo comparten todos sus eventos; `causationId` es el id del evento o request que causó este, y arma el árbol padre → hijo. Viajan como extensiones CloudEvents y se retoman con OpenTelemetry en la clase de Observabilidad. [T14, p. 54]
+La trazabilidad async se resuelve en el contrato del evento, no solo con un APM. `correlationId` identifica el flujo de negocio entero, como el `orderId` o el id de la Saga, y lo comparten todos sus eventos; `causationId` es el id del evento o request que causó este, y arma el árbol padre → hijo. Viajan como extensiones CloudEvents y se retoman con OpenTelemetry en la clase de Observabilidad. [T14, p. 54] Esa clase distingue el `correlationid` de negocio del `traceId` técnico y muestra una traza que cruza la cola. [T23, p. 34] Ver [Observabilidad](observabilidad.md#una-traza-que-cruza-la-cola-el-caso-del-tp).
 
 Los consumidores no se despliegan al mismo tiempo que el productor, así que el contrato debe tolerarlo: versionar el `type` (`com.itba.order.created.v2`) o mantener compatibilidad hacia atrás, y preferir cambios aditivos con campos opcionales antes que renombrar o borrar. Un breaking change mal anunciado se convierte en poison messages en cascada; AsyncAPI y CloudEvents son el contrato que evita ese silent break. [T14, p. 55]
 

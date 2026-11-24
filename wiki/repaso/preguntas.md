@@ -342,6 +342,61 @@ Preguntas recuperables por tema. Mantener las respuestas separadas o plegadas cu
 249. ¿Qué riesgos tiene un único contenedor PostgreSQL con cinco bases, aunque cada servicio tenga base y usuario propios? ¿Qué propuso la cátedra y qué exige la tercera entrega sobre los datos por ambiente?
 250. ¿Cómo puede reformularse la política de hotfix durante los partidos en la tercera entrega sin saltear el gate de `staging`?
 
+## Feature flagging
+
+251. ¿Qué diferencia hay entre desplegar, activar y exponer? ¿Qué revierte y qué no revierte un rollback de flag?
+252. Clasificá las flags de release, experimento, operacional y entitlement por dinamismo, vida y retiro. ¿Por qué un entitlement no alcanza como autorización?
+253. ¿Qué hacen el control plane y el data plane de una plataforma de flags? ¿Por qué no conviene consultar la base central en cada evaluación?
+254. ¿Cómo se logra una asignación estable y por qué "10 % de requests no es 10 % de tiendas"? ¿Qué pasa con la cohorte al subir de 10 % a 25 %?
+255. ¿Qué controla y qué no garantiza cada capa (browser, red, backend, datos)? ¿Por qué el resultado del browser es "una preferencia, no una prueba"?
+256. Distinguí canary de versión, release con flag, experimento y shadow traffic por su unidad y por la pregunta que responden.
+257. Describí las fases expandir, migrar, activar lectura y contraer. ¿Hasta dónde es reversible y qué hay que esperar antes de contraer?
+258. El gateway decidió express con las reglas `r42` y Pagos todavía tiene `r41`. ¿Qué pasa y cómo se evita? ¿Con qué modo interpreta un worker un evento emitido antes de que se apagara la flag?
+259. ¿Qué hace un servicio cuando la plataforma de flags falla (SDK sin inicializar, control plane caído, snapshot viejo)? ¿Por qué "seguro no siempre significa `false`"?
+260. El 1 % del tráfico usa express y falla el 10 %; el resto falla el 0,1 %. ¿Cuánto vale la tasa de error global y qué enseña? ¿Qué se mide para decidir un rollout y qué no va como label?
+261. ¿Qué condiciones habilitan avanzar de etapa en un rollout con guardrails? ¿En qué se diferencia un rollout de un A/B test?
+262. ¿Qué se prueba en un sistema con flags? ¿Cuál es el ciclo de vida completo de una flag y qué pasa si nadie la retira?
+
+## Observabilidad
+
+263. ¿Qué cuatro problemas tiene el monitoreo en microservicios y cómo define la clase la observabilidad?
+264. ¿Qué responde cada pilar (logs, métricas, trazas) y qué papel cumple cada uno en un diagnóstico?
+265. ¿Qué campos mínimos tiene un log estructurado? ¿Qué es un wide event y qué ventaja tiene frente a los narrow logs?
+266. Distinguí counter, gauge e histogram. ¿Qué es la cardinalidad y por qué `userId` no va como label?
+267. ¿Por qué "miente" el promedio? Explicá P50, P95 y P99. ¿Cuántas personas representa el P99 con un millón de usuarios diarios?
+268. ¿Qué miden RED y USE, a qué se aplica cada uno y cómo se combinan?
+269. ¿Cómo obtiene Prometheus las métricas y qué papel cumplen Grafana y Alertmanager? ¿Qué compromiso hay al elegir el `scrape_interval`?
+270. Definí trace y span. ¿Cómo se lee un waterfall? ¿Qué lleva `traceparent` y qué pasa si un servicio no está instrumentado?
+271. ¿Qué aporta OpenTelemetry? Compará la instrumentación automática con la manual. ¿Qué hace el Collector?
+272. Describí el flujo de investigación desde la alerta hasta la causa raíz. ¿Qué es un exemplar?
+273. En la traza del intercambio del TP, ¿por qué hay que propagar a mano en NATS y qué pasa si no se hace? Compará `traceId` y `correlationId`. ¿Cómo se une una compensación disparada por un vencimiento?
+
+## API Gateway
+
+274. ¿Qué problema tiene que el cliente acceda directo a cada servicio? ¿Cuáles son las cuatro decisiones que el gateway toma sobre cada request?
+275. En Kubernetes, ¿qué decisión cubren `Gateway` y `HTTPRoute` y cuáles agrega cada implementación? Si `GET /envios/estado/42` coincide con las reglas `/envios` y `/envios/estado`, ¿cuál se aplica?
+276. Explicá cómo el gateway implementa un Strangler Fig, la traducción de protocolo y la agregación. ¿Qué riesgo tiene la agregación?
+277. ¿Qué es un BFF y de quién es cada uno?
+278. Distinguí autenticación de autorización y los códigos 401 y 403. ¿De dónde sale el token y qué ve el gateway de ese proceso?
+279. ¿Qué partes y qué claims tiene un JWT y cómo se verifica? ¿Qué pasa si alguien cambia el scope en el camino?
+280. Compará la validación local con la introspección ante un token revocado al que le quedaban 10 minutos.
+281. Beto envía `X-User-Id: ana` desde Internet. ¿Qué hace el gateway con ese header? Si Ana pide el pedido de Beto con un scope válido, ¿quién la rechaza y con qué dato?
+282. Con tres réplicas y un contador local de 100 por minuto en cada una, ¿cuánto puede pedir un cliente? ¿Cómo se corrige y qué dilema aparece si el contador compartido no responde?
+283. ¿Por qué el gateway se puede replicar? De estas reglas, ¿cuál va en el gateway: rechazar bodies de más de 1 MB, no enviar a direcciones bloqueadas por fraude, envío gratis desde $ 50.000? ¿Qué tráfico no ve el gateway?
+
+## Service mesh
+
+284. ¿Cuáles son las tres preguntas del tráfico este-oeste y qué problema tiene resolverlas con una librería en cada servicio?
+285. ¿Qué es un proxy sidecar y cómo intercepta las llamadas? ¿Qué hay que cambiar en el código de la app?
+286. ¿Qué hacen el control plane y el data plane de la malla? ¿Qué pasa con las llamadas si el control plane se cae?
+287. ¿Qué garantiza mTLS y quién lo implementa? ¿Qué es un SPIFFE ID y en qué se parece al JWT de un usuario?
+288. Envíos tiene un certificado válido y envía `X-User-Id: ana` a Pedidos, con `PeerAuthentication` en `STRICT`. ¿Qué pasa? ¿Qué agrega la `AuthorizationPolicy`?
+289. ¿Qué observabilidad da la malla sin tocar el código y qué sigue dependiendo de la app?
+290. El proxy reintenta un `POST /facturas` después de un timeout. ¿Qué tiene que garantizar el servicio? ¿Qué es un retry budget? Hacé la cuenta para 100 requests con 3 intentos en tres saltos, sin tope y con un budget de 20 %.
+291. ¿Qué es outlier detection, en qué se diferencia de la readiness y por qué tiene un máximo de expulsados?
+292. Compará sidecar, ambient y eBPF por dónde corren la capa 4 y la capa 7. ¿Qué políticas necesitan un waypoint? ¿Qué hay que reiniciar para actualizar un sidecar?
+293. ¿Qué se paga y qué se obtiene al adoptar una malla?
+
 <details>
 <summary>Respuestas orientativas</summary>
 
@@ -597,6 +652,49 @@ Preguntas recuperables por tema. Mantener las respuestas separadas o plegadas cu
 248. Mezcla "recurso creado" con un resultado de negocio negativo y contradice la regla del propio documento de no esconder errores en un éxito. [D02] La teoría pide códigos correctos y señala como antipatrón el `200` con error en el cuerpo. [T09, p. 9] [T09, p. 10] Alternativas: `200` o `409` con motivo, o `201` con estado explícito. [D02] Cambiarlo modifica el contrato que implementan el servicio real y los mocks y que verifican los tests; se registra en `docs/cicd.md`. [E06]
 249. Las bases no son escribibles en común, pero el fallo y la saturación son comunes y la restauración es conjunta. Además, los NFR suponían un host propio de PostgreSQL y unas 5 réplicas que ningún ambiente tenía. [D02] La cátedra propuso dos instancias, núcleo y vistas, si el presupuesto lo permite. [D02] La tercera entrega exige que los ambientes no compartan datos y que al menos un servicio real tenga base propia. [E06]
 250. *Inferencia:* un rolling update con `maxUnavailable: 0` y drenado no necesita ventana de mantenimiento. [T18, p. 18] El hotfix recorre el mismo flujo `dev → staging → prod`, gate de integración incluido; la política define quién aprueba el cambio a `prod` y con qué urgencia. [E06]
+251. Desplegar es tener el código en producción, en el 100 % de las réplicas desde el día 1; activar es habilitar la flag para una audiencia; exponer es que la variante se ejecute de verdad, y siempre es menor o igual a la audiencia. El rollback de flag selecciona el camino anterior, pero los datos ya escritos permanecen. [T22, p. 6]
+252. Release: estática, vida corta, se retira tras estabilizar el lanzamiento. Experimento: dinámica, vida corta, se retira al concluir el análisis. Operacional: estática, vida larga, con revisión periódica y simulacros. Entitlement: dinámica, vida larga, dura mientras exista el producto. La habilitación comercial y la autorización requieren controles del servidor: el servidor debe autorizar igual. [T22, p. 7]
+253. El control plane define y publica reglas versionadas; es lento, humano y auditado. El data plane evalúa por request y en memoria: un SDK con caché local en el backend y un evaluador remoto en el BFF o el edge para el browser. La clase pide evitar que cada evaluación sea una consulta a la base central. [T22, p. 4] [T22, p. 8] *Inferencia:* esa consulta sumaría latencia y un punto de falla a cada request.
+254. Con `bucket = hash(salt + tenant_id) mod 10000` la misma unidad cae siempre en el mismo bucket. La unidad de asignación es el tenant, no el request: un tenant de diez puede generar el 55 % del tráfico, así que se mide por variante y por tenant. Subir de 10 % a 25 % conserva la cohorte previa si no cambian la clave ni el salt. [T22, p. 11]
+255. Browser: UI y navegación, pero no permisos ni ejecución del servidor. Red L7: la ruta a una versión, pero no la semántica dentro del proceso. Backend: reglas y efectos del negocio, pero no revertir datos ya escritos. Datos: lectura y escritura compatible, pero no deshacer una migración destructiva. [T22, p. 13] Lo que decide el browser es manipulable, así que el backend valida igual. [T22, p. 14] [T22, p. 41]
+256. Canary de versión: tráfico hacia un binario; ¿el nuevo deploy es saludable? Release con flag: audiencia de una capacidad; ¿a quién habilitamos la función? Experimento: unidad aleatorizada estable; ¿qué efecto causa la variante? Shadow traffic: copia de operaciones; ¿qué haría el nuevo camino?, aislando los efectos. [T22, p. 16]
+257. Expandir: columna nullable, se sigue escribiendo el formato viejo. Migrar: backfill y validación, se escribe viejo + nuevo y se lee viejo. Activar lectura: se escribe nuevo y se lee nuevo por cohorte. Contraer: se elimina el formato viejo. Es reversible hasta la fase 3; contraer no tiene retorno. Antes hay que esperar consumidores, jobs y eventos atrasados. [T22, p. 20]
+258. Pagos reevalúa con `r41` y obtiene classic: el mismo tenant recibe dos decisiones. Se evita fijando la decisión de la operación: Checkout persiste el modo con la orden y Pagos lo recibe sin volver a sortear; los reintentos recuperan la misma decisión. [T22, p. 25] [T22, p. 26] El worker usa el modo que trae el evento, no la flag actual; un bloqueo operacional puede detener el procesamiento, nunca cambiar el significado. [T22, p. 28]
+259. SDK sin inicializar: no recibir tráfico (readiness) o un default seguro explícito. Control plane caído: última configuración válida, con un límite de edad medido y alertado. Snapshot fuera del límite: política por riesgo (Pagos rechaza lo nuevo, Recomendaciones omite). El valor seguro depende del negocio y de la semántica de la flag. [T22, p. 29]
+260. 199 fallas en 100.000 requests: 0,199 %, por debajo del umbral de pausa de 1 %, aunque express falla 100 veces más. Hay que comparar siempre por variante. [T22, p. 34] Se miden la salud por variante, el negocio por exposición, el evaluador y la propagación; no van como label el tenant, el usuario, el trace ID ni todas las combinaciones de flags. [T22, p. 33]
+261. Exposiciones reales y configuración adoptada; ventana y volumen mínimos; errores y latencia frente a classic sin degradación; y conversión revisada. [T22, p. 36] El rollout limita riesgo y pregunta si es seguro avanzar; el A/B test mide un efecto, con asignación aleatoria y estable, y con hipótesis, métrica primaria y duración fijadas antes. [T22, p. 37]
+262. Ambas variantes; el default, el provider caído y la configuración obsoleta; las combinaciones que comparten estado o contratos; versiones anteriores de servicios y consumidores; reintentos, eventos atrasados y cambio a mitad del flujo; y la reversión después de escribir datos nuevos, con un evaluador controlable. [T22, p. 38] Ciclo: crear, rollout, 100 % estable, retirar código, archivar y contraer datos. Si nadie la retira, la flag y su camino viejo quedan como deuda técnica. [T22, p. 39]
+263. Silos de datos, falta de contexto, requests distribuidas difíciles de rastrear e infraestructura efímera. [T23, p. 4] Observabilidad es qué tan bien pueden inferirse los estados internos de un sistema a partir de sus salidas externas, que en microservicios son logs, métricas y trazas. [T23, p. 5]
+264. Logs: qué pasó. Métricas: cuándo y cuánto. Tracing: dónde. [T23, p. 6] En un diagnóstico, las métricas detectan el síntoma, las trazas muestran la cadena causal y los logs dan el detalle; sin los tres, el diagnóstico es parcial. [T23, p. 28]
+265. `timestamp` en UTC, `level`, `service`, `traceId`, un `message` de texto fijo y `data` con las variables de negocio. [T23, p. 9] Un wide event es un solo evento por operación con todo el contexto: evita los joins entre servicios y se filtra por cualquier dimensión. [T23, p. 10] [T23, p. 11]
+266. Counter: solo sube y se mira con `rate()`. Gauge: sube y baja. Histogram: cuenta valores por rangos y da los percentiles. [T23, p. 12] Cada combinación de valores de labels es una serie: `userId` genera una por usuario y Prometheus se queda sin memoria; ese detalle va en el wide event o en la traza. [T23, p. 13]
+267. Una CPU que oscila entre 0 % y 100 % promedia 50 %: el dashboard queda en verde con el servicio saturado la mitad del tiempo. [T23, p. 15] P50 es la mediana, P95 el valor que cubre al 95 % de los requests y P99 el peor 1 %, que con un millón de usuarios diarios son 10.000 personas. [T23, p. 16]
+268. RED, por servicio y como lo ve el usuario: rate, errors y duration. USE, por recurso: utilization, saturation y errors. La alerta salta por RED y se investiga con USE. [T23, p. 17]
+269. Por pull: va a buscar `/metrics` a cada servicio cada `scrape_interval`; el servicio no sabe que existe. Grafana visualiza con PromQL y Alertmanager notifica a quien está de guardia. [T23, p. 18] [T23, p. 19] Más frecuencia captura más picos y cuesta más; entre 15 y 30 s alcanza para tendencias y alertas, y los picos de milisegundos se ven en las trazas. [T23, p. 14]
+270. Trace: la vista de punta a punta de una solicitud. Span: una unidad de trabajo dentro de un servicio, con su parent. [T23, p. 20] En el waterfall el ancho es la duración, la profundidad son las dependencias y el span más ancho marca el cuello de botella. [T23, p. 21] `traceparent` lleva versión, trace-id, parent-id y flags; un servicio sin instrumentar corta la traza. [T23, p. 22]
+271. Instrumentar una vez y cambiar de backend por configuración, propagación automática del contexto, SDK más auto-agente y el protocolo OTLP. [T23, p. 24] La automática da la estructura sin tocar el código; la manual agrega el contexto de negocio. [T23, p. 25] El Collector recibe, procesa (sampling, enriquecimiento, filtrado, batching) y exporta a varios backends, y desacopla a los servicios del backend. [T23, p. 26]
+272. Alerta → métrica (¿qué servicio?) → trace (¿qué request?) → span (¿qué operación?) → log (¿qué error?) → causa raíz. [T23, p. 30] El exemplar es el trace ID que Prometheus guarda junto a una muestra de la métrica, y permite saltar de la alerta a la traza. [T23, p. 29]
+273. NATS en Node no tiene auto-instrumentación: sin inyectar y extraer el contexto en los headers del mensaje quedan tres trazas sueltas. [T23, p. 33] El `traceId` identifica una ejecución técnica, nace con el request, viaja en `traceparent` y lo genera OpenTelemetry; el `correlationid` identifica una operación de negocio, vive días, viaja en el CloudEvent y lo genera el dominio. Un job no tiene request de origen y arranca otra traza, que se une por el `correlationid` como atributo del span o con un span link. [T23, p. 34]
+274. El cliente conoce cada servicio, así que un cambio interno (separar Seguimiento) rompe una app que ya está instalada. [T24, p. 3] El gateway decide a dónde va el request, quién es, cuánto puede pedir y qué queda registrado. [T24, p. 4]
+275. `Gateway` y `HTTPRoute` cubren el ruteo; identidad, límites y registro son políticas que agrega cada implementación. [T24, p. 5] La lámina deja la segunda pregunta abierta. [T24, p. 7] *Conocimiento general (Gateway API):* gana el prefijo más largo, `/envios/estado`.
+276. Strangler Fig: lo ya extraído va al servicio nuevo y el resto, al monolito. [T24, p. 8] Traducción: HTTP + JSON afuera y gRPC adentro, sin que ninguno cambie de protocolo. [T24, p. 9] Agregación: una respuesta a partir de varias llamadas; si un servicio no responde, la pantalla entera espera. [T24, p. 10] *Inferencia:* se mitiga con un timeout por llamada y una respuesta parcial.
+277. Un gateway por tipo de cliente (móvil, web, socios); cada uno es del equipo que hace ese cliente. [T24, p. 11]
+278. Autenticación: quién es. Autorización: si puede hacer esto. Sin token, 401; con token pero sin permiso, 403. [T24, p. 13] El token lo emite el proveedor de identidad cuando el usuario inicia sesión con OAuth 2.0 + OIDC; el gateway solo ve un request con un token. [T24, p. 14]
+279. Encabezado, contenido y firma; los claims del ejemplo son `iss`, `sub`, `scope` y `exp`. El gateway verifica la firma con la clave pública del proveedor (JWKS); si cambia un claim, la firma deja de coincidir y responde 401. [T24, p. 15]
+280. La lámina deja la pregunta abierta. [T24, p. 16] *Conocimiento general:* la validación local lo acepta hasta que vence, porque no consulta al proveedor; la introspección lo rechaza desde la revocación, a cambio de una llamada al proveedor por request.
+281. Descarta el header externo y escribe el propio a partir del token verificado. [T24, p. 17] [T24, p. 27] [T22, p. 27] *Inferencia:* a Ana la rechaza Pedidos, con el dato de quién es el dueño del pedido; el gateway solo autoriza por scope. [T24, p. 18]
+282. *Inferencia:* hasta 300 por minuto, porque cada réplica lleva su propia cuenta. [T24, p. 20] Se corrige con un contador compartido que vive fuera del gateway; si deja de responder hay que elegir entre dejar pasar todo o rechazar todo, y la lámina no lo resuelve. [T24, p. 24]
+283. Porque no guarda estado propio: el contador vive afuera. [T24, p. 24] *Inferencia:* solo el límite de 1 MB; las otras dos necesitan datos del negocio y van en un servicio. [T24, p. 25] No ve el tráfico este-oeste, entre servicios. [T24, p. 26]
+284. ¿Quién llama?, ¿va cifrado? y ¿cuántos reintentos? [T25, p. 2] Con librerías, la misma política se implementa una vez por lenguaje y queda con valores distintos en cada servicio. [T25, p. 3]
+285. Un segundo contenedor del Pod que se queda con la identidad, el TLS y los reintentos. Las reglas de red del Pod desvían la llamada y cada llamada pasa por dos proxies. [T25, p. 4] [T25, p. 5] *Inferencia:* el código no cambia.
+286. El control plane distribuye la política a los proxies y firma sus certificados; el data plane son los proxies. [T25, p. 5] [T25, p. 6] [T25, p. 8] *Inferencia:* la llamada sigue funcionando con la última política recibida; lo que no se puede es cambiar políticas ni, si la caída dura, renovar certificados.
+287. Que cada extremo sepa con quién habla, porque los dos presentan un certificado; lo hacen los proxies y la app sigue hablando HTTP. [T25, p. 7] El SPIFFE ID nombra al workload por dominio de confianza, namespace y ServiceAccount; como en el JWT, un emisor firma y el receptor verifica, pero el sujeto es un servicio. [T25, p. 8]
+288. *Inferencia:* con mTLS solo, Pedidos le cree: el certificado prueba quién llama, no qué puede hacer. [T25, p. 9] La `AuthorizationPolicy` deja llamar solo al gateway, y Envíos recibe 403. [T25, p. 10]
+289. Métricas RED por llamada y spans emitidos por el proxy. [T25, p. 11] [T25, p. 12] La app tiene que copiar `traceparent` para que la traza no se corte. [T25, p. 21]
+290. *Inferencia:* idempotencia, porque el timeout no prueba que el primer intento no se haya procesado. [T25, p. 13] [T11, p. 18] El retry budget limita los reintentos a una proporción del tráfico; pasado el tope, el proxy devuelve el error. Sin tope: 100 × 3 × 3 × 3 = 2700. Con 20 %: 120, 144 y 173. [T25, p. 14]
+291. El proxy que llama deja de enviarle por un tiempo a un Pod que acumula errores y después vuelve a probar. [T25, p. 15] *Inferencia:* lo decide el llamador por lo que observa, aunque el Pod figure `Ready`; el máximo evita quedarse sin destinos si fallan todos.
+292. Sidecar: L4 y L7 en el proxy de cada Pod. Ambient: L4 en un `ztunnel` por nodo y L7 en un waypoint aparte y opcional. Cilium: L4 con eBPF en el kernel y L7 con un Envoy por nodo. [T25, p. 19] *Inferencia:* necesitan waypoint las políticas que interpretan HTTP (timeout y reintentos por request, métricas RED, spans); para actualizar un sidecar hay que reiniciar todos los Pods. [T25, p. 16] [T25, p. 18]
+293. Se paga un proxy en cada llamada (latencia y memoria), un control plane que operar y actualizar, y una capa más donde buscar cuando algo falla. Se obtiene mTLS sin tocar el código, identidad y política por servicio, y la misma política de reintentos en todos. [T25, p. 20]
 
 </details>
 
@@ -620,3 +718,8 @@ Preguntas recuperables por tema. Mantener las respuestas separadas o plegadas cu
 - Diseñá el repositorio de estado deseado del Álbum: base común y valores por ambiente, una `Application` por ambiente con su `syncPolicy`, el commit que promueve un digest de `staging` a `prod` y dónde entra la aprobación manual. Marcá qué campos debería ignorar ArgoCD si en el futuro se agrega un HPA. [E06] [T20, p. 13] [T20, p. 17]
 - Pasá un servicio del Álbum por las seis preguntas de revisión de Kubernetes y por el checklist de production readiness, y escribí qué cambiarías en su código y en sus manifiestos. [T18, p. 31] [T21, p. 54]
 - Resolvé el ejercicio de Black Friday: SLOs, qué es prescindible, patrones entre servicios, métrica y límites del autoscaling, topología multi-región, estrategia de datos y validación previa. [T21, p. 53]
+- La tienda de pedidos tiene 4 servicios y 12 Pods. Decidí si adoptarías una malla: cuál de las tres preguntas (¿va cifrado?, ¿quién llama?, ¿cuántos reintentos?) lo justificaría, qué variante de data plane elegirías y qué costo operativo aceptás. [T25, p. 19] [T25, p. 20]
+- El contador compartido del rate limit deja de responder. Elegí entre dejar pasar todo y rechazar todo para tres endpoints del Álbum (abrir un sobre, aceptar una oferta, consultar la colección) y justificá con el riesgo de cada uno. [T24, p. 24] [T22, p. 29]
+- Repartí entre el gateway y los servicios estas reglas del Álbum: validar el token de Google, limitar requests por usuario, verificar que la copia ofrecida es del usuario, rechazar un body mal formado y registrar el `traceparent`. Aplicá el criterio "si necesita datos del negocio, va en un servicio". [T24, p. 25] [T24, p. 28] [E06]
+- Liberá con una flag un cambio en la aceptación de ofertas del Álbum y respondé las cinco preguntas de cierre de la clase: qué medís en despliegue, activación y exposición; dónde evaluás; qué fijás en la operación; qué tres señales te hacen pausar; y qué verificás antes de retirar. [T22, p. 44]
+- Armá la evidencia de observabilidad de un intercambio con compensación: qué spans esperás, qué atributos de negocio agregás, cómo cruza la traza la cola y cómo unís la compensación si la dispara un vencimiento. [T23, p. 32] [T23, p. 33] [T23, p. 34] [E03, p. 11]

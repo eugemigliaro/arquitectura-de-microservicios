@@ -53,7 +53,7 @@ Si se agota el *grace period*, el proceso recibe `SIGKILL`. Un servidor HTTP ter
 ### Configuración, logs y almacenamiento
 
 - **Configuración:** variables de entorno y montajes; *fail fast* si es inválida; no reconstruir la imagen por ambiente. [T18, p. 8]
-- **Observabilidad:** logs a `stdout`/`stderr`, correlación y trazas, sin rotación casera de logs. [T18, p. 8]
+- **Observabilidad:** logs a `stdout`/`stderr`, correlación y trazas, sin rotación casera de logs. [T18, p. 8] Ver [Observabilidad](observabilidad.md). [T23, p. 9]
 - **Almacenamiento:** la capa escribible es efímera, `emptyDir` sirve solo para datos temporales, y lo que debe persistir va a un PVC o a un almacenamiento externo de objetos. [T18, p. 8] Ver la duración de cada opción en [Kubernetes — Parte 2](kubernetes-parte-2.md). [T17, p. 28]
 
 ## 2. Estado, red y recursos

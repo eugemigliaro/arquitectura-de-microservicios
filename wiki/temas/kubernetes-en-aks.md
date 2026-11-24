@@ -74,7 +74,7 @@ Un Service `LoadBalancer` por microservicio implica una IP pública, con su cost
 
 - La `GatewayClass` `eg` es infraestructura del cluster: indica que los Gateway de esa clase los implementa Envoy Gateway. [G09]
 - `40-gateway.yaml` declara el Gateway `figuritas` con un listener HTTP en el puerto 80, una `HTTPRoute` con `PathPrefix /` hacia `web:80` y vuelve a dejar el Service `web` como ClusterIP. [G09]
-- **En el TP, cada microservicio es una `HTTPRoute` más contra el mismo Gateway.** [G09]
+- **En el TP, cada microservicio es una `HTTPRoute` más contra el mismo Gateway.** [G09] La `HTTPRoute` resuelve el ruteo; la identidad, los límites y el registro son políticas que agrega la implementación. [T24, p. 5] Ver [API Gateway](api-gateway.md).
 
 ## Dejarlo listo para el TP
 

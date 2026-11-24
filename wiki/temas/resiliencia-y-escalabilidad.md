@@ -157,7 +157,7 @@ Fuente: [T21, p. 23]. Hay que definir de antemano qué es crítico y qué es pre
 | Plataforma (Kubernetes) | Uniforme y declarativa | Solo infraestructura |
 | Service mesh | Retries, timeouts y circuit breaker sin código | Costo operativo |
 
-Fuente: [T21, p. 24]. **Regla práctica: el negocio en el código, las políticas uniformes en la plataforma.** [T21, p. 24]
+Fuente: [T21, p. 24]. **Regla práctica: el negocio en el código, las políticas uniformes en la plataforma.** [T21, p. 24] Los niveles de gateway y de malla se desarrollan en [API Gateway](api-gateway.md) y [Service mesh](service-mesh.md). [T24, p. 28] [T25, p. 22]
 
 ## 2. Kubernetes: alta disponibilidad y escalado
 
@@ -200,7 +200,7 @@ La mayoría de los incidentes empiezan con un cambio. [T21, p. 29]
 | Blue/green | Dos entornos completos; el cambio de tráfico es instantáneo |
 | Canary | 5 % → 25 % → 100 % con análisis de métricas |
 
-Fuente: [T21, p. 29]. Argo Rollouts o Flagger automatizan el canary y hacen rollback según el SLO. Combinado con feature flags: **desplegar no es lo mismo que liberar**. [T21, p. 29] Ver [DevOps y CI/CD](devops-y-ci-cd.md#estrategias-de-despliegue) y [GitOps](gitops-y-entrega-continua.md).
+Fuente: [T21, p. 29]. Argo Rollouts o Flagger automatizan el canary y hacen rollback según el SLO. Combinado con feature flags: **desplegar no es lo mismo que liberar**. [T21, p. 29] La liberación con flags está en [Feature flagging](feature-flagging.md). [T22, p. 6] Ver [DevOps y CI/CD](devops-y-ci-cd.md#estrategias-de-despliegue) y [GitOps](gitops-y-entrega-continua.md).
 
 **Demo: matar Pods bajo carga.** Con `k6 run --vus 20 --duration 2m` como carga constante, se borran Pods con `kubectl delete pod -l app=checkout --wait=false` y se drena un nodo con `kubectl drain`. Primero sin probes, sin PDB y sin `preStop`, para observar los 5xx; después con readiness, PDB, `preStop` y graceful shutdown, para comparar. [T21, p. 30]
 
@@ -291,7 +291,7 @@ Fuente: [T21, p. 48]. Velero respalda recursos y volúmenes de Kubernetes. **Un 
 
 ## 4. Validación y costo
 
-- **Observabilidad.** Golden signals (latencia, tráfico, errores, saturación), RED para servicios y USE para recursos, alertas por *burn rate* del SLO en lugar de umbrales de CPU, trazas distribuidas para ubicar el origen de una cascada y paneles por región. [T21, p. 49]
+- **Observabilidad.** Golden signals (latencia, tráfico, errores, saturación), RED para servicios y USE para recursos, alertas por *burn rate* del SLO en lugar de umbrales de CPU, trazas distribuidas para ubicar el origen de una cascada y paneles por región. [T21, p. 49] Ver [Observabilidad](observabilidad.md). [T23, p. 17]
 - **Chaos engineering.** Definir el estado estable, formular una hipótesis ("si cae un nodo, no hay errores visibles"), inyectar la falla con *blast radius* acotado, observar, aprender y corregir. Herramientas: Chaos Mesh y Litmus; un *game day* simula la caída de una región con todo el equipo. [T21, p. 50]
 
 | Prueba | Pregunta |

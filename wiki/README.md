@@ -34,6 +34,10 @@
 - [Helm](temas/helm.md): charts, releases y repositorios, instalación de un chart de PostgreSQL, estructura de un chart propio y su lugar en GitOps.
 - [GitOps y entrega continua](temas/gitops-y-entrega-continua.md): principios de OpenGitOps, declarativo frente a imperativo, tags y digests, push frente a pull, reconciliación y drift, antipatrones, ArgoCD y Flux.
 - [Resiliencia y escalabilidad en Kubernetes](temas/resiliencia-y-escalabilidad.md): fallas en cascada, SLOs y error budget, timeouts, retries, circuit breaker, bulkhead, rate limiting, PDB y distribución de réplicas, HPA, VPA, KEDA, multi-región, RTO/RPO, chaos engineering y costo.
+- [Feature flagging](temas/feature-flagging.md): desplegar, activar y exponer; tipos de flags; control plane y data plane; asignación estable por tenant; evaluación en browser, red, backend y datos; expandir, migrar y contraer; decisión fijada en la orden; fallas de la plataforma; métricas por variante; rollout con guardrails y retiro.
+- [Observabilidad](temas/observabilidad.md): logs estructurados y wide events, métricas, cardinalidad, percentiles, RED y USE, Prometheus y Grafana, trazas y spans, `traceparent`, OpenTelemetry y Collector, del síntoma a la causa, y la traza del intercambio que cruza NATS con `traceId` y `correlationId`.
+- [API Gateway](temas/api-gateway.md): acceso directo frente a un único punto de entrada; las cuatro decisiones del borde (ruteo, identidad, límites y registro); Strangler Fig, traducción de protocolo, agregación y BFF; OAuth/OIDC, JWT, scope y recurso; rate limiting con réplicas; qué no va en el gateway.
+- [Service mesh](temas/service-mesh.md): tráfico este-oeste, proxy sidecar, control plane y data plane, mTLS e identidad SPIFFE, PeerAuthentication y AuthorizationPolicy, métricas y spans del proxy, timeout, retry budget y outlier detection, sidecar frente a ambient y eBPF, y cuándo conviene.
 - [Laboratorios de la cátedra](temas/laboratorios-de-la-catedra.md): mapa de guías y demos del repositorio de GitLab, herramientas, advertencias y diferencias entre documentos y código.
 - [Consigna general del trabajo práctico: Álbum 2026](temas/consigna-general-album-2026.md): relato del producto, alcance implementable y de solo diseño, invariante de oro, escenarios mínimos, CI/CD, escala y comparación con la consigna funcional.
 - [Requerimientos funcionales del Álbum 2026 (v1.1)](temas/entrega-album-2026.md): invariantes, RF/RNF, escenarios y rúbrica.
@@ -68,6 +72,10 @@
 | `T19` | *Helm* — oficial | 11 | Problema que resuelve, charts, releases, repositorios, instalación y chart propio |
 | `T20` | *GitOps y entrega continua* — oficial | 27 | Principios de GitOps, inmutabilidad, push y pull, reconciliación y drift, ArgoCD y Flux |
 | `T21` | *Resiliencia y escalabilidad en Kubernetes* — oficial | 55 | Patrones de resiliencia, alta disponibilidad y autoscaling en Kubernetes, multi-región, DR, validación y costo |
+| `T22` | *Feature flagging en microservicios* — oficial | 45 | Liberación gradual con flags: conceptos, capas de evaluación, propagación entre servicios, observación, operación y retiro; apéndice técnico |
+| `T23` | *Observabilidad* — oficial | 36 | Logs, métricas y trazas, Prometheus y Grafana, OpenTelemetry, investigación de incidentes y traza del intercambio del TP |
+| `T24` | *API Gateway* — oficial; láminas animadas exportadas en un solo estado | 28 | Borde del sistema: ruteo, identidad con OAuth/OIDC y JWT, rate limiting, registro, riesgos y límites |
+| `T25` | *Service Mesh: el data plane* — oficial; láminas animadas exportadas en un solo estado | 22 | Tráfico entre servicios: sidecar, mTLS, identidad de workload, autorización, reintentos, outlier detection, variantes del data plane y adopción |
 | `P01` | *Ejercicio DDD: Pedidos — resolución* — oficial, ciclo 2025 | 16 | Fronteras, EventStorming y detalle por dominio |
 | `P02` | *Ejercicio de DDD: Huella* — oficial | 10 | Taller sin solución, entregables y rúbrica |
 | `E01` | *Requerimientos funcionales: Álbum de Figuritas Mundial 2026* — oficial, v1.1 | 7 | Consigna evaluada, invariantes, escenarios y condiciones de entrega |

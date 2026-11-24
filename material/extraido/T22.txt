@@ -1,0 +1,1016 @@
+FUENTE: T22
+TITULO: Feature flagging en microservicios
+ORIGINAL: material/catedra/teoria/Feature flagging en microservicios - Slidev.pdf
+PAGINAS: 45
+
+===== PAGINA 1 =====
+
+Feature flagging
+Liberar funcionalidades en una arquitectura de microservicios
+
+
+
+
+                                                                Microservicios · ITBA · 73.40
+
+===== PAGINA 2 =====
+
+ Un deploy correcto, una experiencia rota
+ Queremos liberar un checkout express para algunas tiendas.
+
+                  hoy                          hoy                                       hoy                       mañana
+
+
+           Navegador                       Gateway                                  Pagos                          Worker
+                                 ✕                                  ✕                                   ✕
+          muestra el botón               ruta a checkout                     recalcula la variante             procesa el evento
+
+
+               express                       classic                               express                          classic
+
+
+
+                     Cada componente funciona. Cuatro decisiones independientes                ⇒ recorrido incoherente.
+ ¿Qué decisión debe mantenerse estable… y durante cuánto tiempo?
+
+
+
+
+Microservicios (73.40)                   Conceptos   Capas   Propagación   Observación    Operación                                2
+
+===== PAGINA 3 =====
+
+ Qué vamos a poder diseñar
+     Conceptos            Capas                      Propagación                     Observación   Operación y cierre
+     15 min               25 min                     15 min                          15 min        20 min
+
+
+ 1. Separar despliegue, activación y exposición.
+ 2. Elegir dónde evaluar una flag: browser, red, backend o datos.
+ 3. Mantener coherencia entre servicios, reintentos y eventos.
+ 4. Observar efectos y detener un rollout con evidencia.
+ 5. Retirar la flag sin romper contratos ni perder datos.
+
+ Caso conductor: checkout express, asignado por tienda (tenant).
+
+
+
+
+Microservicios (73.40)               Conceptos   Capas   Propagación   Observación    Operación                         3
+
+===== PAGINA 4 =====
+
+ Vocabulario de la clase
+    Feature flag            Toggle point                          Control plane              Data plane
+    Decisión configurable   Lugar del código                      Donde se definen y         Donde se evalúa la
+    que elige               donde cambia el                       publican las reglas.       regla en cada
+    comportamiento en       comportamiento.                       Lento y auditado.          operación. Rápido.
+    ejecución.
+
+
+
+    Cohorte                 Stickiness                            Tenant                     BFF
+    Grupo de unidades       Misma unidad, misma                   La tienda o cliente que    Backend dedicado a
+    que reciben la misma    variante entre                        usa el sistema; nuestra    un frontend; puede
+    variante.               requests.                             unidad de asignación.      evaluar flags para el
+                                                                                             browser.
+
+
+
+
+Microservicios (73.40)          Conceptos   Capas   Propagación    Observación   Operación                           4
+
+===== PAGINA 5 =====
+
+ Qué es una feature flag
+ Una decisión configurable que selecciona comportamiento en ejecución.
+
+  const mode = flags.checkoutMode(context) // "classic" | "express"
+  return mode === 'express' ? expressCheckout(order) : classicCheckout(order)
+
+   Toggle point                              Evaluador                                              Configuración
+   Dónde cambia el comportamiento: la        Aplica reglas a un contexto y devuelve                 Variantes, audiencia, porcentaje y
+   línea del if.                             una variante.                                          fallback.
+
+
+ Una variable de entorno también puede ser una flag, pero normalmente exige reiniciar para cambiarla.
+
+
+
+
+                                                                                                                 Fuente: Pete Hodgson · Feature Toggles
+
+Microservicios (73.40)                  Conceptos   Capas   Propagación   Observación   Operación                                                    5
+
+===== PAGINA 6 =====
+
+ Desplegar, activar y exponer
+                         1 · Desplegar              2 · Activar                  3 · Exponer a cohortes     4 · Retirar
+
+
+  Código en
+                                                desplegado en 100 % de las réplicas, desde el día 1
+  producción
+
+                                                                                                          100 %   → se elimina
+  Flag activada
+                               0%                  solo internos
+  (audiencia)
+
+                                                             ≤ audiencia: no todos ejecutan la variante
+  Exposición
+                                0
+  real
+
+
+ Tres cosas distintas, con tres curvas distintas. Un rollback de flag selecciona el camino anterior; los datos
+ ya escritos permanecen.
+
+
+
+
+Microservicios (73.40)              Conceptos     Capas   Propagación   Observación   Operación                                  6
+
+===== PAGINA 7 =====
+
+ Flags con propósitos distintos
+
+
+
+
+ dinámica (por request o cliente)
+                                    Experimento                                                            Entitlement
+                                    Comparar variantes con asignación estable                              Habilitar capacidad por plan o cliente
+
+                                    Retiro: al concluir el análisis                                        Retiro: dura mientras exista el producto
+
+                                                                                                                      ⚠ el servidor debe autorizar igual
+
+                                    Release                                                                Operacional
+                                    Liberar código gradualmente                                            Apagar trabajo costoso o riesgoso
+        →←                          Retiro: tras estabilizar el lanzamiento                                Retiro: revisión periódica y simulacros
+
+
+ estática
+                                                                                     vida corta   ← → vida larga
+ Habilitación comercial y autorización requieren controles del servidor. No todas las flags son
+ booleanas ni deben durar para siempre.
+                                                                                                                                        Fuente: Feature Toggles · categorías y ciclo de vida
+
+Microservicios (73.40)                                                   Conceptos   Capas   Propagación      Observación   Operación                                                     7
+
+===== PAGINA 8 =====
+
+ Arquitectura: control y evaluación
+     CONTROL PLANE · cambia políticas · lento, humano, auditado
+
+
+               Operador              Reglas versionadas
+            cambio + auditoría          checkout-express · r42
+
+
+
+                                                                               distribución
+                                                    distribución
+
+     DATA PLANE · resuelve decisiones                                                               por request · en memoria · rápido
+
+
+                Request               SDK + caché local                               Evaluador remoto
+                                                                                                                               Browser
+            + contexto (tenant)     backend · evalúa en memoria                                 BFF / edge
+
+
+
+
+ Evitar convertir cada evaluación en una consulta a la base central de flags.
+
+                                                                                                        Fuente: Unleash · arquitectura de evaluación
+
+Microservicios (73.40)              Conceptos   Capas   Propagación   Observación   Operación                                                     8
+
+===== PAGINA 9 =====
+
+ Contrato de una flag
+  key: checkout-express
+  owner: equipo-checkout
+  purpose: release
+  variants: [classic, express]
+  default: classic
+  assignment_unit: tenant_id
+  expires_when: rollout estable y camino anterior sin consumidores
+
+ Además: ambientes aislados, permisos de cambio, audiencia y plan de reversión.
+ La semántica es parte del contrato: ¿activar significa habilitar o bloquear?
+
+
+
+
+Microservicios (73.40)                  Conceptos   Capas   Propagación   Observación   Operación   9
+
+===== PAGINA 10 =====
+
+ Contexto y audiencia
+  {                                                                    El contexto describe al sujeto de la decisión; no
+      "targetingKey": "tenant-42",                                     siempre es un usuario.
+      "region": "AR",
+      "plan": "enterprise",                                            Elegir usuario, sesión, dispositivo o tenant según
+      "appVersion": "2.8.0"                                            la experiencia.
+  }
+                                                                       Plan y tenant se derivan de identidad verificada
+                                                                       en el servidor.
+                                                                       Enviar solo atributos necesarios; evitar emails y
+                                                                       datos sensibles.
+
+
+
+
+                                                                                                 Fuente: OpenFeature · Evaluation Context
+
+Microservicios (73.40)               Conceptos   Capas   Propagación   Observación   Operación                                        10
+
+===== PAGINA 11 =====
+
+ 10% de requests ≠ 10% de tiendas
+    Pensemos antes de ver la respuesta · Si sorteamos express al azar en cada request, ¿qué ve la misma tienda
+    en tres clicks seguidos?
+
+   ① Asignación estable                                                         ② La unidad no es el tráfico
+   bucket = hash(salt + tenant_id) mod 10000
+                                                                                10 % de los tenants = 1 de 10
+   10 %      25 %
+
+                                                                                                T1                                    T2 … T10
+
+   0                                                          9999              …pero T1 genera el 55 % del tráfico.
+        tenant-42    → bucket 732 → express                                     Medí por variante y por tenant, no por request.
+
+   Subir de 10 % a 25 % conserva la cohorte previa
+   (si no cambian clave ni salt).
+
+
+                         Si la identidad cambia al iniciar sesión (anónimo       → tenant), la asignación puede cambiar.
+
+                                                                                                                   Fuente: Unleash · stickiness y agrupación
+
+Microservicios (73.40)                        Conceptos   Capas   Propagación     Observación   Operación                                                11
+
+===== PAGINA 12 =====
+
+ Capas: ¿en qué nivel decidimos?
+     Conceptos           Capas    Propagación   Observación   Operación y cierre
+     15 min              25 min   15 min        15 min        20 min
+
+
+
+
+      Una sola flag puede tocar el browser, la red, el backend y los
+      datos. ¿Quién decide en cada capa, y quién garantiza qué?
+
+
+
+
+Microservicios (73.40)                                                             12
+
+===== PAGINA 13 =====
+
+ Cuatro capas, cuatro decisiones
+                         CONTROLA                                             NO GARANTIZA
+
+
+        Browser          UI, navegación, componentes                             permisos ni ejecución del servidor
+
+
+
+
+                                                                                                                      contratos entre capas
+         Red L7          ruta a una versión o destino                            semántica dentro del proceso
+
+
+
+
+        Backend          reglas y efectos del negocio                            revertir datos ya escritos
+
+
+
+
+          Datos          lectura / escritura compatible                          deshacer una migración destructiva
+
+
+ Combinar capas requiere contratos, no cuatro sorteos independientes.
+
+
+Microservicios (73.40)                    Conceptos   Capas   Propagación   Observación   Operación                                 13
+
+===== PAGINA 14 =====
+
+ Browser: ¿dónde se evalúa?
+           SDK con reglas locales                                Evaluación remota                                 Bootstrap del servidor
+
+           Reglas               Browser                      Browser                 BFF / edge                   Servidor                    HTML
+        públicas (CDN)               evalúa                 envía contexto               evalúa                   evalúa antes            resultado inicial
+
+
+      Descarga reglas y evalúa en el cliente          El servidor decide y devuelve la variante                El primer render ya parte de la decisión
+
+
+         👁 Reglas y atributos visibles                                ⏱ Red, latencia                                 🔄 Renovar al cambiar
+                   para cualquiera                                    y disponibilidad                                  login, logout o tienda
+
+
+
+
+                          En las tres: el resultado en el browser es una preferencia, no una prueba.
+                                          Solo credenciales para clientes públicos · el backend valida igual.
+
+
+
+
+                                                                                                                         Fuente: Unleash · frontend y backend SDKs
+
+Microservicios (73.40)                          Conceptos     Capas    Propagación   Observación   Operación                                                   14
+
+===== PAGINA 15 =====
+
+ Red: routing por cohorte
+                                                                               classic                  Checkout v1
+
+                         header externo ✕        Gateway
+       Browser
+                            descartado       autentica + asigna
+                                                                             express
+                                                                                                        Checkout v2
+                                                                         metadata interna
+
+
+     El gateway elimina headers externos que pretendan elegir la cohorte.
+     Inyecta metadata interna después de verificar la identidad.
+     Un reparto por pesos distribuye tráfico; estabilizar usuarios requiere afinidad adicional.
+
+
+
+
+                                                                                                                      Fuente: Istio · routing y balanceo
+
+Microservicios (73.40)                      Conceptos   Capas   Propagación   Observación   Operación                                                15
+
+===== PAGINA 16 =====
+
+ Canary de infraestructura y release de producto
+    Canary de versión                Release con flag                       Experimento                Shadow traffic
+    Unidad: tráfico hacia            Unidad: audiencia de                   Unidad: unidad             Unidad: copia de
+    un binario.                      una capacidad.                         aleatorizada estable.      operaciones.
+    ¿El nuevo deploy es              ¿A quién habilitamos                   ¿Qué efecto causa la       ¿Qué haría el nuevo
+    saludable?                       la función?                            variante?                  camino?
+
+
+ Se pueden desplegar binarios nuevos al 100% con la funcionalidad al 0%.
+
+   Shadow de pagos: aislar efectos; nunca duplicar cobros ni notificaciones.
+
+
+
+
+Microservicios (73.40)                    Conceptos   Capas   Propagación    Observación   Operación                         16
+
+===== PAGINA 17 =====
+
+ Backend: decidir cerca del comportamiento
+  // Ejemplo con API de OpenFeature; provider configurado al iniciar
+  const decision = await client.getStringDetails(
+    'checkout-express', 'classic',
+    { targetingKey: tenant.id, region: tenant.region },
+  )
+  const mode = decision.value === 'express' ? 'express' : 'classic'
+  const strategy = mode === 'express' ? expressFlow : classicFlow
+  return strategy.createOrder(command)
+
+     OpenFeature desacopla la API de evaluación del proveedor.
+     Evaluar una vez por operación y pasar una estrategia explícita.
+     Registrar uso de default y errores: un fallback puede ocultar una falla.
+
+
+
+
+                                                                                                    Fuente: OpenFeature · evaluación tipada y detallada
+
+Microservicios (73.40)                  Conceptos   Capas   Propagación   Observación   Operación                                                   17
+
+===== PAGINA 18 =====
+
+ Backend: una decisión, estrategias encapsuladas
+                                              classic        ClassicFlow
+
+                           Decidir                                                        Contrato estable
+       Operación
+                         una sola vez                                                      API + eventos
+
+                                              express       ExpressFlow
+
+
+
+     Mantener el camino anterior ejecutable durante la transición.
+     Un consumidor antiguo acepta campos nuevos opcionales.
+     No repartir if (flag) por los servicios; evitar la flag global gigante que acopla cinco equipos.
+
+
+
+
+Microservicios (73.40)                  Conceptos   Capas   Propagación    Observación   Operación           18
+
+===== PAGINA 19 =====
+
+ Verificá lo visto en esta sección
+ 1. Un usuario con el modo express pide /checkout dos veces. ¿Qué garantiza que vea lo mismo?
+ 2. ¿Por qué el browser no puede ser quien autoriza una capacidad paga?
+ 3. ¿Qué ventaja tiene evaluar una vez y pasar una estrategia, en vez de if (flag) en cada servicio?
+ 4. ¿Qué debe aceptar un consumidor antiguo cuando el productor agrega campos nuevos?
+
+
+
+
+Microservicios (73.40)            Conceptos   Capas   Propagación   Observación   Operación            19
+
+===== PAGINA 20 =====
+
+ Datos: expandir, migrar, contraer
+                           1 · Expandir                    2 · Migrar                  3 · Activar lectura                    4 · Contraer
+
+
+   Esquema               + columna nullable             backfill + validar                   ambos formatos                  − formato viejo
+
+
+
+   Escribe                  formato viejo                viejo + nuevo                           nuevo                          solo nuevo
+
+
+
+   Lee                   viejo (tolera nuevo)                   viejo                   nuevo, por cohorte                      solo nuevo
+
+
+
+                                   Reversible: el camino viejo sigue siendo válido                                            Sin retorno
+
+                                    Antes de contraer: esperar consumidores, jobs y eventos atrasados.
+
+ La reversión necesita un camino de datos todavía válido. Una flag no recupera una columna eliminada.
+
+                                                                                                           Fuente: Parallel Change · expand, migrate, contract
+
+Microservicios (73.40)                      Conceptos   Capas    Propagación   Observación     Operación                                                   20
+
+===== PAGINA 21 =====
+
+ Datos: contexto y doble escritura
+    Misma base                              Entre stores                                          Antes de cambiar la
+    Escritura compatible en una             Dos writes sueltos pueden                             fuente
+    transacción, cuando sea viable.         divergir. Usar outbox / CDC,                          Una fuente autoritativa.
+    Parámetro explícito o contexto          idempotencia y reconciliación.                        Comparar lecturas en sombra,
+    de transacción: sin fugas entre                                                               con volumen limitado.
+    usuarios de un pool.
+
+
+    Desactivar una flag cambia el trabajo futuro. Los efectos previos requieren compensación o reparación.
+
+
+
+
+Microservicios (73.40)                Conceptos   Capas   Propagación   Observación   Operación                                  21
+
+===== PAGINA 22 =====
+
+ Propagación: de la regla a la decisión
+     Conceptos           Capas    Propagación   Observación   Operación y cierre
+     15 min              25 min   15 min        15 min        20 min
+
+
+
+
+      Si la regla es la misma para todos, ¿por qué dos servicios
+      pueden decidir distinto para la misma orden?
+
+
+
+
+Microservicios (73.40)                                                             22
+
+===== PAGINA 23 =====
+
+ Propagación: tres cosas que viajan
+    ① Configuración                            ② Contexto de evaluación                               ③ Decisión de operación
+    Control plane        → evaluadores         Entrada       → servicios                              Orquestador   → participantes
+    Ejemplo: reglas de la revisión             Ejemplo: tenant verificado,                            Ejemplo: esta orden usa express.
+    42.                                        región.
+
+
+ Distribuir reglas no hace atómica una decisión entre servicios.
+ Elegir qué fijar por request, por sesión o por entidad de negocio.
+
+
+
+
+Microservicios (73.40)                   Conceptos   Capas    Propagación   Observación   Operación                                      23
+
+===== PAGINA 24 =====
+
+ Configuración: polling, streaming y caché
+                          se publica r42
+                                       Polling (cada 30 s): cada réplica consulta en su momento
+
+    Réplica A                    r41                                                                r42
+
+    Réplica B                                 r41                                                               r42
+
+    Réplica C                                                  r41                                                            r42
+
+                                                                                                                  ventana: hasta 1 intervalo
+                                       Streaming: casi inmediato, salvo si se pierde la actualización
+
+    Réplica A            r41                                                                r42
+
+    Réplica B              r41                                                                r42
+
+    Réplica C                                           r41                                                             r42
+
+                                                                                                          C se reconectó tarde
+
+
+                                                                                                                                    tiempo   →
+ Un kill switch necesita un objetivo medido de propagación. Versionar la configuración, descartar
+ actualizaciones atrasadas y medir la edad del snapshot.
+
+Microservicios (73.40)                     Conceptos   Capas    Propagación   Observación    Operación                                           24
+
+===== PAGINA 25 =====
+
+ Carrera: el mismo tenant, dos decisiones
+    Pensemos antes de ver la respuesta · El gateway dijo express con las reglas r42. ¿Qué decide Pagos si
+    todavía tiene r41?
+
+            Gateway                              Checkout                              Pagos
+
+
+                                Mismo tenant con snapshots distintos
+
+
+                      modo express, reglas r42
+
+
+                                                                cobrar orden
+
+
+                                                                          Reevalúa con r41 → classic
+
+
+                                                            Resultado de otro flujo
+
+
+
+            Gateway                              Checkout                              Pagos
+
+
+
+ Hash estable + snapshots distintos todavía puede producir variantes distintas. Opciones: aceptar la
+ divergencia si es inocua, o fijar la decisión de la operación.
+Microservicios (73.40)                                        Conceptos        Capas      Propagación   Observación   Operación   25
+
+===== PAGINA 26 =====
+
+ Fijar una decisión de negocio
+  {                                                                   Checkout decide, valida compatibilidad y
+      "orderId": "ord-731",                                           persiste el modo con la orden.
+      "checkoutMode": "express",
+      "decisionRevision": "r42",                                      Pagos lo recibe por llamada interna o evento
+      "eventSchemaVersion": 2                                         confiable.
+  }
+                                                                      Los reintentos recuperan la misma orden y
+ La revisión ayuda a auditar; no todos los                            decisión (idempotencia).
+ providers permiten evaluar una revisión histórica.
+                                                                      El consumidor respeta esa semántica; no vuelve
+                                                                      a sortear.
+
+
+
+
+Microservicios (73.40)              Conceptos   Capas   Propagación   Observación   Operación                          26
+
+===== PAGINA 27 =====
+
+ Propagación segura entre servicios
+     INTERNET · no confiable                    INTERIOR · identidad de servicio, canal autenticado
+
+
+
+
+                                     Gateway
+         Browser                   autentica identidad                           Checkout                                    Pagos
+                               descarta headers externos
+                                asigna y emite metadata
+
+
+           x-checkout-mode: express ✕                              modo=express ✓ valores permitidos, solo del gateway
+
+
+
+
+                                                      Trace context y baggage sirven para correlación, no prueban autorización.
+
+
+
+ Propagar solo decisiones necesarias; si un destino no soporta el modo, rechazar antes de efectos o elegir
+ un fallback compatible.
+
+                                                                                                 Fuente: OpenFeature · contexto y alcance de propagación
+
+Microservicios (73.40)                    Conceptos   Capas   Propagación   Observación   Operación                                                  27
+
+===== PAGINA 28 =====
+
+ Eventos, replays y workflows largos
+    Pensemos antes de ver la respuesta · Un worker consume hoy un evento de ayer, y la flag cambió entre
+    medio. ¿Con qué modo lo interpreta?
+
+                     Lunes                                      Martes                                              Miércoles
+
+
+
+         Checkout emite evento                              Se apaga la flag                                     El worker consume
+         mode = express · schema v2                         express   → classic                                   el evento del lunes
+
+
+
+
+                                                                               ✕ Consulta la flag actual              ✓ Usa el modo del evento
+                                                                             → classic: reinterpreta el evento           → misma semántica
+
+                         Excepción: un bloqueo operacional puede detener el procesamiento, nunca cambiar el significado.
+
+
+Microservicios (73.40)                          Conceptos   Capas     Propagación   Observación   Operación                                      28
+
+===== PAGINA 29 =====
+
+ Cuando la plataforma de flags falla
+
+                                          Sí                                                   Sí
+                     ¿SDK                                      ¿Control plane                             ¿Snapshot dentro
+                                                                                                                                     Evaluar
+                 inicializado?                                       responde?                                  del límite?
+
+
+
+                         No                                                No                                         No
+
+
+                 Readiness                                  Última config válida                        Política por riesgo
+              No recibir tráfico,                              con límite de edad                      Pagos: rechazar nuevo
+              o default seguro                                (medida y alertada)                     Recomendaciones: omitir
+                   explícito
+
+
+
+                          ¿Contexto incompleto?                                                     ¿El kill switch no llega?
+                     Fallback explícito + señal observable                                 Ruta de emergencia independiente y ensayada
+
+
+ Seguro no siempre significa false. El valor seguro depende del negocio y de la semántica de la flag.
+
+
+
+Microservicios (73.40)                          Conceptos    Capas     Propagación   Observación    Operación                                  29
+
+===== PAGINA 30 =====
+
+ Observación: ¿lo que liberamos funciona?
+     Conceptos           Capas    Propagación   Observación   Operación y cierre
+     15 min              25 min   15 min        15 min        20 min
+
+
+
+
+      ¿Cómo sabemos que el problema (o la mejora) lo causó la flag,
+      y no otra cosa?
+
+
+
+
+Microservicios (73.40)                                                             30
+
+===== PAGINA 31 =====
+
+ Observar flags: cuatro preguntas
+       1 · Configuración                2 · Evaluación                       3 · Exposición             4 · Resultado
+   ¿quién cambió qué y cuándo?       ¿qué variante y por qué?              ¿se ejecutó ese camino?   ¿cómo cambió el efecto?
+
+
+
+           r42: 5 % → 25 %              variant=express                        createOrder(               errores 10 %
+           por ana · 14:02              reason=targeting                       mode=express)           confirmados 3,1 %
+
+
+
+                                 Evaluar no es ejecutar: abrir la pantalla ≠ confirmar el checkout
+
+
+                                  Correlacionar con trace_id + versión de la configuración
+
+
+
+
+Microservicios (73.40)                   Conceptos   Capas   Propagación   Observación   Operación                             31
+
+===== PAGINA 32 =====
+
+ Telemetría de evaluación
+  {                                                                         OpenTelemetry define esos nombres; el ejemplo
+      "event_name": "feature_flag.evaluation",                              representa el evento lógico.
+      "feature_flag.key": "checkout-express",
+      "feature_flag.result.variant": "express",                             Emitir con contexto de traza para correlacionar con
+      "feature_flag.result.reason": "targeting_match",                      la operación.
+      "feature_flag.version": "r42"
+  }                                                                         Instrumentar desde hooks/SDK; controlar
+                                                                            volumen, muestreo y datos sensibles.
+                                                                            Convenciones en Release Candidate al preparar
+                                                                            esta clase.
+
+
+
+
+                                                                                                      Fuente: OpenTelemetry · feature flag evaluation events
+
+Microservicios (73.40)                    Conceptos   Capas   Propagación   Observación   Operación                                                      32
+
+===== PAGINA 33 =====
+
+ Métricas que permiten decidir
+    Dimensión                                   Qué medir
+
+    Salud por variante                          Errores, p95/p99, timeouts y saturación
+
+    Negocio por exposición                      Checkouts confirmados / intentos expuestos
+
+    Evaluador                                   Defaults, errores, readiness y edad de configuración
+
+    Propagación                                 Latencia de adopción y desacuerdos de modo
+
+
+   Labels de métricas: variantes acotadas y un conjunto seleccionado de flags. No usar tenant, usuario, trace ID ni todas las
+   combinaciones de flags. En logs/trazas, aplicar privacidad y retención.
+
+
+
+
+Microservicios (73.40)                     Conceptos   Capas   Propagación   Observación   Operación                            33
+
+===== PAGINA 34 =====
+
+ El promedio global esconde el incidente
+    Pensemos antes de ver la respuesta · El 1% del tráfico usa express y falla el 10%. El resto falla el 0,1%.
+    ¿Cuánto vale la tasa de error global?
+
+   Tasa de error por variante                                                   Por qué: el volumen manda
+                                   10 %
+     10 %
+
+
+
+                                                                                Classic: 99.000 requests · 99 fallas
+                                                                                Express: 1.000 requests · 100 fallas
+                                                                                Global: 100.000 requests · 199 fallas
+      5%
+
+
+                                                                                         Express falla 100 veces más
+                                                                                            y el promedio global ni lo insinúa.
+                                                umbral de pausa 1 %                          Comparar siempre por variante.
+                         0,1 %                        0,199 %
+         0
+                         Classic   Express              Global                  Ejemplo hipotético; la diferencia observada no prueba causalidad.
+
+
+
+Microservicios (73.40)                  Conceptos   Capas   Propagación   Observación   Operación                                              34
+
+===== PAGINA 35 =====
+
+ Operación: de 1% a 100% y retirar
+     Conceptos           Capas    Propagación   Observación   Operación y cierre
+     15 min              25 min   15 min        15 min        20 min
+
+
+
+
+      ¿Cómo aumentamos la exposición sin apostar el negocio, y
+      cómo cerramos la flag cuando ya no hace falta?
+
+
+
+
+Microservicios (73.40)                                                             35
+
+===== PAGINA 36 =====
+
+ Rollout con guardrails
+   % de tenants expuestos     →
+                                                                                                                  🔒
+                                                                                         🔒
+                                                          🔒
+                          🔒
+          Internos                      1%                              5%                             25 %                  100 %
+
+
+     🔒 Para avanzar a la siguiente etapa                                            ⏸ Pausar o revertir
+     ✓ exposiciones reales y config adoptada                                        Ante degradación, y mantener capacidad
+     ✓ ventana y volumen mínimos (ciclos de carga)                                  para el retorno.
+     ✓ errores y latencia vs classic, sin degradación                               Regla de ejemplo: errores express > 1 %
+     ✓ conversión revisada                                                          con ≥ 500 intentos. Ajustar al SLO real.
+
+
+
+
+Microservicios (73.40)                        Conceptos       Capas   Propagación    Observación   Operación                         36
+
+===== PAGINA 37 =====
+
+ Un rollout no es automáticamente un experimento
+   Rollout · limita riesgo                                                  A/B test · mide un efecto
+       Puede empezar por clientes internos.                                   Asignación aleatoria y estable.
+       Aumenta el porcentaje cuando es seguro.                                Hipótesis, métrica primaria y duración fijadas antes.
+       Pregunta: ¿es seguro avanzar?                                          Pregunta: ¿qué efecto causa la variante?
+
+
+     Registrar la exposición real y deduplicar conversiones.
+     Asignando por tenant, el análisis debe considerar esa agrupación (los usuarios de una tienda comparten
+     estado).
+
+ Aumentar el porcentaje durante el test puede cambiar la interpretación.
+
+
+
+
+Microservicios (73.40)                    Conceptos   Capas   Propagación     Observación   Operación                                 37
+
+===== PAGINA 38 =====
+
+ Probar un sistema con flags
+
+                         1.024
+                                                                                   Qué sí probar
+                                                                                     Ambas variantes de la capacidad modificada.
+          combinaciones teóricas con 10 flags booleanas (2¹ ).   ⁰                   Default, provider caído y configuración obsoleta.
+                                                                                     Combinaciones que comparten estado o contratos.
+       No se prueban todas: se prueban las que importan.
+                                                                                     Versiones anteriores de servicios y consumidores.
+                                                                                     Reintentos, eventos atrasados y cambio a mitad del flujo.
+                                                                                     Reversión después de escribir datos nuevos.
+
+
+ Usar un evaluador controlable en tests, sin depender de la consola de producción.
+
+
+
+
+Microservicios (73.40)                       Conceptos   Capas       Propagación     Observación   Operación                                     38
+
+===== PAGINA 39 =====
+
+ Operar y retirar sin acumular deuda
+
+          Crear             Rollout           100 % estable             Retirar código                    Archivar       Contraer datos
+    owner, propósito,       cohortes y         verificar clientes,           camino viejo y           la configuración   sin compatibilidad
+     default y retiro       guardrails         jobs y mensajes                evaluaciones             (con auditoría)        pendiente
+
+
+
+                                              ⚠ deuda técnica si nadie la retira, la flag y su camino viejo se quedan.
+
+            Mientras tanto: permisos por ambiente · auditoría · ensayo de reversión · pocos cambios simultáneos
+                                  La flag desaparece; la semántica histórica de las órdenes permanece.
+
+
+
+
+Microservicios (73.40)                    Conceptos   Capas    Propagación     Observación    Operación                                       39
+
+===== PAGINA 40 =====
+
+ Apéndice
+ Fragmentos técnicos de consulta, no se presentan en clase salvo que surja la pregunta.
+     A1 · Browser: render coherente y caché segura
+     A2 · Red: una regla de routing concreta (Istio)
+     A3 · Base de datos: cambio compatible en SQL
+     A4 · Autoevaluación y lecturas
+
+
+
+
+Microservicios (73.40)                                                                    40
+
+===== PAGINA 41 =====
+
+ A1 · Browser: render coherente y caché segura
+  // Pseudocódigo: bootstrap construido por el servidor para esta sesión
+  const mode = bootstrap.features.checkoutMode ?? 'classic'
+  renderCheckout(mode)
+  // Al confirmar, el servidor devuelve el modo realmente aceptado.
+
+     Resolver el estado inicial antes del primer render evita parpadeos.
+     SSR e hidratación deben partir de la misma decisión.
+     Renovar contexto al hacer login, logout o cambiar de tienda.
+     Cachear por identidad/cohorte; evitar servir HTML express a otra tienda.
+
+    Un resultado del browser es una preferencia manipulable, no una prueba.
+
+
+
+
+Microservicios (73.40)                                                          41
+
+===== PAGINA 42 =====
+
+ A2 · Red: una regla de routing concreta
+  # Fragmento de VirtualService de Istio: reglas HTTP en orden
+  http:
+    - match:
+        - headers:
+            x-checkout-mode:
+              exact: express
+      route:
+        - destination: { host: checkout, subset: v2 }
+    - route:
+        - destination: { host: checkout, subset: v1 }
+
+ Requiere un VirtualService completo, subsets en DestinationRule y workloads etiquetados.
+ El header es un contrato interno propio del ejemplo. Restringir quién puede llegar a ese proxy y
+ emitirlo.
+
+
+
+
+                                                                                       Fuente: Istio · Request Routing
+
+Microservicios (73.40)                                                                                             42
+
+===== PAGINA 43 =====
+
+ A3 · Base de datos: cambio compatible en SQL
+  -- Expandir: el nuevo checkout almacena su formato explícitamente
+  ALTER TABLE orders ADD COLUMN checkout_mode text;
+  -- NULL significa classic para las filas históricas.
+
+  -- Escritura nueva: decisión fijada al crear la orden
+  INSERT INTO orders (id, total_cents, checkout_mode)
+  VALUES (:id, :total_cents, :persisted_mode);
+
+  -- Lectura compatible durante la transición
+  SELECT id, total_cents, COALESCE(checkout_mode, 'classic') AS mode
+  FROM orders WHERE id = :id;
+
+ DDL mediante migraciones controladas; revisar locks y duración en el motor elegido.
+ Los lectores viejos deben tolerar el esquema expandido.
+
+
+
+
+                                                                                  Fuente: PostgreSQL · modificación de tablas
+
+Microservicios (73.40)                                                                                                    43
+
+===== PAGINA 44 =====
+
+ Qué pueden hacer ahora
+ Autoevaluación: ¿puedo responder cada pregunta con un ejemplo del checkout?
+
+   ① Despliegue, activación, exposición                                ② Dónde evaluar
+   ¿Qué cambia entre una y otra, y qué mido en cada una?               ¿Qué decido en browser, red, backend y datos, y qué valido
+                                                                       siempre en el servidor?
+
+
+   ③ Coherencia                                                        ④ Evidencia
+   ¿Qué fijo en la orden para que reintentos y eventos no              ¿Qué tres señales por variante me hacen pausar un rollout?
+   cambien de modo?
+
+
+   ⑤ Retiro
+   ¿Qué debo verificar antes de borrar la flag y contraer los datos?
+
+
+
+
+Microservicios (73.40)                                                                                                              44
+
+===== PAGINA 45 =====
+
+ Lecturas para profundizar
+     Feature Toggles · Pete Hodgson: categorías y diseño.
+     OpenFeature · especificación: evaluación, providers y contexto.
+     Unleash · arquitectura y stickiness: distribución y cohortes.
+     Istio · Request Routing: selección de destinos por metadata.
+     Parallel Change: evolución compatible.
+     OpenTelemetry · Feature flag events: instrumentación de decisiones.
+
+
+
+
+Microservicios (73.40)                                                     45
+

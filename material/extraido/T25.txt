@@ -1,0 +1,526 @@
+FUENTE: T25
+TITULO: Service Mesh: el data plane
+ORIGINAL: material/catedra/teoria/Service Mesh_ el data plane - Slidev.pdf
+PAGINAS: 22
+
+===== PAGINA 1 =====
+
+Microservicios · 73.40
+
+
+Service Mesh
+El tráfico entre servicios
+
+===== PAGINA 2 =====
+
+ Tráfico este-oeste: tres preguntas abiertas
+ Donde quedó la primera parte
+                                       Internet              API gateway                       Interior del sistema
+          App móvil · Ana         norte-sur                  ¿quién llama?
+     GET /pedidos/42
+                                                                                         Pedidos
+                                                                                      lee X-User-Id
+     token de Ana
+                                                             X-User-Id: ana           ¿va cifrado?     este-oeste
+
+
+                                                                   Envíos                Facturación
+
+                                                                              ¿cuántos reintentos?
+
+                                                                                         Seguimiento
+
+
+    Y un caso sin resolver: Envíos llama a Pedidos con la identidad de Ana, y Pedidos le cree.
+
+
+
+Microservicios (73.40)                                                                                                2
+
+===== PAGINA 3 =====
+
+ En el código: una librería en cada servicio
+ Supuesto: cada equipo eligió su lenguaje y sus librerías
+                                                                                           Interior del sistema
+            Go                      Java                     Python                   Node.js
+
+                   Pedidos                 Facturación           Envíos                   Seguimiento
+
+                lógica de negocio     lógica de negocio        lógica de negocio        lógica de negocio
+
+                identidad             identidad                identidad                identidad
+
+                TLS                   TLS                      TLS                      TLS
+
+                intentos: 3           intentos: 5              intentos: 1              intentos: 3
+
+
+
+    La misma política, implementada cuatro veces y con valores distintos.
+    Hay que pasar de 3 intentos a 2 en toda la tienda: ¿qué hay que hacer, y quién?
+
+Microservicios (73.40)                                                                                            3
+
+===== PAGINA 4 =====
+
+ Proxy sidecar: la red sale del código
+ El Pod de Pedidos, por dentro
+                                                                                   Interior del sistema
+                         Pod · 2 contenedores
+
+                               Pedidos             Go                      proxy
+
+                             lógica de negocio
+
+                                                               identidad
+
+                                                               TLS
+
+                                                               intentos: 3
+
+
+    Las tres respuestas pasan al proxy. En la app queda la lógica de negocio.
+
+
+
+Microservicios (73.40)                                                                                    4
+
+===== PAGINA 5 =====
+
+ Intercepción: cada llamada pasa por dos proxies
+ La app de Pedidos llama a http://facturacion
+                                                           GET /facturas/42                             Interior del sistema
+
+              Pod                                                       Pod
+
+
+                                   desviado                                             entrega
+                     Pedidos                       proxy                      proxy                      Facturación
+
+
+
+                           reglas de red del Pod                                      reglas de red del Pod
+
+
+
+    Malla de servicios (service mesh): cada llamada pasa por dos proxies. Juntos son el data plane.
+    ¿Qué hubo que cambiar en el código de Pedidos?
+
+Microservicios (73.40)                                                                                                         5
+
+===== PAGINA 6 =====
+
+ Control plane y data plane: quién configura
+ Otro día · el control plane no responde
+                                                                                          Interior del sistema
+
+                Control plane · caído
+
+
+                          política
+                          intentos: 2
+
+
+
+
+                          Pedidos                     Facturación                  Seguimiento
+
+                         intentos: 2                 intentos: 2                  intentos: 2
+
+    El control plane está caído. Pedidos necesita llamar a Facturación.
+    Se cae el control plane: ¿qué pasa con la llamada de Pedidos a Facturación?
+
+Microservicios (73.40)                                                                                           6
+
+===== PAGINA 7 =====
+
+ mTLS: los dos extremos presentan un certificado
+ La "conexión interna" de la primera parte, ahora entre dos servicios
+                                                     GET /facturas/42                             Interior del sistema
+
+              Pod                                                            Pod
+                                                     pedidos
+                                                               mTLS
+                    Pedidos                  proxy                            proxy                 Facturación
+                                   HTTP                                                HTTP
+                                                               facturacion
+
+
+                   sabe que habla con Facturación                                  sabe que la llama Pedidos
+
+
+
+    Lo hacen los proxies: cada app sigue hablando HTTP con el suyo.
+
+
+
+Microservicios (73.40)                                                                                                   7
+
+===== PAGINA 8 =====
+
+ Identidad de workload: un certificado por servicio
+ Supuesto: namespace tienda, una ServiceAccount por servicio
+                                                                                                                  Interior del sistema
+                Control plane                                                                        vence en 24 h · se renueva solo
+
+              Pod                                                    firma      firma       Pod
+
+                                                              pedidos
+                    Pedidos                     proxy                                        proxy                  Facturación
+                                                                         facturacion
+
+                         ServiceAccount: pedidos                                                  ServiceAccount: facturacion
+
+                                  spiffe://   cluster.local   /ns/     tienda   /sa/    pedidos
+                                          dominio de confianza       namespace ServiceAccount
+
+    Como el JWT de Ana: un emisor firma y el receptor verifica. Acá el sujeto es un servicio.
+
+
+
+Microservicios (73.40)                                                                                                                   8
+
+===== PAGINA 9 =====
+
+ PeerAuthentication: PERMISSIVE y STRICT
+ Después · Envíos ya tiene proxy y certificado
+                                                                                          Interior del sistema
+                                         PeerAuthentication
+                                         modo: STRICT
+
+                   mTLS                                                                    Pedidos
+                                                                                        lee X-User-Id
+                                                                          proxy
+
+                                      mTLS         X-User-Id: ana
+                         Envíos
+                                     envios                              Pod
+
+
+
+    Envíos ya presenta su certificado, y envía el header con la identidad de Ana.
+    Envíos tiene un certificado válido y envía X-User-Id: ana: ¿qué responde Pedidos?
+
+Microservicios (73.40)                                                                                           9
+
+===== PAGINA 10 =====
+
+ AuthorizationPolicy: quién puede llamar a quién
+ Supuesto: el gateway también está en la malla
+                                                                                               Interior del sistema
+                                                   AuthorizationPolicy
+                                                   puede llamar: gateway
+
+                   mTLS           X-User-Id: ana                                                Pedidos
+                                                                                             lee X-User-Id
+                gateway                                                        proxy   200
+
+                                              mTLS           X-User-Id: ana
+                         Envíos
+                                             envios          403              Pod
+
+
+
+    El header X-User-Id vale porque solo el gateway puede llegar a Pedidos con él.
+
+
+
+Microservicios (73.40)                                                                                                10
+
+===== PAGINA 11 =====
+
+ Métricas RED por llamada, sin tocar el código
+ Otro día · valores ilustrativos
+                                                                                              Interior del sistema
+
+
+                            Pedidos                        Facturación                   Seguimiento
+
+
+
+                     gateway → pedidos           120 req/s · 4 % errores · p99 2060 ms
+
+
+                     pedidos → facturacion       120 req/s · 4 % errores · p99 2030 ms
+
+
+                     facturacion → seguimiento   120 req/s · 4 % errores · p99 2000 ms
+
+
+
+    El error aparece en toda la cadena. La llamada más profunda que lo muestra dice dónde empieza.
+
+
+
+Microservicios (73.40)                                                                                               11
+
+===== PAGINA 12 =====
+
+ Trazas: el proxy emite spans, la app propaga
+ La app de Facturación, vista desde su proxy
+                                                                                          Interior del sistema
+
+                                                Pod
+
+                                                            Facturación
+
+            traceparent: 4bf9…
+
+                    Pedidos                                  proxy                        Seguimiento
+
+
+               span · traza 4bf9… · pedidos → facturacion
+
+    Para responder, la app llama a Seguimiento. El proxy ve salir otro request.
+    ¿Cómo sabe el proxy de Facturación que el request que sale es consecuencia del que entró?
+
+Microservicios (73.40)                                                                                           12
+
+===== PAGINA 13 =====
+
+ Timeout y reintentos en el proxy
+ Otro request · POST /facturas
+                                                                                       Interior del sistema
+
+                                                                                Facturación · f1
+
+
+                                                intento 1 · sin respuesta
+                    Pedidos                                                     Facturación · f2
+
+
+
+               HTTPRoute · facturacion                                          Facturación · f3
+                                                                   intento 2
+               intentos: 3 · timeout: 2 s
+
+
+    El primer intento no responde en 2 s, y el proxy reintenta en otro Pod.
+    El proxy reintenta POST /facturas: ¿qué tiene que garantizar Facturación?
+
+Microservicios (73.40)                                                                                        13
+
+===== PAGINA 14 =====
+
+ Reintentos en cadena: retry budget
+ 100 requests de usuarios · sin tope llegarían 2700
+                                                                                             Interior del sistema
+
+
+
+           ≤ 120                          ≤ 144                            ≤ 173
+                         Pedidos                             Facturación                    Seguimiento
+
+         3 intentos      3 intentos                          3 intentos                         503
+
+
+                                        DestinationRule · retryBudget
+                                        reintentos ≤ 20 % del tráfico
+
+
+
+    Retry budget: un tope a los reintentos como proporción del tráfico. Pasado el tope, el proxy devuelve el error.
+
+
+
+Microservicios (73.40)                                                                                                14
+
+===== PAGINA 15 =====
+
+ Outlier detection: expulsar al Pod que falla
+ El proxy de Pedidos elige un Pod de Facturación en cada request
+                                                                                             Interior del sistema
+                                                                       200           Facturación · f1
+                                                                                  Ready
+
+
+                                                           expulsado 30 s            Facturación · f2
+                    Pedidos
+                                                                                  Ready
+
+
+               DestinationRule · facturacion                                         Facturación · f3
+               expulsar tras 5 errores · 30 s                          200        Ready
+               máximo expulsado: 1 de 3
+
+
+    Outlier detection: el proxy de Pedidos deja de enviarle a f2 durante 30 s. Después vuelve a probar.
+    Empiezan a fallar también f1 y f3: ¿el proxy expulsa a los tres?
+
+Microservicios (73.40)                                                                                              15
+
+===== PAGINA 16 =====
+
+ El costo del sidecar: un proxy por Pod
+ Supuesto: 3 réplicas por servicio, repartidas en 3 nodos
+                                                                                                Interior del sistema
+              nodo 1                         nodo 2                               nodo 3
+                         Envíos                       Envíos                               Envíos
+
+                         Seguimiento                  Seguimiento                          Seguimiento
+
+                         Facturación                  Facturación                          Facturación
+
+                         Pedidos                      Pedidos                              Pedidos
+
+
+
+
+                                           12 proxies × 60 MB = 720 MB
+
+    Cada proxy consume memoria y CPU, y cada llamada cruza dos: suma menos de 1 ms, según Istio.
+    Hay que actualizar el proxy por una vulnerabilidad: ¿qué hay que reiniciar?
+
+Microservicios (73.40)                                                                                                 16
+
+===== PAGINA 17 =====
+
+ Un proxy por nodo: qué se comparte
+ La misma tienda, con un proxy por nodo (un DaemonSet)
+                                                                                            Interior del sistema
+              nodo 1                        nodo 2                            nodo 3
+                         Envíos                      Envíos                            Envíos
+
+                         Seguimiento                 Seguimiento                       Seguimiento
+
+                         Facturación                 Facturación                       Facturación
+
+                         Pedidos                     Pedidos                           Pedidos
+
+                          proxy · L4 y L7             proxy · L4 y L7                   proxy · L4 y L7
+
+                                               12 Pods · 3 proxies
+
+    Capa 4 (conexiones, mTLS, identidad) es simple y se puede compartir. Capa 7 (interpretar HTTP) es lo
+    complejo.
+
+
+Microservicios (73.40)                                                                                             17
+
+===== PAGINA 18 =====
+
+ Ambient: L4 por nodo, L7 donde hace falta
+ Modo ambient de Istio · dos de los tres nodos
+                                                                                                               Interior del sistema
+              nodo 1                                     Con solo ztunnel:                      nodo 2
+                         Envíos                          cifrado e identidad                              Envíos
+                                                         autorización por identidad
+                         Seguimiento                     métricas de TCP                                  Seguimiento
+
+                         Facturación                                                                      Facturación
+                                                                   waypoint · L7
+                         Pedidos                                                                          Pedidos
+                                                          mTLS                        mTLS
+                           ztunnel · L4                                                                     ztunnel · L4
+
+                                          Un ztunnel por nodo, que escucha dentro de la red de cada Pod
+
+    Para interpretar HTTP hace falta un waypoint: un proxy de capa 7 aparte, solo para quien lo necesita.
+    ¿Cuáles de las políticas de hoy necesitan un waypoint?
+
+Microservicios (73.40)                                                                                                                18
+
+===== PAGINA 19 =====
+
+ Dónde corre el data plane: tres variantes
+ Las mallas que van a encontrar
+        Dónde corre el proxy      Capa 4                     Capa 7                     Ejemplos
+
+        Sidecar                                                                         Istio (sidecar)
+                                  el proxy del Pod           el proxy del Pod
+        un proxy por Pod                                                                Linkerd
+
+
+        Ambient                   ztunnel                    waypoint
+                                                                                        Istio (ambient)
+        separado por capa         uno por nodo               aparte, opcional
+
+
+                                  eBPF                       Envoy
+        Kernel y nodo                                                                   Cilium
+                                  en el kernel               uno por nodo
+
+
+    Cilium comparte por nodo el proxy de capa 7: la decisión que Istio descartó. Son dos criterios de diseño.
+
+
+
+Microservicios (73.40)                                                                                          19
+
+===== PAGINA 20 =====
+
+ Adopción: qué se paga y cuándo conviene
+ La tienda: 4 servicios, 12 Pods
+
+     Qué se paga                                              Qué se obtiene
+
+        un proxy en cada llamada: latencia y memoria            ¿va cifrado? mTLS, sin tocar el código
+
+
+
+        un control plane que operar y actualizar                ¿quién llama? identidad y política por servicio
+
+
+
+        una capa más donde buscar cuando algo falla             ¿cuántos reintentos? la misma política en todos
+
+
+
+
+    A cambio: las tres respuestas, iguales en todos los servicios y fuera del código.
+    La tienda: 4 servicios, 12 Pods. ¿Cuál de las tres preguntas justificaría una malla?
+
+Microservicios (73.40)                                                                                            20
+
+===== PAGINA 21 =====
+
+ La llamada completa: de Pedidos a Facturación
+ ¿quién llama? · ¿va cifrado? · ¿cuántos reintentos?
+                                       Internet            API gateway                        Interior del sistema
+          App móvil · Ana         norte-sur                por certificado
+     GET /pedidos/42
+                                                                                         Pedidos
+                                                                                      lee X-User-Id
+     token de Ana
+                                                           X-User-Id: ana       403         mTLS          este-oeste
+
+                                                                                         Facturación
+                                                                 Envíos               copia traceparent
+
+                                                                             3 intentos, con tope
+
+                                                                                         Seguimiento
+
+
+
+    Y queda registrado por llamada. La traza sigue necesitando que cada app copie traceparent.
+
+
+
+Microservicios (73.40)                                                                                                 21
+
+===== PAGINA 22 =====
+
+ Mapa de la clase
+ Los números son las diapositivas de esta clase
+
+        Una librería en cada servicio · 3                     Malla: proxy y control plane · 4–6        En el servicio · 12–13
+
+
+
+        ¿Va cifrado?                    ¿Quién llama?                    ¿Cuántos reintentos?           ¿Qué se registra?
+
+        mTLS                     7      SPIFFE ID                 8      HTTPRoute, timeout 13          métricas RED             11
+        identidad, certificado   8      AuthorizationPolicy      10      retry budget              14   spans del proxy          12
+        PERMISSIVE, STRICT       9      X-User-Id, resuelto      10      outlier detection         15   la app propaga           12
+
+              TLS del gateway               JWT e identidad                    de Resiliencia              de Observabilidad
+
+        Costo: dónde corre el proxy · sidecar, nodo, ambient · 16–19                                       Cuándo conviene · 20
+
+    La malla responde lo mismo para todos los servicios. Lo que necesita conocer el negocio queda en cada uno.
+
+
+
+Microservicios (73.40)                                                                                                                22
+

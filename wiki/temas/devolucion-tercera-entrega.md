@@ -109,11 +109,16 @@ IT-20, IT-24, IT-25, IT-28, IT-35 e IT-36 necesitan inyectar fallas, pausar oper
 
 | Ítem | Decisión | Responsable | Estado |
 |---|---|---|---|
-| C6.4 Justificación de herramientas | Dos filas nuevas en la tabla de `docs/cicd.md`: lenguaje y framework (ADR-0010 y ADR-0011) y tests (Vitest con V8 y funcionales con Compose) | Franco | Escrito en el TP, falta commitear |
+| C6.4 Justificación de herramientas | Dos filas nuevas en la tabla de `docs/cicd.md`: lenguaje y framework (ADR-0010 y ADR-0011) y tests (Vitest con V8 y funcionales con Compose) | Franco | En la rama `correcciones-e3` del TP; se integra por MR cuando se prenda el cluster |
 | C1.3 Cliente OAuth | Separar solo el de `prod`; `dev` y `staging` siguen compartiendo el actual, que tiene solo cuentas de prueba. Así no cambian las variables del CI ni los refresh tokens, que están atados al cliente de `staging` | Francisco | Pendiente; necesita el cluster prendido y el deploy token de ArgoCD rotado |
-| C3.11 Liveness | En discusión | Franco | Pendiente |
+| C3.11 Liveness | Medir el retraso del event loop con `monitorEventLoopDelay` de Node: si el p99 entre dos sondas supera `SALUD_RETRASO_MAXIMO_MS` (1 s por defecto), `/salud/vivo` responde `503 PROCESO_SATURADO`. Se descartó sumar un latido del relay del outbox, porque sus consultas a PostgreSQL no tienen timeout y la liveness pasaría a depender de la base | Franco, en los dos servicios reales; cada dueño, en su servicio nuevo | Implementado en `acceso-e-identidad` y `coleccion-y-sobres`, en la rama `correcciones-e3`, con unitarios y funcionales en verde en contenedor |
 | C3.6 y C3.9 Gobierno de `prod` | Sin decidir | — | Pendiente |
 | Deploy token de ArgoCD y refresh tokens de Google | Rotar antes de prender el cluster para trabajar | — | Pendiente |
+
+**Liveness en cada servicio nuevo.** Al pasar un mock a servicio real, su dueño repite lo de los dos servicios actuales:
+1. Copiar `src/salud/retraso-del-event-loop.ts` y su test desde `acceso-e-identidad`, registrarlo como provider del módulo raíz y usarlo en `vivo()`.
+2. Agregar `salud.retrasoMaximoMs` a la configuración, leído de `SALUD_RETRASO_MAXIMO_MS`, y el error `ProcesoSaturado` (503).
+3. Que la liveness no consulte nada externo: ni la base, ni Kafka, ni otro servicio. La base va solo en la readiness. [T18, p. 17]
 
 **Cómo hacer C1.3 sin romper `prod`:**
 1. Crear en Google Cloud un cliente web nuevo con el callback de `prod` y borrarle ese callback al cliente viejo.

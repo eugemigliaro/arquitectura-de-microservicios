@@ -171,7 +171,8 @@ Ver [Kubernetes — Parte 1](temas/kubernetes-parte-1.md) y [Kubernetes — Part
 | kubelet | Agente del nodo que observa los Pods asignados y mantiene sus contenedores en ejecución. [T16, p. 9] |
 | etcd | Almacén que persiste los datos de la API de Kubernetes. [T16, p. 8] |
 | Requests / limits | Demanda de recursos considerada al elegir nodo / restricciones durante la ejecución del contenedor. [T16, p. 16] |
-| Startup / readiness / liveness probe | Pruebas de arranque, preparación para tráfico y necesidad de reinicio, respectivamente. [T16, p. 20] |
+| Startup / readiness / liveness probe | Pruebas de arranque, preparación para tráfico y necesidad de reinicio, respectivamente. [T16, p. 20] Una liveness que devuelve siempre OK no protege: la corrección de la tercera entrega la marcó como parcial y sugirió medir el lag del event loop o el heartbeat de los consumidores, sin depender de servicios externos. [D03] [E06] |
+| Environment protegido (GitLab) | Ambiente de despliegue de GitLab que restringe quién puede ejecutar los jobs que lo apuntan y puede exigir aprobaciones de personas determinadas. `E06` lo acepta como mecanismo de aprobación manual a `prod`. [E06] La corrección de la tercera entrega lo sugirió porque un job `when: manual` lo podía ejecutar cualquier Maintainer, incluido el autor del cambio. [D03] |
 | Init container | Contenedor de preparación; los init comunes se ejecutan en orden y deben terminar con éxito antes de las aplicaciones. [T16, p. 17] |
 | Sidecar nativo | Auxiliar que permanece activo, declarado en `initContainers` con `restartPolicy: Always`. [T16, p. 17] |
 | Deployment | Recurso que gestiona ReplicaSets y actualizaciones declarativas; cambiar su template inicia un rollout. [T16, p. 26] [T16, p. 29] |

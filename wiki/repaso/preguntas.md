@@ -342,6 +342,15 @@ Preguntas recuperables por tema. Mantener las respuestas separadas o plegadas cu
 249. ¿Qué riesgos tiene un único contenedor PostgreSQL con cinco bases, aunque cada servicio tenga base y usuario propios? ¿Qué propuso la cátedra y qué exige la tercera entrega sobre los datos por ambiente?
 250. ¿Cómo puede reformularse la política de hotfix durante los partidos en la tercera entrega sin saltear el gate de `staging`?
 
+## Devolución de la tercera entrega
+
+294. La aprobación a `prod` del TP era un job `when: manual` sobre `main` protegida. ¿Por qué la cátedra lo consideró insuficiente si un Developer no podía dispararlo? ¿Qué dos alternativas propuso?
+295. ¿Por qué una liveness que devuelve siempre OK es un error? ¿Qué podría verificar un servicio Node.js con consumidores de Kafka y un relay de outbox sin depender de PostgreSQL ni del broker?
+296. Los tres ambientes compartían el cliente OAuth de Google. ¿Por qué compartir el client ID sería solo una observación, pero compartir el client secret no?
+297. Con ArgoCD en sincronización automática en `prod`, ¿por qué los cambios en los manifiestos comunes eluden el gate de `staging`? ¿Qué dos formas de cerrarlo sugirió la cátedra?
+298. ¿Qué credenciales con vencimiento tenía el despliegue del TP y qué se rompe si vencen antes de la defensa?
+299. Para la entrega final, ¿qué significa que "un IT de escenario que no está implementado o no pasa equivale a un escenario sin cubrir"? ¿Qué tests necesitan un mecanismo especial para controlar el escenario sin credenciales del cluster?
+
 ## Feature flagging
 
 251. ¿Qué diferencia hay entre desplegar, activar y exponer? ¿Qué revierte y qué no revierte un rollback de flag?
@@ -697,6 +706,13 @@ Preguntas recuperables por tema. Mantener las respuestas separadas o plegadas cu
 293. Se paga un proxy en cada llamada (latencia y memoria), un control plane que operar y actualizar, y una capa más donde buscar cuando algo falla. Se obtiene mTLS sin tocar el código, identidad y política por servicio, y la misma política de reintentos en todos. [T25, p. 20]
 
 </details>
+
+294. Porque los cuatro integrantes eran Maintainers: cualquiera, incluido el autor del cambio, podía ejecutar el job, y no había environment protegido ni reglas de aprobación. [D03] Alternativas: proteger el environment `prod` con aprobadores explícitos, o que `promover-prod` abra un MR al estado deseado de prod que integre otra persona. [D03] `E06` acepta la aprobación del pull request, la protección del environment o la sincronización manual en ArgoCD. [E06]
+295. Porque el kubelet decide reiniciar según la liveness: si siempre responde OK, un proceso colgado nunca se reinicia. [E06] [T18, p. 15] La cátedra sugirió medir el lag del event loop contra un umbral, el heartbeat reciente del consumidor y del relay del outbox, o que el servidor gRPC siga sirviendo. [D03] La liveness no tiene que fallar porque PostgreSQL o el broker estén caídos: eso es tarea de la readiness. [T18, p. 17]
+296. El client ID es un identificador público, que viaja en la URL de autorización. *Inferencia, conocimiento general.* El secret, en cambio, autentica a la aplicación frente a Google: si se compromete el de `dev`, queda comprometido el de `prod`. [D03] Además, `docs/cicd.md` afirmaba que cada ambiente tenía su cliente, y eso también se marcó. [D03]
+297. Porque el job de aprobación solo protege el overlay de `prod` (los digests). `gitops/workloads`, `base` y `entrada` son comunes y llegan a los tres ambientes con el merge a `main`. [D03] Se puede versionar la base por ambiente o fijar el `targetRevision` de prod a un commit o tag ya promovido. [D03]
+298. El deploy token de solo lectura que usa ArgoCD para leer el repositorio, que venció el 2026-11-20: sin él, ArgoCD no puede sincronizar. Y los refresh tokens de Google de las cuentas de prueba, que duran 7 días: sin ellos, la suite de integración de `staging` falla y bloquea la promoción. [D03]
+299. Que cada escenario de aceptación de `E01` se considera cubierto solo si su IT existe y pasa en el pipeline; un test pendiente equivale a un escenario no demostrado. [E06] IT-20, IT-24, IT-25, IT-28, IT-35 e IT-36 necesitan inyectar fallas, pausar operaciones o sembrar estados inconsistentes sin dar al CI credenciales de administración del cluster. [E06]
 
 ## Casos para practicar sin respuesta única
 

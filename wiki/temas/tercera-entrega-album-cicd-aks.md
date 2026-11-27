@@ -275,6 +275,10 @@ Solo está incorporada la versión 1.1. Su changelog registra: [E06]
 | 5.7 Secretos | Secrets en Base64 y prácticas [T17, p. 51] [T17, p. 52]; secretos externos como drift esperado [T20, p. 13]. |
 | Excluido | HA, autoscaling y latencia, con el vocabulario de [Resiliencia y escalabilidad](resiliencia-y-escalabilidad.md) para justificarlo [T21, p. 7] [T21, p. 32]. |
 
+## Devolución recibida
+
+La cátedra corrigió la entrega del grupo con veredicto PASS en las seis secciones y sin hallazgos bloqueantes. Quedaron cuatro ítems parciales: la aprobación a `prod` sin un aprobador distinto del autor (C3.6), una liveness que responde OK siempre (C3.11), un cliente OAuth compartido entre ambientes (C1.3) y la falta de justificación del lenguaje y del framework de tests (C6.4). [D03] El detalle, lo que se revisa en la defensa y el camino hacia la entrega final están en [Devolución de la tercera entrega](devolucion-tercera-entrega.md).
+
 ## Puntos aclarados y abiertos
 
 - **AKS en lugar de Compose.** Resuelto: esta entrega se despliega en AKS y sus decisiones prevalecen sobre las secciones 8 y 9 de la segunda entrega. [E06]

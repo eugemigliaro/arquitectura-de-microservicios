@@ -103,6 +103,25 @@ IT-20, IT-24, IT-25, IT-28, IT-35 e IT-36 necesitan inyectar fallas, pausar oper
 4. **Servicios reales, de a uno:** cada servicio entra con su CI completo, su cobertura y los tests de integración de su bloque. Por tamaño y riesgo, `intercambios` primero.
 5. **Ensayo de defensa:** arrancar el cluster, recorrer la lista de la sección anterior y apagarlo.
 
+### Seguimiento de los arreglos
+
+*Registro del grupo, no de la cátedra.* Se actualiza a medida que cada arreglo avanza. El estado real está en el repositorio del TP y en su pipeline; esta tabla dice quién toma cada ítem y qué se decidió.
+
+| Ítem | Decisión | Responsable | Estado |
+|---|---|---|---|
+| C6.4 Justificación de herramientas | Dos filas nuevas en la tabla de `docs/cicd.md`: lenguaje y framework (ADR-0010 y ADR-0011) y tests (Vitest con V8 y funcionales con Compose) | Franco | Escrito en el TP, falta commitear |
+| C1.3 Cliente OAuth | Separar solo el de `prod`; `dev` y `staging` siguen compartiendo el actual, que tiene solo cuentas de prueba. Así no cambian las variables del CI ni los refresh tokens, que están atados al cliente de `staging` | Francisco | Pendiente; necesita el cluster prendido y el deploy token de ArgoCD rotado |
+| C3.11 Liveness | En discusión | Franco | Pendiente |
+| C3.6 y C3.9 Gobierno de `prod` | Sin decidir | — | Pendiente |
+| Deploy token de ArgoCD y refresh tokens de Google | Rotar antes de prender el cluster para trabajar | — | Pendiente |
+
+**Cómo hacer C1.3 sin romper `prod`:**
+1. Crear en Google Cloud un cliente web nuevo con el callback de `prod` y borrarle ese callback al cliente viejo.
+2. Volver a sellar **solo** las claves `oidc-audiencia` y `oidc-secreto-cliente` de `gitops/secrets/prod/acceso-e-identidad.sealed.json` con `kubeseal --raw --scope strict --namespace prod --name acceso-e-identidad`. Cada clave de un SealedSecret se cifra por separado, así que se puede reemplazar una sin tocar las demás. No hay que usar `sellar_servicios.py`: regenera también la contraseña de la base, y PostgreSQL solo la lee al inicializarse.
+3. Corregir el paso 1.6 del README y el párrafo de secretos de `docs/cicd.md`.
+4. Subir el cambio por un MR que integre otra persona.
+5. Cuando ArgoCD sincronice, borrar el Pod de identidad, porque la audiencia entra como variable de entorno y solo se lee al arrancar. Después, probar el login en los tres ambientes.
+
 ## Puntos abiertos
 
 - **Consigna de la entrega final.** No está incorporada. Hay que confirmar si mantiene `E06` como base de la plataforma o si agrega requisitos, por ejemplo observabilidad o prueba de carga. Ver [Dudas y conflictos](../dudas-y-conflictos.md).
